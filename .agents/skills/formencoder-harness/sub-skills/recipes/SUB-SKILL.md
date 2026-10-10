@@ -60,7 +60,7 @@ Check the spec sheet line by line against `export_settings` `summary`; `verify` 
 
 ## Podcast or music master
 
-`system/mp3-podcast` or `system/aac-256` with `{"effects.loudness.enabled": true, "effects.loudness.standard": "podcast"}` (-16 LUFS); music for streaming `standard: streaming` (-14 LUFS); a WAV master `system/wav-48-24` with loudness off unless asked. From a formwav session: `family {action: add, app: formwav, id, preset}`.
+`system/mp3-podcast` (needs an FFmpeg with LAME; the bundled LGPL build has none, so check `formats {format: mp3}` first) or `system/aac-256` with `{"effects.loudness.enabled": true, "effects.loudness.standard": "podcast"}` (-16 LUFS); music for streaming `standard: streaming` (-14 LUFS); a WAV master `system/wav-48-24` with loudness off unless asked. From a formwav session: `family {action: add, app: formwav, id, preset}`.
 
 ## Image sequence and GIF
 

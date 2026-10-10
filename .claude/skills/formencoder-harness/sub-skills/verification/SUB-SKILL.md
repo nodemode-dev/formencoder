@@ -35,6 +35,7 @@ The result is `{path, probe, checks, passed}`: each check is `{check, want, got,
 | Symptom | Usual cause | Fix |
 | --- | --- | --- |
 | `failed` at once with an encoder error | a hardware encoder the machine lists but cannot open | `video.hardware: off`, encode again |
+| `no H.264 (AVC) encoder works in this ffmpeg on this computer` or `no MP3 encoder` | the LGPL FFmpeg and no hardware encoder (see `session-and-connection`) | another codec, or an FFmpeg with the encoder in `ffmpegDir` |
 | `vbr2` refused | two-pass needs a software encoder | `video.hardware: off` or `rateControl: vbr1` |
 | Odd frame size error | 4:2:0 codecs need even width and height | patch an even size |
 | No audio in the output | `exportAudio` off, or the source has none (`probe`) | turn it on, or say the source is silent |

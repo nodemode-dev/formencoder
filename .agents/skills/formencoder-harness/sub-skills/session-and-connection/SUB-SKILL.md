@@ -32,6 +32,7 @@ formencoder encodes with an LGPL FFmpeg build it pins (the same builds formcut s
 
 - The desktop app carries it. A source checkout downloads it on first boot into the per-person data folder, checking every file against the pinned record.
 - When `status` reports FFmpeg missing, no encode can run. Ask the person to choose Help, Download formencoder's FFmpeg (LGPL) in the window, or set the `ffmpegDir` preference (`execute prefs.set {values: {ffmpegDir: "/abs/folder"}}`) to a folder holding `ffmpeg` and `ffprobe`.
+- The LGPL build has no software H.264, HEVC or AV1 encoder and no MP3 encoder. H.264 and HEVC go through the machine's hardware encoder: VideoToolbox on every Mac, Media Foundation, NVENC or AMF on Windows, NVENC or VA-API on Linux. `formats {format}` and `execute format.encoders` show what works here. On a machine with none, an H.264 output fails with a sentence that says so: offer ProRes, DNxHR or VP9 instead, or ask the person to point `ffmpegDir` at an FFmpeg they installed that has libx264 (their own install, not shipped by formencoder).
 - A system FFmpeg is used only when neither is present; it may lack encoders formats expect, and `formats {format}` then shows them as missing.
 
 ## When something is wrong
