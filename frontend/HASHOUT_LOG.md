@@ -32,4 +32,6 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - Pending indicators carry `.ns-pending` and keep their box; they show after 300 ms and stay at least 250 ms (`pendingClass`).
 - Images change with `swapMedia` (decode off-screen, swap once).
 - Labels that change length on the same control reserve their width (`.fe-run-label`).
+- Single-line text that arrives after mount keeps a fixed height while empty: the Media Browser path line (`.fe-m-path`, 23 px) once shifted the list 14 px when the first folder loaded.
+- Double-click on the Queue list's own background (or the empty card) runs Add Source; Send to formcut and Send to formvfx in a finished output's menu call `family.send` through the client, not a command, because sending is an outside effect with nothing to undo.
 - Verified under 4x CPU and network throttling: one reveal on a constant background, no node added or removed in the Queue list while outputs reset and encode, no layout shift.
