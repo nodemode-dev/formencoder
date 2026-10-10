@@ -150,7 +150,7 @@ Note: read-only.
 
 ## presets
 
-The Preset Browser: list {query, category, kind} (81 system encoding presets in Web Video, Social Media, Devices, Mezzanine, Broadcast, DVD, Image Sequence, Image, Animated GIF, Audio Only, Archive, Proxy and Form Family, plus 5 Ingest presets), get {preset}, create {name, settings or fromOutput, group, comment}, update, delete, duplicate, alias, import {path} (.fepreset, JSON or Media Encoder .epr), export {preset, path}.
+The Preset Browser: list {query, category, kind} (93 system encoding presets in Web Video, Social Media, Devices, Mezzanine, Broadcast, Cinema, DVD, Image Sequence, Image, Animated GIF, Audio Only, Archive, Proxy and Form Family, plus 5 Ingest presets), get {preset}, create {name, settings or fromOutput, group, comment}, update, delete, duplicate, alias, import {path} (.fepreset, JSON or Media Encoder .epr), export {preset, path}.
 
 - `action`: string (list | get | create | update | delete | duplicate | alias | import | export); required
 - `preset`: string; Preset id (system/youtube-1080p, user/...), name or alias.
@@ -167,7 +167,7 @@ The Preset Browser: list {query, category, kind} (81 system encoding presets in 
 
 ## formats
 
-Without format: the 33 formats with their codecs. With format (or output): every export setting of it (key, label, type, options, unit, showIf), its codecs with the encoders this machine has, the effect defaults, loudness standards and the complete default settings.
+Without format: the 40 formats with their codecs. With format (or output): every export setting of it (key, label, type, options, unit, showIf), its codecs with the encoders this machine has, the effect defaults, loudness standards and the complete default settings.
 
 - `format`: string
 - `output`: string; Output id (o-...) or '#n' for the nth item's first output.
@@ -193,9 +193,9 @@ Watch folders: list, add {folder, preset or outputs, kind: encode|analysis, move
 
 ## family
 
-The form family: discover (which of formcut, formvfx, formwav and formvis are running here), sources {app} (their projects, comps, sessions, images), add {app, id or name, preset, settings, folder, in, out, start} queues one (formcut renders it, formvfx streams it over Dynamic Link, formwav mixes it, formvis hands the image), addLink {path} queues a formvfx .fvxlink, send {app: formcut|formvfx, files, project} imports finished files there.
+The form family: discover (which of formcut, formvfx, formwav and formvis are running here), sources {app} (their projects, comps, sessions, images), add {app, id or name, preset, settings, folder, in, out, start} queues one (formcut renders it, formvfx streams it over Dynamic Link, formwav mixes it, formvis hands the image), addLink {path} queues a formvfx .fvxlink, send {app: formcut|formvfx, files, project} imports finished files there, linkFormcut {preset, folder, start} makes every formcut export arrive here (through formcut's signed webhooks) and encode with that preset, unlinkFormcut stops it, links shows the link. An app that is not running is started headless (its engine only) when formencoder finds it.
 
-- `action`: string (discover | sources | add | addLink | send); required
+- `action`: string (discover | sources | add | addLink | send | linkFormcut | unlinkFormcut | links); required
 - `app`: string (formcut | formvfx | formwav | formvis)
 - `id`: string
 - `name`: string
@@ -292,7 +292,7 @@ metadata {mode: retain|clear|custom, fields {title, artist, author, comment, des
 
 ### publish
 
-publish is a list of destinations run after the encode: {type: folder, path, deleteLocal}, {type: ftp, host, port, user, password, remotePath, tls, retries}, {type: s3, endpoint, region, bucket, prefix, accessKey, secretKey}, {type: webhook, url, secret} (POSTs JSON, signed with HMAC-SHA256 in x-formencoder-signature), {type: family, app: formcut|formvfx, project} (imports the file there). Results show on the output (encode.report).
+publish is a list of destinations run after the encode: {type: folder, path, deleteLocal}, {type: ftp, host, port, user, password, remotePath, tls, retries}, {type: s3, endpoint, region, bucket, prefix, accessKey, secretKey}, {type: webhook, url, secret} (POSTs JSON, signed with HMAC-SHA256 in x-formencoder-signature), {type: family, app: formcut|formvfx, project} (imports the file there), {type: youtube, clientId, clientSecret, refreshToken, title, description, tags, categoryId, privacy, madeForKids} (resumable upload with an OAuth refresh token that has the youtube.upload scope), {type: vimeo, accessToken, title, description, privacy} (tus upload), {type: facebook, appId, userToken, pageId, pageToken, title, description, graphVersion} (resumable upload, then published to the Page), {type: plugin, plugin, options} (a plug-in that takes the publish event). title may use {name}, {source} and {preset}. Results show on the output (encode.report).
 
 ### watch
 

@@ -1,6 +1,6 @@
 ---
 name: formencoder-harness
-description: Drive formencoder, the media encoder of the form family (an Adobe Media Encoder alternative), through its formencoder MCP server or the formencoder command line. Use whenever the person wants a file encoded, transcoded, converted, compressed, exported or delivered; a YouTube, Vimeo, TikTok, Instagram, broadcast, ProRes, DNxHR, XDCAM, MXF, H.264, HEVC, AV1, WebM, GIF, WAV, MP3 or image sequence version; a batch queue, several outputs per source, a preset made or imported, a watch folder, a card ingest with checksums, proxies, a LUT, HDR to SDR conform, loudness normalised to EBU R128 or ATSC A/85, captions burnt in or written as a sidecar, an overlay or timecode burn-in, Time Tuner, metadata, or files published to a folder, FTP, S3 or a webhook; when media from formcut, formvfx, formwav or formvis should be encoded; or when formencoder tools such as status, encode, export_settings, preview_frame or verify are available or fail. Not for editing formencoder's own source (use formencoder-skillset).
+description: Drive formencoder, the media encoder of the form family (an Adobe Media Encoder alternative), through its formencoder MCP server or the formencoder command line. Use whenever the person wants a file encoded, transcoded, converted, compressed, exported or delivered; a YouTube, Vimeo, TikTok, Instagram, broadcast, AS-11, DCP, ProRes, DNxHR, XDCAM, MXF, H.264, HEVC, AV1, WebM, GIF, WAV, MP3 or image sequence version; a batch queue, several outputs per source, a preset made or imported, a watch folder, a card ingest with checksums, proxies, a LUT, HDR to SDR conform, loudness normalised to EBU R128 or ATSC A/85, captions burnt in or written as a sidecar, an overlay or timecode burn-in, metadata, or files published to a folder, FTP, S3 or a webhook; when media from formcut, formvfx, formwav or formvis should be encoded; or when formencoder tools such as status, encode, export_settings, preview_frame or verify are available or fail. Not for editing formencoder's own source (use formencoder-skillset).
 ---
 
 # formencoder harness
@@ -13,9 +13,10 @@ The encoding itself is done by formencoder's Rust engine (`fe_core`), which plan
 
 - The **queue** holds **items**. An item is one source: a file, an image sequence, several clips stitched together, or a formcut sequence, formvfx composition, formwav session or formvis image.
 - An item has one or more **outputs**. Each output is a file to make, with its own **export settings** (format, video, audio, multiplexer, range, crop, scaling, effects, captions, metadata, publish) and an output path. Outputs of one source encode in parallel.
-- A **preset** is a named settings object: 81 system presets, 5 Ingest presets, and the person's own. Settings on an output are a copy; changing a preset later does not touch queued outputs.
+- A **preset** is a named settings object: 93 system presets, 5 Ingest presets, and the person's own. Settings on an output are a copy; changing a preset later does not touch queued outputs.
 - **Watch folders** turn files that land in a folder into queue items with the folder's outputs.
-- Every action is a **command** (81 of them). Commands that change the queue are undoable; `batch` makes several one step.
+- Every action is a **command** (96 of them).
+- Some deliverables go through a **separate tool** after FFmpeg: bmx for AS-10, AS-11 and P2, asdcplib and OpenJPEG for DCP, OpenH264, Kvazaar and LAME for software H.264, HEVC and MP3, whisper.cpp for speech to text, c2patool for Content Credentials. `execute tools.list` says which are installed. Commands that change the queue are undoable; `batch` makes several one step.
 
 `references/concepts.md` has the details that save the most time: refs, the settings object and how patches merge, time, the result each kind of command returns, and how errors read.
 
@@ -43,15 +44,15 @@ Load the sub-skill for the part of the job in front of you. For a delivery with 
 | A whole delivery, a brief, several destinations, anything broad or unscoped | `sub-skills/harness-director/SUB-SKILL.md` |
 | Connecting: the MCP server, the command line, permission prompts, the engine not running, FFmpeg missing | `sub-skills/session-and-connection/SUB-SKILL.md` |
 | Adding sources, outputs, refs, ranges, stitching, image sequences, interpreting footage, the queue's order and status, presets and the Preset Browser | `sub-skills/queue-and-presets/SUB-SKILL.md` |
-| The Export Settings of an output: format, codec, frame size, rate, bitrate, hardware encoding, colour, HDR, audio, the multiplexer, output names | `sub-skills/export-settings/SUB-SKILL.md` |
+| The Export Settings of an output: format, codec, frame size, rate, bitrate, hardware or software encoding, crop, VR, colour, HDR, audio and channel routing, the multiplexer, AS-10, AS-11, P2 and DCP packages, output names | `sub-skills/export-settings/SUB-SKILL.md` |
 | LUTs, SDR conform, image, name, text and timecode overlays, Time Tuner, video limiter, loudness normalisation | `sub-skills/effects-and-loudness/SUB-SKILL.md` |
-| Captions (burn in, sidecar, embed, convert) and metadata (retain, clear, custom, XMP) | `sub-skills/captions-and-metadata/SUB-SKILL.md` |
+| Captions (burn in, sidecar, embed, convert, speech to text), metadata (retain, clear, templates, rules, XMP) and Content Credentials | `sub-skills/captions-and-metadata/SUB-SKILL.md` |
 | Watch folders, card ingest with checksums, proxies, media analysis | `sub-skills/watch-folders-and-ingest/SUB-SKILL.md` |
-| Media from formcut, formvfx, formwav or formvis, Dynamic Link, sending files back | `sub-skills/form-family-bridge/SUB-SKILL.md` |
-| After the encode: copy to a folder, FTP, S3, a webhook, or import into a family app | `sub-skills/publish/SUB-SKILL.md` |
+| Media from formcut, formvfx, formwav or formvis, Dynamic Link, receiving formcut exports, sending files back | `sub-skills/form-family-bridge/SUB-SKILL.md` |
+| After the encode: copy to a folder, FTP, S3, a webhook, YouTube, Vimeo, Facebook, a plug-in, or import into a family app | `sub-skills/publish/SUB-SKILL.md` |
 | Checking work: previews, contact sheets, verify, logs, loudness reports | `sub-skills/verification/SUB-SKILL.md` |
 | The formencoder window: panels, workspaces, opening Export Settings for the person | `sub-skills/ui-automation/SUB-SKILL.md` |
-| A known deliverable (YouTube upload, broadcast master, social cutdowns, podcast audio, archive master, proxies...) | `sub-skills/recipes/SUB-SKILL.md` |
+| A known deliverable (YouTube upload, broadcast master, AS-11, DCP, social cutdowns, podcast audio, archive master, proxies...) | `sub-skills/recipes/SUB-SKILL.md` |
 
 ## Rules that hold everywhere
 

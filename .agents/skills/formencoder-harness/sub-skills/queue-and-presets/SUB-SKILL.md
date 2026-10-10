@@ -24,7 +24,7 @@ A source added without a preset gets the `defaultPreset` preference (Match Sourc
 - `queue {action: setPreset, refs, preset}` applies a preset; the folder, file name and range are kept.
 - `queue {action: setOutput, refs, path}` sets one file; `folder` moves several; `name` sets the name template (`{source}_{preset}`, tokens in `references/concepts.md`).
 - `queue {action: setRange, refs, mode: custom, in, out}` encodes a part, in source seconds (`inout` and `workArea` take the same `in` and `out`, and keep Media Encoder's names for where the marks came from); `entire` resets.
-- `execute queue.interpret {item, frameRate, pixelAspect, fieldOrder, alpha, rotation}` overrides how a source is read: a 23.976 clip flagged 29.97, interlaced footage flagged progressive, a phone clip with the wrong rotation, alpha to ignore.
+- `execute queue.interpret {item, frameRate, pixelAspect, fieldOrder, alpha, rotation}` overrides how a source is read: a 23.976 clip flagged 29.97, interlaced footage flagged progressive, a phone clip with the wrong rotation, alpha to ignore. `rawExposure` (stops) and `rawTransfer` (`rec709`, `linear`) develop CinemaDNG and DNG. R3D, ARRIRAW, X-OCN, Canon RAW and BRAW decode only through a vendor decoder the person registers in Preferences, Delivery Tools (`rawDecoders`); without one, adding such a file fails and says so.
 - Settings changes go through `export_settings` (see `export-settings`).
 
 ## Running

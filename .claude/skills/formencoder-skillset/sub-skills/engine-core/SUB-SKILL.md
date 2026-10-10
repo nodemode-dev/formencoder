@@ -14,7 +14,7 @@ Read `native/fe-core/HASHOUT_LOG.md` first: it carries the reasoning the code do
 | `engine.rs` | `Engine`: the document (`doc = {items, watch}`), undo, ids, `tick`, events, the UI state shaping |
 | `commands.rs` | the command table (`c(id, label, menu, params, required, undoable, query, shortcut, doc, handler)`) and every handler |
 | `settings.rs` | defaults per format, `normalize`, `apply_patch`, the summary line |
-| `formats.rs` | the 33 formats, codecs, containers and field specs with `showIf` |
+| `formats.rs` | the 40 formats, codecs, containers and field specs with `showIf`, including package fields |
 | `presets.rs` | system and ingest presets, user preset files (`.fepreset`), `.epr` import |
 | `pipeline.rs` | the plan: geometry, filter graph, effects, captions, encoder arguments, estimate, unique paths |
 | `runner.rs` | worker threads running FFmpeg, progress, two-pass, ingest copy and verify, publish and family requests |
@@ -22,6 +22,11 @@ Read `native/fe-core/HASHOUT_LOG.md` first: it carries the reasoning the code do
 | `ffmpeg.rs` | locating FFmpeg, `probe`, process construction |
 | `captions.rs`, `text.rs`, `colour.rs`, `sidecars.rs` | caption parse and convert, glyph rendering, LUTs and SDR conform, XMP, loudness XML and analysis JSON |
 | `preview.rs` | `PreviewJob`: frames and contact sheets through an output's settings |
+| `tools.rs` | the separate programs (bmx, asdcplib, OpenJPEG, Kvazaar, LAME, whisper.cpp, c2patool): where they are found, `require` with the install line, `run` |
+| `wrap.rs` | AS-10, AS-11, D10, P2 and DCP packaging after FFmpeg: the J2K worker, bmx and asdcp-wrap calls, CPL, PKL and ASSETMAP, package verify |
+| `openh264.rs` | Cisco's OpenH264 loaded at run time (never linked or bundled), driven through its vtable |
+| `transcribe.rs`, `credentials.rs`, `raw.rs`, `plugins.rs` | whisper.cpp speech to text, C2PA signing with c2patool, DNG development and vendor raw decoder hooks, the JSON plug-in protocol |
+| `metadata.rs`, `vr.rs`, `prefs.rs` | metadata categories and templates, spherical metadata, preferences including shortcuts and `rawDecoders` |
 | `py.rs` | the PyO3 `Engine` and functions (`probe`, `thumbnail`, `ffmpeg_info`, `catalogue`, `version`) |
 
 ## Adding a command
@@ -33,7 +38,7 @@ Read `native/fe-core/HASHOUT_LOG.md` first: it carries the reasoning the code do
 
 ## Adding a format or settings field
 
-Add the format row and its field specs in `formats.rs`, its defaults in `settings.rs`, its arguments in `pipeline.rs`. The Export Settings window and `formats {format}` render from the specs, so no interface change is needed for a plain field. Keep LGPL in mind: a codec only a GPL encoder provides must be optional and found at run time.
+Add the format row and its field specs in `formats.rs`, its defaults in `settings.rs`, its arguments in `pipeline.rs`. The Export Settings window and `formats {format}` render from the specs, so no interface change is needed for a plain field. Keep LGPL in mind: a codec only a GPL encoder provides must be optional and found at run time. A codec FFmpeg cannot write goes through a separate program: register it in `tools.rs` and `setup/install_tools.py` (pinned commit, licence) and add an `External` branch in `pipeline.rs`, never a linked library.
 
 ## Rules
 

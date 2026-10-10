@@ -10,7 +10,7 @@ The media encoder of the form family (an Adobe Media Encoder alternative) beside
 
 ## Layout
 
-- `native/fe-core/` · the encoding engine (`fe_core`), written for formencoder in Rust: the queue and undo, commands, export settings, 33 formats, 86 presets, the FFmpeg graph planner and parallel runner, watch folders, ingest, captions, overlays, colour, loudness, previews and logs, exposed to Python with PyO3. Build with `./formencoder install-native`.
+- `native/fe-core/` · the encoding engine (`fe_core`), written for formencoder in Rust: the queue and undo, commands, export settings, 40 formats, 98 presets, the FFmpeg graph planner and parallel runner, the separate delivery tools (bmx, asdcplib, OpenJPEG, OpenH264, Kvazaar, LAME, whisper.cpp, c2patool) and packaging, watch folders, ingest, captions, overlays, colour, loudness, plug-ins, previews and logs, exposed to Python with PyO3. Build with `./formencoder install-native`; `./formencoder install-tools` builds the delivery tools from pinned sources.
 - `backend/app/` · the engine service: `engine/` (the engine thread, bus, JSON-RPC, family bridge, publish), `routers/` (live socket, files and previews, terminal, MCP, agents), `agent/` (MCP tools, consent, workspace, CLI), `ffmpeg_fetch.py` (the pinned FFmpeg download).
 - `frontend/src/` · the interface: `engine/` (client, store; no DOM), `ui/` (dock, menus, palette, forms, widgets), `panels/`, `app/`.
 - `setup/` · install, boot, build, freeze and desktop scripts behind the `./formencoder` dispatcher; `setup/agents.py` regenerates the harness skill's references from the engine.

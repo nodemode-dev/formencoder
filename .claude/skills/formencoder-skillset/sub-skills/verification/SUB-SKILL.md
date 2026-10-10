@@ -10,7 +10,8 @@ description: Verifying a change to formencoder before it ships. Use after any en
 | Gate | Command | Passes when |
 | --- | --- | --- |
 | Engine compiles on every host | `cd native/fe-core && cargo check` plus `--target x86_64-pc-windows-msvc` and `--target aarch64-apple-darwin` | no errors, no warnings |
-| Engine self check | `backend/venv/bin/python backend/formencoder_engine.py --selfcheck` | `"ok": true` with 81 commands, 33 formats, 86 presets and the FFmpeg found |
+| Engine self check | `backend/venv/bin/python backend/formencoder_engine.py --selfcheck` | `"ok": true` with 96 commands, 40 formats, 98 presets and the FFmpeg found |
+| Separate tools | `./formencoder install-tools --keep-going` then `execute tools.list` | each tool reports its path; a package or software encode reads back through `verify` |
 | Interface types and bundle | `cd frontend && npm run build` | no errors |
 | Text hygiene | `python3 setup/lint_text.py .` | 0 findings |
 | Agent references | `./formencoder agents sync --check` | in step |

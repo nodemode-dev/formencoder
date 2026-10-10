@@ -1,6 +1,6 @@
 ---
 name: publish
-description: What formencoder does with a file after encoding it. Use when an output should be copied to a folder or network share, uploaded over FTP or FTPS, put in an S3 or S3-compatible bucket, announced to a webhook, or imported into formcut or formvfx; when publish results or failures need reading; or when credentials for a destination are involved.
+description: What formencoder does with a file after encoding it. Use when an output should be copied to a folder or network share, uploaded over FTP or FTPS, put in an S3 or S3-compatible bucket, announced to a webhook, uploaded to YouTube, Vimeo or a Facebook Page, handed to a plug-in, or imported into formcut or formvfx; when publish results or failures need reading; or when credentials for a destination are involved.
 ---
 
 # publish
@@ -14,6 +14,12 @@ An output's `publish` setting is a list of destinations. They run in order after
 | `s3` | `endpoint`, `region`, `bucket`, `prefix`, `accessKey`, `secretKey`, `deleteLocal` | uploads to S3 or any S3-compatible store (`endpoint` for MinIO, R2, Wasabi) |
 | `webhook` | `url`, `secret` | POSTs JSON describing the output and file, signed with HMAC-SHA256 of the body in `x-formencoder-signature` |
 | `family` | `app: formcut|formvfx`, `project` | imports the file into the running app (see `form-family-bridge`) |
+| `youtube` | `clientId`, `clientSecret`, `refreshToken`, `title`, `description`, `tags`, `categoryId`, `privacy`, `madeForKids` | resumable upload through the YouTube Data API with the person's OAuth refresh token |
+| `vimeo` | `accessToken`, `title`, `description`, `privacy` | tus upload with a Vimeo personal access token that has the upload scope |
+| `facebook` | `appId`, `userToken`, `pageId`, `pageToken`, `title`, `description`, `graphVersion` | resumable upload to a Facebook Page through the Graph API |
+| `plugin` | `plugin`, `options` | hands the files to an installed plug-in's publish event (`execute plugin.list`; `docs/PLUGINS.md`) |
+
+Titles default to the file name and take `{name}`, `{source}` and `{preset}`. YouTube, Vimeo and Facebook upload the output's video file. YouTube uploads are private unless `privacy` says otherwise; Vimeo follows the account's default unless `privacy` (`anybody`, `nobody`, `unlisted`...) is set. Say which when you deliver. The tokens come from the person's own developer app or account: formencoder does not hold a client of its own.
 
 ## Setting it
 

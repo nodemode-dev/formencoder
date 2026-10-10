@@ -40,6 +40,12 @@ The vertical and square presets keep the default `scaling: fit`, which letterbox
 
 Check the spec sheet line by line against `export_settings` `summary`; `verify` reports the measured loudness. The XML loudness report sits beside the file for the broadcaster.
 
+When the broadcaster names a packaged file: `system/as11-mpeg2-1080i50` (AS-11 OP1a HD), `system/as11-d10-imx50-625` (UK DPP SD), `system/as10-high-hd-1080i50` or `-1080i5994` (AS-10), `system/p2-dvcprohd-1080i50` or `-720p50` (a P2 card folder). Fill the `package.*` titles from the spec, keep loudness on, and `verify` reads the MXF back through bmx. `execute tools.list` first: without bmx these presets fail with the install line.
+
+## Cinema (DCP)
+
+`system/dcp-2k-flat-24`, `dcp-2k-scope-24`, `dcp-4k-flat-24` (SMPTE) or `dcp-2k-flat-24-interop` for older servers. Set `package.title` and `package.contentKind` (`feature`, `trailer`, `advertisement`...). Picture becomes X'Y'Z' JPEG 2000 at the DCI raster; audio is 5.1 at 48 kHz (a stereo source fills L and R). The output is a folder holding the CPL, PKL, ASSETMAP and MXF track files. Encoding JPEG 2000 is slow, so give the person a time estimate from `encode.estimate` before starting a feature.
+
 ## Review copy with burn-ins
 
 `system/match-source-medium` plus:

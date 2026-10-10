@@ -1,8 +1,8 @@
 # formencoder
 
-The media encoder of the form family, beside formcut (video), formvfx (motion graphics), formwav (audio) and formvis (images): an Adobe Media Encoder alternative for the desktop and the browser. A queue of sources with several outputs each, encoded in parallel; 81 encoding presets and 5 ingest presets across web, social, devices, mezzanine, broadcast, DVD, image sequences, GIF, audio, archive and proxies; 33 formats from H.264, HEVC, AV1 and WebM to ProRes, DNxHR, CineForm, XDCAM and JPEG 2000 MXF, DPX and OpenEXR; watch folders, card ingest with checksums and proxies; LUTs, HDR to SDR conform, image, name, text and timecode overlays, Time Tuner, a video limiter and loudness normalisation; captions burnt in, as sidecars or embedded; metadata and XMP; publishing to folders, FTP, S3, webhooks and the family apps; with an agent harness so Claude Code, Codex and Cursor can drive every tool from formencoder's embedded terminal.
+The media encoder of the form family, beside formcut (video), formvfx (motion graphics), formwav (audio) and formvis (images): an Adobe Media Encoder alternative for the desktop and the browser. A queue of sources with several outputs each, encoded in parallel; 93 encoding presets and 5 ingest presets across web, social, devices, mezzanine, broadcast, cinema, DVD and Blu-ray, image sequences, GIF, audio, archive and proxies; 40 formats from H.264, HEVC, AV1 and WebM to ProRes, DNxHR, CineForm, XDCAM and JPEG 2000 MXF, AS-10, AS-11, P2 and DCP packages, DPX and OpenEXR; watch folders, card ingest with checksums and proxies; LUTs, HDR to SDR conform, image, name, text and timecode overlays, Time Tuner, a video limiter and loudness normalisation; captions burnt in, as sidecars or embedded, and speech to text; metadata templates, XMP and Content Credentials; plug-ins; publishing to folders, FTP, S3, webhooks, YouTube, Vimeo, Facebook and the family apps; with an agent harness so Claude Code, Codex and Cursor can drive every tool from formencoder's embedded terminal.
 
-Version 0.1.0 · Apache-2.0 · encoding engine: formencoder's own, in Rust (`native/fe-core`), driving a pinned LGPL FFmpeg
+Version 0.2.0 · Apache-2.0 · encoding engine: formencoder's own, in Rust (`native/fe-core`), driving a pinned LGPL FFmpeg
 
 ## Quick start
 
@@ -19,13 +19,13 @@ Drag media into the Queue, drag presets from the Preset Browser onto a source to
 
 ## The engine
 
-`native/fe-core` is formencoder's encoding engine, written for formencoder in Rust and loaded by the engine service as the `fe_core` Python extension; `./formencoder install-native` rebuilds it. It owns the queue with undo, the 81 commands with their parameter schemas, the export settings model and every format's field specs, the presets (and Media Encoder `.epr` import), the FFmpeg graph planner (geometry, scaling, crop, rotation, interpretation, time interpolation, two pass, stitching, timecode, caption timing), the parallel runner, watch folders, ingest with size, MD5 or bit-for-bit verification, media analysis, previews through an output's exact settings, and the encoding and error logs. FFmpeg runs as a separate program and is never linked. Overlays and burnt-in captions are drawn by the engine's own glyph rasteriser and HDR to SDR conform is a generated 3D LUT, so the effects work with the LGPL build; hardware encoders (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API) are found by a test encode on each machine.
+`native/fe-core` is formencoder's encoding engine, written for formencoder in Rust and loaded by the engine service as the `fe_core` Python extension; `./formencoder install-native` rebuilds it. It owns the queue with undo, the 96 commands with their parameter schemas, the export settings model and every format's field specs, the presets (and Media Encoder `.epr` import), the FFmpeg graph planner (geometry, scaling, crop, rotation, interpretation, time interpolation, two pass, stitching, timecode, caption timing), the parallel runner, watch folders, ingest with size, MD5 or bit-for-bit verification, media analysis, previews through an output's exact settings, and the encoding and error logs. FFmpeg runs as a separate program and is never linked. Overlays and burnt-in captions are drawn by the engine's own glyph rasteriser and HDR to SDR conform is a generated 3D LUT, so the effects work with the LGPL build; hardware encoders (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API) are found by a test encode on each machine.
 
-The LGPL FFmpeg has no software H.264, HEVC or AV1 encoder and no MP3 encoder. H.264 and HEVC encode through VideoToolbox on every Mac and through Media Foundation, NVENC, AMF or VA-API elsewhere; on a machine without any of them, formencoder says so and an FFmpeg you install yourself can be chosen in Preferences.
+The LGPL FFmpeg has no software H.264, HEVC or AV1 encoder and no MP3 encoder. H.264 and HEVC encode through VideoToolbox on every Mac and through Media Foundation, NVENC, AMF or VA-API elsewhere. Without a hardware encoder, H.264 goes through Cisco's OpenH264 (downloaded from Cisco in Preferences, Delivery Tools, never bundled), HEVC through Kvazaar and MP3 through LAME. Broadcast and cinema packages are wrapped by BBC bmx (AS-10, AS-11, P2) and asdcplib with OpenJPEG (DCP), speech to text runs whisper.cpp and Content Credentials are signed by c2patool. All of these are separate programs built from pinned sources by `./formencoder install-tools` and shipped in the desktop app; an FFmpeg you install yourself can still be chosen in Preferences.
 
 ## The form family
 
-formencoder finds formcut, formvfx, formwav and formvis running on the same computer and queues their work: a formcut project rendered by formcut, a formvfx composition pulled over Dynamic Link with no render in formvfx, a formwav session mixed by formwav, a formvis image. Finished files go back to formcut or formvfx from the Queue or as a publish step.
+formencoder finds formcut, formvfx, formwav and formvis running on the same computer and queues their work: a formcut project rendered by formcut, a formvfx composition pulled over Dynamic Link with no render in formvfx, a formwav session mixed by formwav, a formvis image. Finished files go back to formcut or formvfx from the Queue or as a publish step. An app that is not open has its engine started headless, and Receive Exports makes every formcut export arrive in the queue through formcut's signed webhooks.
 
 ## Agents
 
@@ -52,6 +52,7 @@ Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundl
 | --- | --- |
 | `./formencoder` / `boot` | engine and interface for development |
 | `install`, `install-native` | everything, or only the Rust encoding engine (`--dev` for a quicker debug build) |
+| `install-tools [TOOL...]` | the delivery tools from pinned sources (`--model base` for a speech model, `--stage` for the desktop bundle, `--keep-going`) |
 | `serve` | the built interface from the engine |
 | `install-desktop`, `freeze`, `desktop dev`, `desktop build` | the desktop app |
 | `doctor` | checks the toolchain, FFmpeg and ports |
@@ -66,20 +67,20 @@ Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundl
 
 ## Parity
 
-[`docs/PARITY.md`](docs/PARITY.md) grades formencoder against Media Encoder 26.5 on 84 traced capability rows, with HandBrake, Shutter Encoder and Compressor graded on the same rows: formencoder 70.5 of 84 (84%), 64 Full, 13 Partial, 7 None; Compressor 67%, Shutter Encoder 62%, HandBrake 35%. The measured page with every cell's evidence is [`docs/parity/index.html`](docs/parity/index.html). The wiki (`.docs/wiki`) covers getting started, encoding, agents, the family, the architecture, the desktop app and releasing.
+[`docs/PARITY.md`](docs/PARITY.md) grades formencoder against Media Encoder 26.5 on 84 traced capability rows, with HandBrake, Shutter Encoder and Compressor graded on the same rows: formencoder 83 of 84 (99%), 82 Full, 2 Partial, 0 None; Compressor 67%, Shutter Encoder 62%, HandBrake 35%. The two Partial rows are AVC-Intra (no LGPL or permissive encoder exists) and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW and BRAW need the makers' SDKs, which formencoder runs through a decoder hook rather than ships). The measured page with every cell's evidence is [`docs/parity/index.html`](docs/parity/index.html). The wiki (`.docs/wiki`) covers getting started, encoding, agents, the family, the architecture, the desktop app and releasing.
 
 ## Code size
 
 | Area | Files | Lines |
 | --- | ---: | ---: |
-| Encoding engine (Rust, fe-core) | 20 | 7,167 |
-| Engine service (Python) | 31 | 2,466 |
-| Interface (TypeScript) | 37 | 5,182 |
-| Interface styles (CSS) | 5 | 624 |
+| Encoding engine (Rust, fe-core) | 29 | 10,233 |
+| Engine service (Python) | 36 | 3,068 |
+| Interface (TypeScript) | 38 | 5,834 |
+| Interface styles (CSS) | 5 | 673 |
 | Desktop shell (Rust, Tauri) | 1 | 144 |
-| Setup and CLI | 36 | 944 |
-| Agent skills (Markdown, hand-written) | 21 | 760 |
-| Total | 151 | 17,287 |
+| Setup and CLI | 37 | 1,165 |
+| Agent skills (Markdown, hand-written) | 21 | 788 |
+| Total | 167 | 21,905 |
 
 Non-blank lines in tracked files; generated skill references excluded. `./formencoder counts` prints this table.
 

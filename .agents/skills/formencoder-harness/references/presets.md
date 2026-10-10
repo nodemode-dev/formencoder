@@ -2,11 +2,11 @@
 
 Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand.
 
-86 built-in presets. Use the id (`system/...`, `ingest/...`) with `encode {preset}`, `queue.addSource {preset}`, `queue.setPreset`, `queue.addOutput` or `watch.add`; `presets {action: get, preset}` shows the full settings. A settings patch on top of a preset keeps the rest of the preset.
+98 built-in presets. Use the id (`system/...`, `ingest/...`) with `encode {preset}`, `queue.addSource {preset}`, `queue.setPreset`, `queue.addOutput` or `watch.add`; `presets {action: get, preset}` shows the full settings. A settings patch on top of a preset keeps the rest of the preset.
 
 ## Contents
 
-`Web Video` (8) `Social Media` (12) `Devices` (4) `Mezzanine` (16) `Broadcast` (10) `DVD` (2) `Image Sequence` (7) `Image` (2) `Animated GIF` (2) `Audio Only` (10) `Archive` (1) `Proxy` (4) `Form Family` (3) `Ingest` (5)
+`Web Video` (8) `Social Media` (12) `Devices` (4) `Mezzanine` (16) `Broadcast` (16) `DVD` (4) `Cinema` (4) `Image Sequence` (7) `Image` (2) `Animated GIF` (2) `Audio Only` (10) `Archive` (1) `Proxy` (4) `Form Family` (3) `Ingest` (5)
 
 ## Web Video
 
@@ -82,13 +82,30 @@ Generated from the formencoder engine by `./formencoder agents sync`; do not edi
 | `system/mpeg2-1080i` | MPEG-2 1080i 29.97 Broadcast | MPEG-2 | 1920x1080 | 29.97 | 25 Mb/s |
 | `system/h264-broadcast-ebu` | H.264 Broadcast, EBU R128 loudness | H.264 | 1920x1080 | Match source | 30 Mb/s |
 | `system/h264-broadcast-atsc` | H.264 Broadcast, ATSC A/85 loudness | H.264 | 1920x1080 | Match source | 30 Mb/s |
+| `system/as10-high-hd-1080i50` | AS-10 HIGH_HD_2014 1080i 25 | AS-10 MXF (MPEG-2 HD422) | 1920x1080 | 25 | 10 Mb/s |
+| `system/as10-high-hd-1080i5994` | AS-10 HIGH_HD_2014 1080i 29.97 | AS-10 MXF (MPEG-2 HD422) | 1920x1080 | 29.97 | 10 Mb/s |
+| `system/as11-mpeg2-1080i50` | AS-11 OP1a MPEG-2 HD422 1080i 25 | AS-11 OP1a MXF (MPEG-2 HD422) | 1920x1080 | 25 | 10 Mb/s |
+| `system/as11-d10-imx50-625` | AS-11 D10 IMX 50 625 (UK DPP SD) | AS-11 D10 MXF (IMX 50, SD) | 720x576 | 25 |  |
+| `system/p2-dvcprohd-1080i50` | P2 DVCPRO HD 1080i 25 | P2 card (DVCPRO HD OP-Atom) | 1440x1080 | 25 |  |
+| `system/p2-dvcprohd-720p50` | P2 DVCPRO HD 720p 50 | P2 card (DVCPRO HD OP-Atom) | 960x720 | 50 |  |
 
 ## DVD
 
 | id | name | format | frame | rate | target |
 | --- | --- | --- | --- | --- | --- |
 | `system/mpeg2-dvd-ntsc` | NTSC DV Widescreen DVD | MPEG-2-DVD | 720x480 | 29.97 | 6 Mb/s |
+| `system/bluray-mpeg2-1080i` | Blu-ray MPEG-2 1080i 29.97 | MPEG2 Blu-ray | 1920x1080 | 29.97 | 25 Mb/s |
+| `system/bluray-h264-1080p24` | Blu-ray H.264 1080p 23.976 | H.264 Blu-ray | 1920x1080 | 23.976 | 25 Mb/s |
 | `system/mpeg2-dvd-pal` | PAL DV Widescreen DVD | MPEG-2-DVD | 720x576 | 25 | 6 Mb/s |
+
+## Cinema
+
+| id | name | format | frame | rate | target |
+| --- | --- | --- | --- | --- | --- |
+| `system/dcp-2k-flat-24` | DCP 2K Flat 24 (SMPTE) | DCP (Digital Cinema Package) | 1998x1080 | 24 |  |
+| `system/dcp-2k-scope-24` | DCP 2K Scope 24 (SMPTE) | DCP (Digital Cinema Package) | 2048x858 | 24 |  |
+| `system/dcp-2k-flat-24-interop` | DCP 2K Flat 24 (Interop) | DCP (Digital Cinema Package) | 1998x1080 | 24 |  |
+| `system/dcp-4k-flat-24` | DCP 4K Flat 24 (SMPTE) | DCP (Digital Cinema Package) | 3996x2160 | 24 |  |
 
 ## Image Sequence
 
