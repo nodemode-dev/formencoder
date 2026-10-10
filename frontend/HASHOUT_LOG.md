@@ -25,12 +25,14 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - Encoding: one row per running output with a preview of the frame being encoded (through `/api/preview.png` at the output's `outTime`, at most every 2.5 s, only while the panel is visible and Preferences allow it).
 - Export Settings is a window, not a panel: the settings are a local copy; every change goes through `settings.apply` (the engine normalises and applies the patch, so format switches behave exactly as they do for agents) and the preview renders the copy through `frame.png` with `patch`. OK writes it with `queue.setSettings` and `replace`; Cancel drops it.
 - Field controls for Video, Audio and Multiplexer come from `format.describe` (keys, types, options, units, `showIf`); Effects, Captions, Publish and Metadata have their own field lists in `panels/export-settings.ts` that use the same control factory (`ui/fields.ts`).
+- Packaged formats (AS-10, AS-11, P2, DCP) add their `package` fields to the Multiplexer pane, ending with a read-only `note` field that says which tool packages the output and whether it is installed; the note's text is part of its `patchList` key so installing the tool replaces just that row.
 
 ## DOM stability
 
 - Lists use `patchList` keyed by ids; progress updates set text and a CSS custom property (`--p`, a `scaleX` on the bar) on the row's existing nodes.
 - Pending indicators carry `.ns-pending` and keep their box; they show after 300 ms and stay at least 250 ms (`pendingClass`).
 - Images change with `swapMedia` (decode off-screen, swap once).
+- The Export Settings preview images fill their figure (`position: absolute; inset: 0; object-fit: contain`), so a preview with another aspect ratio letterboxes inside the same box instead of resizing the figure; `imageRect` works out the contained picture from the natural size for the crop box. Opening the window applies the current view's hidden figures before the first render, and opening it for a different output clears the last output's pictures (a 1998x1080 DCP frame once resized the figure 16 px when the next output's 16:9 frame arrived).
 - Labels that change length on the same control reserve their width (`.fe-run-label`).
 - Single-line text that arrives after mount keeps a fixed height while empty: the Media Browser path line (`.fe-m-path`, 23 px) once shifted the list 14 px when the first folder loaded.
 - Double-click on the Queue list's own background (or the empty card) runs Add Source; Send to formcut and Send to formvfx in a finished output's menu call `family.send` through the client, not a command, because sending is an outside effect with nothing to undo.

@@ -19,6 +19,9 @@ pub fn video_codecs() -> &'static Value {
             "cineform": {"label": "GoPro CineForm", "family": "cineform", "rate": ["profile"], "flavors": [["low", "Low"], ["medium", "Medium"], ["high", "High"], ["filmscan1", "Film Scan 1"], ["filmscan2", "Film Scan 2"], ["filmscan3", "Film Scan 3"]], "bitDepths": [10, 12], "alpha": true},
             "xdcam": {"label": "XDCAM HD 422 (MPEG-2)", "family": "mpeg2", "rate": ["cbr"], "flavors": [["50", "XDCAM HD 422 50 Mb/s"], ["35", "XDCAM HD 35 Mb/s (4:2:0)"]], "bitDepths": [8]},
             "mpeg2": {"label": "MPEG-2 Video", "family": "mpeg2", "rate": ["vbr1", "vbr2", "cbr"], "profiles": ["main", "422"], "bitDepths": [8]},
+            "imx": {"label": "IMX / D-10 (MPEG-2 4:2:2 intra)", "family": "mpeg2", "rate": ["profile"], "flavors": [["50_625", "IMX 50, 625 lines (25i)"], ["50_525", "IMX 50, 525 lines (29.97i)"], ["40_625", "IMX 40, 625 lines (25i)"], ["30_625", "IMX 30, 625 lines (25i)"]], "bitDepths": [8]},
+            "dvcprohd": {"label": "DVCPRO HD", "family": "dv", "rate": ["profile"], "flavors": [["1080i50", "1080i 25 (1440x1080)"], ["1080i5994", "1080i 29.97 (1280x1080)"], ["720p50", "720p 50 (960x720)"], ["720p5994", "720p 59.94 (960x720)"]], "bitDepths": [8]},
+            "dcp_j2k": {"label": "JPEG 2000 DCI (XYZ, OpenJPEG)", "family": "uncompressed", "rate": ["profile"], "flavors": [["2k", "2K DCI"], ["4k", "4K DCI"]], "bitDepths": [12]},
             "mpeg4": {"label": "MPEG-4 Part 2", "family": "mpeg4", "rate": ["vbr1", "vbr2", "cbr", "quality"], "bitDepths": [8]},
             "jpeg2000": {"label": "JPEG 2000", "family": "jpeg2000", "rate": ["quality"], "bitDepths": [8, 10, 12], "alpha": true},
             "mjpeg": {"label": "Photo-JPEG (Motion JPEG)", "family": "mjpeg", "rate": ["quality"], "bitDepths": [8]},
@@ -70,6 +73,16 @@ pub fn catalogue() -> &'static Value {
             "dnxhr_mxf": {"label": "DNxHR/DNxHD MXF OP1a", "group": "Broadcast", "ext": "mxf", "video": ["dnxhr"], "audio": ["pcm"], "containers": ["mxf"]},
             "mxf_op1a": {"label": "MXF OP1a", "group": "Broadcast", "ext": "mxf", "video": ["xdcam", "dnxhr", "prores", "jpeg2000", "mpeg2"], "audio": ["pcm"], "containers": ["mxf"]},
             "jpeg2000_mxf": {"label": "JPEG 2000 MXF OP1a", "group": "Broadcast", "ext": "mxf", "video": ["jpeg2000"], "audio": ["pcm"], "containers": ["mxf"]},
+            "as10": {"label": "AS-10 MXF (MPEG-2 HD422)", "group": "Broadcast", "ext": "mxf", "video": ["xdcam"], "audio": ["pcm"], "containers": ["mxf"], "package": "as10", "tool": "bmx", "audioTracks": 8,
+                     "defaults": {"video": {"matchSource": false, "width": 1920, "height": 1080, "frameRate": 25, "fieldOrder": "tff"}, "audio": {"bitDepth": 24, "channels": "custom"}, "package": {"shim": "HIGH_HD_2014"}}},
+            "as11": {"label": "AS-11 OP1a MXF (MPEG-2 HD422)", "group": "Broadcast", "ext": "mxf", "video": ["xdcam"], "audio": ["pcm"], "containers": ["mxf"], "package": "as11op1a", "tool": "bmx", "audioTracks": 4,
+                     "defaults": {"video": {"matchSource": false, "width": 1920, "height": 1080, "frameRate": 25, "fieldOrder": "tff"}, "audio": {"bitDepth": 24, "channels": "custom"}, "package": {"shim": "AS-11 X1"}}},
+            "as11_d10": {"label": "AS-11 D10 MXF (IMX 50, SD)", "group": "Broadcast", "ext": "mxf", "video": ["imx"], "audio": ["pcm"], "containers": ["mxf"], "package": "as11d10", "tool": "bmx", "audioTracks": 4,
+                         "defaults": {"video": {"matchSource": false, "fieldOrder": "tff"}, "audio": {"bitDepth": 16, "channels": "custom"}, "package": {"shim": "UK DPP SD"}}},
+            "p2": {"label": "P2 card (DVCPRO HD OP-Atom)", "group": "Broadcast", "ext": "mxf", "video": ["dvcprohd"], "audio": ["pcm"], "containers": ["mxf"], "package": "p2", "tool": "bmx", "audioTracks": 4, "folder": "P2",
+                   "defaults": {"video": {"matchSource": false}, "audio": {"bitDepth": 16, "channels": "custom"}}},
+            "dcp": {"label": "DCP (Digital Cinema Package)", "group": "Cinema", "ext": "mxf", "video": ["dcp_j2k"], "audio": ["pcm"], "containers": ["dcp"], "package": "dcp", "tool": "asdcplib", "folder": "DCP",
+                    "defaults": {"video": {"matchSource": false, "frameRate": 24}, "audio": {"bitDepth": 24, "channels": "custom", "routing": [{"layout": "5.1", "channels": [{"track": 0, "channel": 0}, {"track": 0, "channel": 1}]}]}, "package": {"standard": "smpte", "aspect": "flat", "contentKind": "feature"}}},
             "cineform": {"label": "GoPro CineForm", "group": "Video", "ext": "mov", "video": ["cineform"], "audio": ["pcm"], "containers": ["mov"]},
             "mpeg2": {"label": "MPEG-2", "group": "Broadcast", "ext": "mpg", "video": ["mpeg2"], "audio": ["mp2", "ac3", "pcm"], "containers": ["mpeg", "ts"]},
             "mpeg2_dvd": {"label": "MPEG-2-DVD", "group": "Broadcast", "ext": "mpg", "video": ["mpeg2"], "audio": ["ac3", "mp2", "pcm"], "containers": ["dvd"], "dvd": true},
@@ -360,5 +373,53 @@ pub fn fields(fmt: &str, settings: Option<&Value>) -> Res {
     if containers.iter().any(|c| c == "mp4" || c == "mov") {
         mux.push(field("multiplexer.fastStart", "Fast Start (index at the front)", "bool", json!({})));
     }
-    Ok(json!({"format": fmt, "label": f["label"], "video": video, "audio": audio, "multiplexer": mux}))
+    let mut package = Vec::new();
+    match f["package"].as_str().unwrap_or("") {
+        "as10" => {
+            package.push(field("package.shim", "AS-10 Shim", "select", json!({"options": AS10_SHIMS.iter().map(|s| json!([s, s])).collect::<Vec<_>>()})));
+            package.push(field("package.mainTitle", "Main Title", "text", json!({})));
+            package.push(field("package.subTitle", "Sub Title", "text", json!({})));
+            package.push(field("package.organization", "Organization", "text", json!({})));
+        }
+        "as11op1a" | "as11d10" => {
+            package.push(field("package.seriesTitle", "Series Title", "text", json!({})));
+            package.push(field("package.programmeTitle", "Programme Title", "text", json!({})));
+            package.push(field("package.episode", "Episode Title or Number", "text", json!({})));
+            package.push(field("package.shim", "Shim Name", "text", json!({})));
+            package.push(field("package.shimVersion", "Shim Version", "text", json!({})));
+            package.push(field("package.audioTrackLayout", "Audio Track Layout", "int", json!({"min": 0, "max": 255})));
+            package.push(field("package.language", "Primary Audio Language", "text", json!({})));
+            package.push(field("package.closedCaptions", "Closed Captions Present", "bool", json!({})));
+        }
+        "p2" => {
+            package.push(field("package.clipName", "Clip Name (6 characters)", "text", json!({})));
+            package.push(field("package.userClipName", "User Clip Name", "text", json!({})));
+        }
+        "dcp" => {
+            package.push(field("package.title", "Content Title", "text", json!({})));
+            package.push(field("package.standard", "Standard", "select", json!({"options": [["smpte", "SMPTE"], ["interop", "Interop"]]})));
+            package.push(field("package.aspect", "Container", "select", json!({"options": [["flat", "Flat (1.85)"], ["scope", "Scope (2.39)"], ["full", "Full container (1.90)"]]})));
+            package.push(field("package.contentKind", "Content Kind", "select", json!({"options": DCP_KINDS.iter().map(|k| json!([k, k])).collect::<Vec<_>>()})));
+            package.push(field("package.issuer", "Issuer", "text", json!({})));
+        }
+        _ => {}
+    }
+    if let Some(t) = f["tool"].as_str().and_then(crate::tools::get) {
+        let missing: Vec<&str> = t.programs.iter().copied().filter(|p| crate::tools::find(p).is_none()).collect();
+        let text = if missing.is_empty() { format!("{} {} ({}), installed", t.label, t.version, t.licence) } else { format!("{} {} ({}) is not installed: run ./formencoder install-tools {}", t.label, t.version, t.licence, t.id) };
+        package.push(field("package.tool", "Packaged By", "note", json!({"value": text})));
+        if f["package"] == "dcp" {
+            if let Some(j) = crate::tools::get("openjpeg").filter(|j| crate::tools::find(j.programs[0]).is_none()) {
+                package.push(field("package.tool2", "Pictures By", "note", json!({"value": format!("{} {} ({}) is not installed: run ./formencoder install-tools {}", j.label, j.version, j.licence, j.id)})));
+            }
+        }
+    }
+    Ok(json!({"format": fmt, "label": f["label"], "video": video, "audio": audio, "multiplexer": mux, "package": package, "tool": f.get("tool").cloned().unwrap_or(Value::Null)}))
+}
+
+pub const AS10_SHIMS: &[&str] = &["HIGH_HD_2014", "CNN_HD_2012", "NRK_HD_2012", "JVC_HD_35_VBR_2012", "JVC_HD_25_CBR_2012"];
+pub const DCP_KINDS: &[&str] = &["feature", "trailer", "teaser", "advertisement", "short", "test", "transitional", "rating", "policy", "psa"];
+
+pub fn package(fmt: &str) -> Option<&'static str> {
+    catalogue().get(fmt).and_then(|f| f["package"].as_str())
 }

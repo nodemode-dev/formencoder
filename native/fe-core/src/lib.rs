@@ -18,8 +18,10 @@ pub mod runner;
 pub mod settings;
 pub mod sidecars;
 pub mod text;
+pub mod tools;
 pub mod util;
 pub mod vr;
+pub mod wrap;
 
 #[cfg(feature = "python")]
 mod py;

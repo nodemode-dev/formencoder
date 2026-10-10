@@ -146,7 +146,7 @@ export interface PresetRow {
 export interface FieldSpec {
   key: string;
   label: string;
-  type: 'bool' | 'int' | 'number' | 'select' | 'text' | 'color' | 'path' | 'routing';
+  type: 'bool' | 'int' | 'number' | 'select' | 'text' | 'color' | 'path' | 'routing' | 'note';
   options?: Array<[unknown, string]>;
   min?: number;
   max?: number;
@@ -164,6 +164,7 @@ export interface FormatDescription {
   video: FieldSpec[];
   audio: FieldSpec[];
   multiplexer: FieldSpec[];
+  package?: FieldSpec[];
   codecs: Record<string, { label: string; encoders: string[] }>;
   audioCodecs: Record<string, { label: string; encoders: string[] }>;
   effects: Record<string, Record<string, unknown>>;

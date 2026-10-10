@@ -547,8 +547,14 @@ fn command_line(e: &mut Engine, p: &Value) -> Res {
     let measured = pipeline::Measured::default();
     let work = paths::sub("cache").join("plans").join(e.items()[i]["outputs"][j]["id"].as_str().unwrap_or("x"));
     let opt = pipeline::BuildOptions { preview_at: None, preview_width: None, still_duration: prefs::load()["stillDuration"].as_f64().unwrap_or(5.0), threads: 0, measured: &measured };
-    let plan = pipeline::build(&src, &s0, &out, &work, &opt)?;
-    Ok(json!({"command": plan.command_line(), "encoder": plan.encoder, "audioEncoder": plan.audio_encoder, "notes": plan.notes, "width": plan.width, "height": plan.height, "fps": plan.fps, "duration": plan.duration, "output": out}))
+    let package = crate::wrap::kind(&s0);
+    let target = package.map(|k| crate::wrap::essence_path(k, &work)).unwrap_or_else(|| out.clone());
+    let mut plan = pipeline::build(&src, &s0, &target, &work, &opt)?;
+    if let Some(k) = package {
+        let by = if k == "dcp" { "OpenJPEG (DCI JPEG 2000) and asdcp-wrap, then formencoder writes the CPL, PKL and ASSETMAP" } else { "bmx (bmxtranswrap)" };
+        plan.notes.push(format!("ffmpeg writes the essence to the job folder; {by} packages it at {out}"));
+    }
+    Ok(json!({"command": plan.command_line(), "encoder": plan.encoder, "audioEncoder": plan.audio_encoder, "notes": plan.notes, "width": plan.width, "height": plan.height, "fps": plan.fps, "duration": plan.duration, "output": out, "package": package}))
 }
 
 fn verify(e: &mut Engine, p: &Value) -> Res {
@@ -572,13 +578,20 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
     if path.contains("%0") {
         probe_path = rt["files"].get(0).and_then(|x| x.as_str()).map(String::from).ok_or("no frames of that sequence were written")?;
     }
+    let package = sopt.as_ref().and_then(crate::wrap::kind);
+    let files: Vec<String> = rt["files"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();
+    if let Some(k) = package {
+        probe_path = crate::wrap::picture_file(k, &path, &files).ok_or("the package's picture file was not found")?;
+    }
     let info = ffmpeg::probe(&probe_path, None);
     let v = &info["video"];
     let mut checks: Vec<Value> = Vec::new();
     if let Some(s0) = &sopt {
         let fmt = s0["format"].as_str().unwrap_or("");
         if s0["exportVideo"].as_bool().unwrap_or(false) && rt["width"].is_number() {
-            checks.push(json!({"check": "frame size", "want": format!("{}x{}", rt["width"], rt["height"]), "got": format!("{}x{}", v["width"], v["height"]), "ok": v["width"] == rt["width"] && v["height"] == rt["height"]}));
+            let pad = pipeline::fixed_raster(s0).map(|r| r.pad_top as i64).unwrap_or(0);
+            let want_h = json!(rt["height"].as_i64().unwrap_or(0) + pad);
+            checks.push(json!({"check": "frame size", "want": format!("{}x{}", rt["width"], want_h), "got": format!("{}x{}", v["width"], v["height"]), "ok": v["width"] == rt["width"] && v["height"] == want_h}));
         }
         if s0["exportVideo"].as_bool().unwrap_or(false) && rt["fps"].is_number() && !formats::is_image(fmt) && fmt != "gif" {
             let ok = (v["fps"].as_f64().unwrap_or(0.0) - rt["fps"].as_f64().unwrap_or(0.0)).abs() < 0.02;
@@ -592,10 +605,13 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
         }
         if s0["exportVideo"].as_bool().unwrap_or(false) {
             let codec = s0["video"]["codec"].as_str().unwrap_or("");
-            let want = match codec { "dnxhr" => "dnxhd", "cineform" => "cfhd", "xdcam" | "mpeg2" => "mpeg2video", "jpeg" | "mjpeg" => "mjpeg", "uncompressed" => if s0["video"]["flavor"] == "v210" { "v210" } else { "rawvideo" }, other => other };
+            let want = match codec { "dnxhr" => "dnxhd", "cineform" => "cfhd", "xdcam" | "mpeg2" | "imx" => "mpeg2video", "dvcprohd" => "dvvideo", "dcp_j2k" => "jpeg2000", "jpeg" | "mjpeg" => "mjpeg", "uncompressed" => if s0["video"]["flavor"] == "v210" { "v210" } else { "rawvideo" }, other => other };
             checks.push(json!({"check": "video codec", "want": want, "got": v["codec"], "ok": v["codec"] == json!(want)}));
         }
-        if s0["exportAudio"].as_bool().unwrap_or(false) && src_audio {
+        if let Some(k) = package {
+            checks.extend(crate::wrap::verify(k, s0, &path, &files));
+        }
+        if s0["exportAudio"].as_bool().unwrap_or(false) && src_audio && !matches!(package, Some("p2" | "dcp")) {
             if let Some(ac) = s0["audio"]["codec"].as_str() {
                 let a = info["audio"].get(0).cloned().unwrap_or(Value::Null);
                 let got = a["codec"].as_str().unwrap_or("");
@@ -933,6 +949,9 @@ fn format_describe(e: &mut Engine, p: &Value) -> Res {
     out["positions"] = json!(settings::POSITIONS);
     out["scaling"] = json!(formats::SCALING.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
     out["cropProportions"] = json!(pipeline::CROP_PROPORTIONS.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
+    if let Some(t) = f["tool"].as_str() {
+        out["toolStatus"] = crate::tools::listing().as_array().and_then(|a| a.iter().find(|x| x["id"] == t).cloned()).unwrap_or(Value::Null);
+    }
     out["timeInterpolation"] = json!(formats::INTERPOLATION.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
     out["captions"] = json!(captions::FORMATS.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
     out["defaults"] = settings::default(&fmt)?;
@@ -1109,6 +1128,10 @@ fn prefs_set(e: &mut Engine, p: &Value) -> Res {
         *e.encoder_status.lock().unwrap() = Some(encoders::status());
     }
     Ok(json!({"prefs": out}))
+}
+
+fn tools_list(_: &mut Engine, _: &Value) -> Res {
+    Ok(json!({"tools": crate::tools::listing(), "folders": crate::tools::folders().iter().map(|(o, p)| json!({"origin": o, "path": p.to_string_lossy()})).collect::<Vec<_>>()}))
 }
 
 fn cache_info(_: &mut Engine, _: &Value) -> Res {
@@ -1329,6 +1352,8 @@ pub fn all() -> &'static Vec<Cmd> {
             c("prefs.set", "Set Preferences", "Edit", p!("values" => ob()), &["values"], false, false, "", "", prefs_set),
             c("prefs.reset", "Reset Preferences", "Edit", p!(), &[], false, false, "", "", prefs_reset),
             c("prefs.cacheInfo", "Media Cache", "Edit", p!(), &[], false, true, "", "The media cache folder, its size and file count, the cache limit, and the memory free and reserved.", cache_info),
+            c("tools.list", "Delivery Tools", "Edit", p!(), &[], false, true, "",
+              "The separate programs formencoder drives for packaged deliverables (bmx for AS-10, AS-11 and P2; asdcplib and OpenJPEG for DCP): version, licence, what each is for and where it was found.", tools_list),
             c("prefs.cleanCache", "Clean Media Cache", "Edit", p!("all" => bo()), &[], false, false, "",
               "Removes the oldest cache files until the cache is under its limit (all: everything not in use by a running encode).", cache_clean),
             c("family.queue", "Queue Family Source", "File", p!("spec" => ob(), "preset" => preset_s(), "format" => format_s(), "settings" => ob(), "folder" => st(), "outputs" => objs(), "start" => bo()), &["spec"], true, false, "",

@@ -147,6 +147,9 @@ export class ExportSettings {
       toast('Copy and analysis outputs have no export settings', 'error');
       return;
     }
+    if (this.output !== info.output) {
+      for (const img of Array.from(this.scrim.querySelectorAll<HTMLImageElement>('.fe-es-fig img'))) img.removeAttribute('src');
+    }
     this.output = info.output;
     this.info = info;
     this.s = info.settings;
@@ -168,7 +171,7 @@ export class ExportSettings {
     this.scrim.hidden = false;
     this.showTab(this.s.format && ['wav', 'bwf', 'aiff', 'mp3', 'aac', 'flac', 'ogg'].includes(this.s.format) ? 'audio' : this.tab);
     this.refreshAll();
-    this.schedulePreview(0);
+    this.setView(this.view);
     q<HTMLElement>(this.scrim, '.fe-es').focus();
   }
 
@@ -189,7 +192,7 @@ export class ExportSettings {
     if (!ti.options.length) for (const [v, l] of this.desc.timeInterpolation) ti.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: l }));
     this.buildFieldPane('video', this.desc.video, 'This format has no video.');
     this.buildFieldPane('audio', this.desc.audio, 'This format has no audio.');
-    this.buildFieldPane('multiplexer', this.desc.multiplexer, 'This format has one container and no multiplexer settings.');
+    this.buildFieldPane('multiplexer', [...this.desc.multiplexer, ...(this.desc.package ?? [])], 'This format has one container and no multiplexer settings.');
     this.buildEffects();
     this.buildCaptions();
     this.buildPublish();
@@ -204,7 +207,7 @@ export class ExportSettings {
     const host = q(this.scrim, `[data-pane="${pane}"]`);
     const rows: Array<FieldSpec | null> = fields.length ? [...fields.filter((x) => !x.advanced), ...fields.filter((x) => x.advanced)] : [null];
     patchList(host, rows, {
-      key: (x) => (x ? `${x.key}|${(x.options ?? []).map((o) => String(o[0])).join(',')}` : '__empty'),
+      key: (x) => (x ? `${x.key}|${(x.options ?? []).map((o) => String(o[0])).join(',')}|${x.type === 'note' ? String(x.value ?? '') : ''}` : '__empty'),
       create: (x) => {
         if (!x) return el('<p class="fx-note fe-es-empty"></p>');
         const c = fieldControl(x, (k, v) => void this.patch({ [k]: v }), { sources: () => ((this.info?.sourceInfo as { audio?: Array<{ channels?: number }> } | undefined)?.audio ?? []) });
@@ -470,7 +473,10 @@ export class ExportSettings {
     if (!img.naturalWidth || fig.hidden) return null;
     const fr = fig.getBoundingClientRect();
     const ir = img.getBoundingClientRect();
-    return { x: ir.left - fr.left, y: ir.top - fr.top, w: ir.width, h: ir.height };
+    const k = Math.min(ir.width / img.naturalWidth, ir.height / img.naturalHeight);
+    const w = img.naturalWidth * k;
+    const h = img.naturalHeight * k;
+    return { x: ir.left - fr.left + (ir.width - w) / 2, y: ir.top - fr.top + (ir.height - h) / 2, w, h };
   }
 
   private placeCropBox(): void {
@@ -592,7 +598,7 @@ export class ExportSettings {
     for (const [key, c] of this.controls) {
       c.set(this.get(key));
       if (['video.width', 'video.height', 'video.frameRate', 'video.fieldOrder', 'video.pixelAspect'].includes(key)) c.setDisabled(match);
-      const spec = [...(this.desc?.video ?? []), ...(this.desc?.audio ?? []), ...(this.desc?.multiplexer ?? [])].find((x) => x.key === key);
+      const spec = [...(this.desc?.video ?? []), ...(this.desc?.audio ?? []), ...(this.desc?.multiplexer ?? []), ...(this.desc?.package ?? [])].find((x) => x.key === key);
       const cond = spec?.showIf ?? c.row.dataset.showIf;
       if (cond !== undefined) setHidden(c.row, !showIf(cond || undefined, (k) => this.get(k)));
     }

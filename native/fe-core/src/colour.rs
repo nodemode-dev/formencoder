@@ -125,6 +125,30 @@ pub fn sdr_conform_lut(transfer: &str, knee: f64, peak: f64, brightness: f64, co
     Ok(out)
 }
 
+const M709_TO_XYZ: [[f64; 3]; 3] = [[0.4124564, 0.3575761, 0.1804375], [0.2126729, 0.7151522, 0.0721750], [0.0193339, 0.1191920, 0.9503041]];
+
+pub fn dcp_xyz_lut() -> Res<PathBuf> {
+    let size = 65;
+    let out = paths::sub("cache").join(format!("dcp_rec709_to_xyz_{size}.cube"));
+    if out.is_file() {
+        return Ok(out);
+    }
+    let mut text = String::new();
+    let _ = writeln!(text, "TITLE \"formencoder Rec. 709 to DCI X'Y'Z'\"\nLUT_3D_SIZE {size}\nDOMAIN_MIN 0 0 0\nDOMAIN_MAX 1 1 1");
+    let scale = 48.0 / 52.37;
+    for bi in 0..size {
+        for gi in 0..size {
+            for ri in 0..size {
+                let lin = [ri, gi, bi].map(|c| (c as f64 / (size - 1) as f64).powf(2.4));
+                let enc: Vec<f64> = M709_TO_XYZ.iter().map(|row| ((row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2]) * scale).clamp(0.0, 1.0).powf(1.0 / 2.6)).collect();
+                let _ = writeln!(text, "{:.6} {:.6} {:.6}", enc[0], enc[1], enc[2]);
+            }
+        }
+    }
+    fs::write(&out, text).map_err(|e| e.to_string())?;
+    Ok(out)
+}
+
 pub fn tags(space: &str) -> Option<(&'static str, &'static str, &'static str)> {
     Some(match space {
         "rec709" => ("bt709", "bt709", "bt709"),

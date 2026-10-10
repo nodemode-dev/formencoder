@@ -17,6 +17,39 @@ pub fn new_id(prefix: &str) -> String {
     format!("{prefix}{:x}{:03x}", t & 0xff_ffff, n & 0xfff)
 }
 
+pub fn uuid4() -> String {
+    use md5::{Digest, Md5};
+    use std::hash::{BuildHasher, Hasher};
+    let mut seed = std::collections::hash_map::RandomState::new().build_hasher();
+    seed.write_u64(SEQ.fetch_add(1, Ordering::Relaxed));
+    seed.write_u128(SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
+    seed.write_u32(std::process::id());
+    let mut h = Md5::new();
+    h.update(seed.finish().to_le_bytes());
+    h.update(std::collections::hash_map::RandomState::new().build_hasher().finish().to_le_bytes());
+    let mut b: [u8; 16] = h.finalize().into();
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    let x: String = b.iter().map(|v| format!("{v:02x}")).collect();
+    format!("{}-{}-{}-{}-{}", &x[0..8], &x[8..12], &x[12..16], &x[16..20], &x[20..32])
+}
+
+pub fn base64(data: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for chunk in data.chunks(3) {
+        let n = (chunk[0] as u32) << 16 | (*chunk.get(1).unwrap_or(&0) as u32) << 8 | *chunk.get(2).unwrap_or(&0) as u32;
+        for i in 0..4 {
+            if i <= chunk.len() {
+                out.push(T[(n >> (18 - 6 * i) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
 pub fn s<'a>(v: &'a Value, key: &str) -> Option<&'a str> {
     v.get(key).and_then(Value::as_str)
 }

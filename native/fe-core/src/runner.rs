@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 
 use crate::pipeline::{self, BuildOptions, Measured, Plan, Source};
 use crate::util::{Res, now};
-use crate::{ffmpeg, paths, settings, sidecars};
+use crate::{ffmpeg, paths, settings, sidecars, wrap};
 
 const DECODE_ERRORS: &[&str] = &["error while decoding", "Invalid NAL", "corrupt decoded frame", "concealing", "decode_slice_header error"];
 
@@ -23,6 +23,7 @@ pub struct Shared {
     pub pid: Option<u32>,
     pub stop: bool,
     pub paused: bool,
+    pub throttled: bool,
     pub family: Option<Result<Value, String>>,
     pub requests: Vec<Value>,
 }
@@ -46,7 +47,11 @@ impl Job {
             s.pid
         };
         if let Some(pid) = pid {
-            if self.shared.lock().unwrap().paused {
+            let held = {
+                let s = self.shared.lock().unwrap();
+                s.paused || s.throttled
+            };
+            if held {
                 suspend(pid, false);
             }
             kill(pid);
@@ -61,7 +66,7 @@ impl Job {
             }
             s.paused = on;
             s.updates.push(json!({"status": if on { "paused" } else { "encoding" }}));
-            s.pid
+            if !on && s.throttled { None } else { s.pid }
         };
         if let Some(pid) = pid {
             suspend(pid, on);
@@ -289,10 +294,18 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         return Err("stopped".into());
     }
     let opt = BuildOptions { preview_at: None, preview_width: None, still_duration: ctx.prefs["stillDuration"].as_f64().unwrap_or(5.0), threads: ctx.prefs["threads"].as_i64().unwrap_or(0), measured: &measured };
-    let mut plan = pipeline::build(&src, &s, &out_path, &work, &opt)?;
+    let package = wrap::kind(&s);
+    if let Some(k) = package {
+        wrap::required_tool(k)?;
+    }
+    let target = match package {
+        Some(k) => wrap::essence_path(k, &work),
+        None => out_path.clone(),
+    };
+    let mut plan = pipeline::build(&src, &s, &target, &work, &opt)?;
     ctx.push(json!({"status": "encoding", "path": out_path, "encoder": plan.encoder, "audioEncoder": plan.audio_encoder, "command": plan.command_line(), "notes": plan.notes,
                     "duration": plan.duration, "frames": plan.frames, "width": plan.width, "height": plan.height, "fps": plan.fps, "summary": settings::summary(&s, &src.info)}));
-    let part_path = if out_path.contains("%0") {
+    let part_path = if out_path.contains("%0") || package.is_some() {
         None
     } else {
         let p = Path::new(&out_path);
@@ -309,7 +322,29 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
             }
         }
     }
+    let j2k = if package == Some("dcp") {
+        let held = ctx.shared.clone();
+        let throttle: wrap::Throttle = Arc::new(move |on| {
+            let mut s = held.lock().unwrap();
+            s.throttled = on;
+            if let Some(pid) = s.pid {
+                if !s.paused {
+                    suspend(pid, on);
+                }
+            }
+        });
+        let watch = ctx.shared.clone();
+        let stopped: wrap::Stopped = Arc::new(move || watch.lock().unwrap().stop);
+        let dir = Path::new(&target).parent().unwrap_or(&work).to_path_buf();
+        Some(wrap::J2k::start(dir, plan.width, plan.height, plan.fps, throttle, stopped)?)
+    } else {
+        None
+    };
     let encoded = encode_passes(ctx, &plan, base);
+    let j2k_done = j2k.map(|j| {
+        ctx.report(0.94, "finishing the JPEG 2000 frames");
+        j.finish(encoded.is_ok())
+    });
     if let Some(part) = &part_path {
         if encoded.is_ok() && Path::new(part).is_file() {
             fs::rename(part, &out_path).map_err(|e| format!("cannot move the finished file into place at {out_path}: {e}"))?;
@@ -318,11 +353,21 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         }
     }
     encoded?;
+    if let Some(r) = j2k_done {
+        r?;
+    }
     if crate::vr::wanted(&s) && ["mp4", "mov"].contains(&s["multiplexer"]["container"].as_str().unwrap_or("")) && Path::new(&out_path).is_file() {
         crate::vr::inject(&out_path, &crate::vr::xml(&s, plan.width, plan.height)).map_err(|e| format!("could not write the VR metadata: {e}"))?;
     }
     let mut files: Vec<String> = Vec::new();
-    if out_path.contains("%0") {
+    if let Some(k) = package {
+        let probe = if k == "dcp" { json!({}) } else { ffmpeg::probe(&target, None) };
+        let start_tc = probe["timecode"].as_str().map(String::from).or_else(|| s["startTimecode"].as_str().map(String::from)).unwrap_or_else(|| "00:00:00:00".into());
+        let frames = probe["duration"].as_f64().map(|d| (d * plan.fps).round() as i64).filter(|f| *f > 0).unwrap_or(plan.frames);
+        let report = |f: f64, m: &str| ctx.report(base + (1.0 - base) * f, m);
+        let job = wrap::Job { s: &s, essence: &target, out: &out_path, frames, fps: plan.fps, width: plan.width, height: plan.height, start_tc: &start_tc, report: &report };
+        files = wrap::finish(k, &job)?;
+    } else if out_path.contains("%0") {
         let p = Path::new(&out_path);
         let stem = p.file_name().map(|n| n.to_string_lossy().split("%0").next().unwrap_or("").to_string()).unwrap_or_default();
         if let Ok(rd) = fs::read_dir(p.parent().unwrap_or(Path::new("."))) {
@@ -350,7 +395,12 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
     let mut result = json!({"path": out_path, "files": files.iter().take(2000).collect::<Vec<_>>(), "count": files.len(), "sidecars": written, "bytes": bytes, "notes": plan.notes,
                             "encoder": plan.encoder, "audioEncoder": plan.audio_encoder, "width": plan.width, "height": plan.height, "fps": plan.fps, "duration": plan.duration});
     if let Some(l) = &plan.loudness {
-        let after = if s["exportAudio"].as_bool().unwrap_or(true) { pipeline::measure_file(&files[0]) } else { json!({}) };
+        let measured_from = match package {
+            Some("dcp") => Path::new(&target).with_file_name("audio.wav").to_string_lossy().into_owned(),
+            Some(_) => target.clone(),
+            None => files[0].clone(),
+        };
+        let after = if s["exportAudio"].as_bool().unwrap_or(true) { pipeline::measure_file(&measured_from) } else { json!({}) };
         let mut lo = l.clone();
         lo["output"] = after.clone();
         result["loudness"] = lo;

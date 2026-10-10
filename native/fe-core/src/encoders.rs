@@ -19,6 +19,7 @@ pub const VIDEO: &[(&str, &[&str])] = &[
     ("cineform", &["cfhd"]),
     ("mpeg2", &["mpeg2video", "mpeg2_qsv", "mpeg2_vaapi"]),
     ("mpeg4", &["mpeg4"]),
+    ("dv", &["dvvideo"]),
     ("mjpeg", &["mjpeg"]),
     ("jpeg2000", &["libopenjpeg", "jpeg2000"]),
     ("ffv1", &["ffv1"]),
@@ -93,7 +94,7 @@ fn works(encoder: &str) -> bool {
 fn identity() -> String {
     let path = ffmpeg::ffmpeg();
     match fs::metadata(&path) {
-        Ok(m) => format!("{path}|{}|{:?}", m.len(), m.modified().ok()),
+        Ok(m) => format!("{path}|{}|{:?}|{}", m.len(), m.modified().ok(), VIDEO.len()),
         Err(_) => path,
     }
 }

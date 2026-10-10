@@ -127,11 +127,61 @@ pub fn geometry(info: &Value, s: &Value, interp: &Value) -> Geometry {
 pub const BLURAY_SIZES: &[(u32, u32)] = &[(1920, 1080), (1440, 1080), (1280, 720), (720, 576), (720, 480)];
 pub const BLURAY_RATES: &[f64] = &[23.976, 24.0, 25.0, 29.97, 50.0, 59.94];
 
+pub struct Raster {
+    pub w: u32,
+    pub h: u32,
+    pub fps: f64,
+    pub sar: (u32, u32),
+    pub field: &'static str,
+    pub pad_top: u32,
+}
+
+fn nearest(r: f64, allowed: &[f64]) -> f64 {
+    allowed.iter().cloned().fold(f64::NAN, |best, x| if best.is_nan() || (x - r).abs() < (best - r).abs() { x } else { best })
+}
+
+pub const DCP_RATES: &[f64] = &[24.0, 25.0, 30.0, 48.0, 50.0, 60.0];
+
+pub fn fixed_raster(s: &Value) -> Option<Raster> {
+    let v = &s["video"];
+    let flavor = v["flavor"].as_str().unwrap_or("");
+    let want = v["frameRate"].as_f64().unwrap_or(25.0);
+    let r = |w, h, fps, sar, field, pad_top| Some(Raster { w, h, fps, sar, field, pad_top });
+    match v["codec"].as_str().unwrap_or("") {
+        "imx" => {
+            if flavor.ends_with("525") { r(720, 486, 29.97, (40, 33), "bff", 26) } else { r(720, 576, 25.0, (64, 45), "tff", 32) }
+        }
+        "dvcprohd" => match flavor {
+            "1080i5994" => r(1280, 1080, 29.97, (3, 2), "tff", 0),
+            "720p50" => r(960, 720, 50.0, (4, 3), "progressive", 0),
+            "720p5994" => r(960, 720, 59.94, (4, 3), "progressive", 0),
+            _ => r(1440, 1080, 25.0, (4, 3), "tff", 0),
+        },
+        "dcp_j2k" => {
+            let k = if flavor == "4k" { 2 } else { 1 };
+            let (w, h) = match s["package"]["aspect"].as_str().unwrap_or("flat") { "scope" => (2048, 858), "full" => (2048, 1080), _ => (1998, 1080) };
+            let rates: &[f64] = if s["package"]["standard"] == "interop" { &[24.0, 48.0] } else if k == 2 { &[24.0, 25.0, 30.0] } else { DCP_RATES };
+            r(w * k, h * k, nearest(want, rates), (1, 1), "progressive", 0)
+        }
+        "xdcam" if matches!(formats::package(s["format"].as_str().unwrap_or("")), Some("as10" | "as11op1a")) => {
+            if v["height"].as_f64().unwrap_or(1080.0) < 900.0 {
+                r(1280, 720, nearest(want, &[50.0, 59.94]), (1, 1), "progressive", 0)
+            } else {
+                r(1920, 1080, nearest(want, &[25.0, 29.97]), (1, 1), "tff", 0)
+            }
+        }
+        _ => None,
+    }
+}
+
 fn is_bluray(s: &Value) -> bool {
     formats::get(s["format"].as_str().unwrap_or("")).map(|f| f.get("bluray").is_some()).unwrap_or(false)
 }
 
 pub fn output_size(s: &Value, g: &Geometry) -> (u32, u32) {
+    if let Some(r) = fixed_raster(s) {
+        return (r.w, r.h);
+    }
     let (w, h) = output_size_free(s, g);
     if !is_bluray(s) || BLURAY_SIZES.contains(&(w, h)) {
         return (w, h);
@@ -174,6 +224,9 @@ pub fn out_fps(s: &Value, g: &Geometry, info: &Value) -> f64 {
     } else {
         g.fps
     };
+    if let Some(fr) = fixed_raster(s) {
+        return fr.fps;
+    }
     if !is_bluray(s) {
         return r;
     }
@@ -244,6 +297,7 @@ pub fn pick_pix_fmt(codec: &str, encoder: &str, s: &Value) -> Option<String> {
         "dnxhr" => p(match flavor { "dnxhr_444" => "yuv444p10le", "dnxhr_hqx" | "dnxhd_220x" => "yuv422p10le", _ => "yuv422p" }),
         "cineform" => p(if alpha { "gbrap12le" } else if flavor.starts_with("filmscan") { "gbrp12le" } else { "yuv422p10le" }),
         "xdcam" => p(if flavor == "35" { "yuv420p" } else { "yuv422p" }),
+        "imx" | "dvcprohd" => p("yuv422p"),
         "mpeg2" => p(if v["profile"] == "422" { "yuv422p" } else { "yuv420p" }),
         "qtrle" => p(if alpha { "argb" } else { "rgb24" }),
         "uncompressed" => p(match flavor { "v210" => "yuv422p10le", "rgb24" => "rgb24", "rgba" => "rgba", _ => "uyvy422" }),
@@ -452,6 +506,13 @@ fn video_codec_args(codec: &str, encoder: &str, s: &Value, fps: f64, w: u32, h: 
             let rate = if v["flavor"].as_str() == Some("35") { "35M" } else { "50M" };
             push(&["-b:v", rate, "-minrate", rate, "-maxrate", rate, "-bufsize", "17825792", "-rc_init_occupancy", "17825792", "-g", "12", "-bf", "2", "-intra_vlc", "1", "-non_linear_quant", "1", "-qmin", "1", "-qmax", "12", "-dc", "10", "-lmin", "QP2LAMBDA", "-ps", "1", "-sc_threshold", "1000000000"]);
         }
+        "imx" => {
+            let rate = format!("{}M", v["flavor"].as_str().unwrap_or("50_625").split('_').next().unwrap_or("50"));
+            let top = if v["flavor"].as_str().unwrap_or("").ends_with("525") { "0" } else { "1" };
+            push(&["-g", "1", "-flags", "+ildct+low_delay", "-top", top, "-dc", "10", "-non_linear_quant", "1", "-intra_vlc", "1", "-qmin", "1", "-qmax", "28", "-ps", "1",
+                   "-rc_max_vbv_use", "1", "-rc_min_vbv_use", "1", "-b:v", &rate, "-minrate", &rate, "-maxrate", &rate, "-bufsize", "2000000", "-rc_init_occupancy", "2000000"]);
+        }
+        "dcp_j2k" => push(&["-pix_fmt", "gbrp12be"]),
         "mpeg2" => {
             if rc == "cbr" {
                 push(&["-b:v", &tb, "-minrate", &tb, "-maxrate", &tb, "-bufsize", &tb]);
@@ -734,7 +795,8 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     let src_has_audio = !info["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true) || src.audio_path.is_some() || src.stitch.iter().any(|(_, i)| !i["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true));
     let preview = opt.preview_at.is_some();
     let has_video = !info["video"].is_null() && s["exportVideo"].as_bool().unwrap_or(true) && fmt_video;
-    let has_audio = src_has_audio && s["exportAudio"].as_bool().unwrap_or(true) && fmt_audio && !preview;
+    let silent_tracks = !src_has_audio && fmt.get("package").is_some() && s["audio"]["channels"] == "custom";
+    let has_audio = (src_has_audio || silent_tracks) && s["exportAudio"].as_bool().unwrap_or(true) && fmt_audio && !preview;
     if formats::is_audio_only(fmt_id) && !src_has_audio {
         return Err(format!("{} has no audio for an audio-only format", info["name"].as_str().unwrap_or(&src.path)));
     }
@@ -860,13 +922,21 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
             if anamorphic {
                 chain.push(format!("scale=iw*sar:ih:flags={flags},setsar=1"));
             }
-            if (w, h) != (g.crop_w, g.crop_h) || anamorphic {
+            let raster = fixed_raster(s);
+            let (dw, dh) = match &raster {
+                Some(r) if r.sar != (1, 1) => (even(w as f64 * r.sar.0 as f64 / r.sar.1 as f64), h),
+                _ => (w, h),
+            };
+            if (w, h) != (g.crop_w, g.crop_h) || anamorphic || dw != w {
                 chain.push(match s["scaling"].as_str().unwrap_or("fit") {
-                    "stretch" => format!("scale={w}:{h}:flags={flags}"),
-                    "fill" => format!("scale={w}:{h}:force_original_aspect_ratio=increase:flags={flags},crop={w}:{h}"),
-                    "fitBlack" => format!("scale='min({w},iw)':'min({h},ih)':force_original_aspect_ratio=decrease:flags={flags},pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black"),
-                    _ => format!("scale={w}:{h}:force_original_aspect_ratio=decrease:flags={flags},pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black"),
+                    "stretch" => format!("scale={dw}:{dh}:flags={flags}"),
+                    "fill" => format!("scale={dw}:{dh}:force_original_aspect_ratio=increase:flags={flags},crop={dw}:{dh}"),
+                    "fitBlack" => format!("scale='min({dw},iw)':'min({dh},ih)':force_original_aspect_ratio=decrease:flags={flags},pad={dw}:{dh}:(ow-iw)/2:(oh-ih)/2:black"),
+                    _ => format!("scale={dw}:{dh}:force_original_aspect_ratio=decrease:flags={flags},pad={dw}:{dh}:(ow-iw)/2:(oh-ih)/2:black"),
                 });
+                if dw != w {
+                    chain.push(format!("scale={w}:{h}:flags={flags}"));
+                }
             }
             if !preview && info["kind"] != "image" {
                 if tuner_mode == "drop" {
@@ -884,7 +954,15 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
                     }
                 }
             }
-            if let Some(px) = s["video"]["pixelAspect"].as_str().filter(|x| *x != "source") {
+            if let Some(r) = &raster {
+                chain.push(format!("setsar={}/{}", r.sar.0, r.sar.1));
+                if r.pad_top > 0 {
+                    chain.push(format!("pad={}:{}:0:{}:black", r.w, r.h + r.pad_top, r.pad_top));
+                }
+                if r.field != "progressive" {
+                    chain.push(format!("setfield={}", r.field));
+                }
+            } else if let Some(px) = s["video"]["pixelAspect"].as_str().filter(|x| *x != "source") {
                 chain.push(format!("setsar={}", px.replace(':', "/")));
             }
         }
@@ -1104,6 +1182,10 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
             graph.push(format!("{label}split[g1][g2];[g1]palettegen=stats_mode=diff[gp];[g2][gp]paletteuse=dither={dither}[vout]"));
         } else {
             let mut tail: Vec<String> = Vec::new();
+            if vcodec_id == "dcp_j2k" {
+                let lut = colour::dcp_xyz_lut()?;
+                tail.push(format!("format=gbrpf32le,lut3d=file='{}':interp=tetrahedral,format=gbrp12be,shuffleplanes=2:0:1", colour::esc(&lut)));
+            }
             if let Some(px) = pick_pix_fmt(&vcodec_id, &encoder, s) {
                 tail.push(format!("format={px}"));
             }
@@ -1150,7 +1232,10 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
         let plain = src.stitch.is_empty() && src.audio_path.is_none();
         let routing = s["audio"]["routing"].as_array().cloned().unwrap_or_default();
         if ach == "custom" && !routing.is_empty() {
-            let pool_tracks: Vec<(String, usize)> = if plain {
+            let pool_tracks: Vec<(String, usize)> = if silent_tracks {
+                graph.push(format!("anullsrc=r=48000:cl=stereo,atrim=0:{out_dur:.6}[asil]"));
+                vec![("[asil]".to_string(), 2)]
+            } else if plain {
                 (0..src_audio).map(|i| (format!("[0:a:{i}]"), info["audio"][i]["channels"].as_u64().unwrap_or(2).max(1) as usize)).collect()
             } else {
                 vec![(alabel.clone(), info["audio"][0]["channels"].as_u64().unwrap_or(2).max(1) as usize)]
@@ -1193,6 +1278,12 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
                 tail.extend(chain.iter().filter(|x| !x.starts_with("aformat=")).cloned());
                 graph.push(format!("{}{}[aout{ti}]", outs[ti], tail.join(",")));
                 audio_maps.extend(sv(&["-map", &format!("[aout{ti}]")]));
+            }
+            if vcodec_id == "imx" && routing.len() > 1 {
+                let ins: String = (0..routing.len()).map(|i| format!("[aout{i}]")).collect();
+                let joined = if routing.len() > 4 { "7.1" } else { "4.0" };
+                graph.push(format!("{ins}join=inputs={}:channel_layout={joined}[aoutd]", routing.len()));
+                audio_maps = sv(&["-map", "[aoutd]"]);
             }
         } else if ach == "tracks" && src_audio > 1 && plain {
             for i in 0..src_audio {
@@ -1277,6 +1368,8 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     }
     if fmt_id == "mpeg2_dvd" {
         mux.extend(sv(&["-f", "dvd"]));
+    } else if vcodec_id == "imx" && container == "mxf" {
+        mux.extend(sv(&["-f", "mxf_d10"]));
     } else if !image {
         if let Some(m) = formats::muxer(&container) {
             mux.extend(sv(&["-f", m]));
@@ -1352,7 +1445,15 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     fin.extend(maps_v);
     fin.extend(vargs);
     fin.extend(rate_args);
-    if container == "none" && has_video {
+    if fmt_id == "dcp" {
+        fin.extend(threads);
+        fin.extend(sv(&["-f", "image2", output]));
+        if has_audio {
+            let wav = Path::new(output).with_file_name("audio.wav").to_string_lossy().into_owned();
+            fin.extend(audio_maps);
+            fin.extend(sv(&["-c:a", "pcm_s24le", "-ar", "48000", "-rf64", "auto", "-f", "wav", &wav]));
+        }
+    } else if container == "none" && has_video {
         let raw = match vcodec_id.as_str() { "h264" => "h264", "hevc" => "hevc", "mpeg2" => "mpeg2video", "av1" => "obu", _ => "rawvideo" };
         fin.extend(common);
         fin.extend(sv(&["-f", raw, output]));

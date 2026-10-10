@@ -66,7 +66,7 @@ pub fn default(fmt: &str) -> Res {
         _ => 256,
     };
     let adepth = if ["pcm", "flac", "alac"].contains(&ac_id.as_str()) { 24 } else { 16 };
-    Ok(json!({
+    let mut base = json!({
         "format": fmt, "preset": null, "presetName": "Custom", "comments": "", "outputName": "{source}",
         "exportVideo": !vlist.is_empty(), "exportAudio": !alist.is_empty() && f.get("noAudio").is_none(),
         "video": {"codec": if vc_id.is_empty() { Value::Null } else { json!(vc_id) }, "flavor": default_flavor(&vc_id), "matchSource": true, "width": null, "height": null, "frameRate": null,
@@ -83,8 +83,22 @@ pub fn default(fmt: &str) -> Res {
         "effects": effects_default(),
         "captions": {"mode": "none", "source": "auto", "format": "srt", "language": "eng", "size": 36, "color": "#ffffff", "background": 60, "position": "bottom"},
         "metadata": {"mode": "retain", "template": null, "rules": {"keep": [], "drop": []}, "fields": {}, "xmpSidecar": false},
-        "publish": []
-    }))
+        "publish": [],
+        "package": package_default()
+    });
+    if let Some(n) = f["audioTracks"].as_u64() {
+        let tracks: Vec<Value> = (0..n).map(|i| json!({"layout": "mono", "channels": [if i < 2 { json!({"track": 0, "channel": i}) } else { Value::Null }]})).collect();
+        base["audio"]["routing"] = Value::Array(tracks);
+    }
+    if let Some(d) = f.get("defaults") {
+        base = deep_merge(&base, d);
+    }
+    Ok(base)
+}
+
+pub fn package_default() -> Value {
+    json!({"shim": "", "shimVersion": "1.1", "mainTitle": "", "subTitle": "", "organization": "", "seriesTitle": "", "programmeTitle": "", "episode": "", "audioTrackLayout": 0, "language": "eng",
+           "closedCaptions": false, "clipName": "", "userClipName": "", "title": "", "standard": "smpte", "aspect": "flat", "contentKind": "feature", "issuer": "formencoder", "fields": {}})
 }
 
 fn contains(list: &Value, v: &Value) -> bool {
@@ -172,6 +186,34 @@ pub fn normalize(settings: &Value) -> Res {
         out["publish"] = json!([]);
     }
     out["audio"]["routing"] = normalize_routing(&out["audio"]["routing"]);
+    if let Some(n) = f["audioTracks"].as_u64() {
+        out["audio"]["channels"] = json!("custom");
+        let mut tracks = out["audio"]["routing"].as_array().cloned().unwrap_or_default();
+        tracks.retain(|t| t["layout"] == "mono");
+        tracks.truncate(n as usize);
+        while tracks.len() < n as usize {
+            tracks.push(json!({"layout": "mono", "channels": [Value::Null]}));
+        }
+        out["audio"]["routing"] = Value::Array(tracks);
+    }
+    if f["package"] == "dcp" {
+        out["audio"]["channels"] = json!("custom");
+        if out["audio"]["routing"].as_array().map(|a| a.len() != 1 || a[0]["layout"] != "5.1").unwrap_or(true) {
+            out["audio"]["routing"] = normalize_routing(&f["defaults"]["audio"]["routing"]);
+        }
+    }
+    if f.get("package").is_some() {
+        out["audio"]["sampleRate"] = json!(48000);
+    }
+    let pk = deep_merge(&package_default(), &out["package"]);
+    out["package"] = pk;
+    if let Some(r) = crate::pipeline::fixed_raster(&out) {
+        out["video"]["matchSource"] = json!(false);
+        out["video"]["width"] = json!(r.w);
+        out["video"]["height"] = json!(r.h);
+        out["video"]["frameRate"] = json!(r.fps);
+        out["video"]["fieldOrder"] = json!(r.field);
+    }
     Ok(out)
 }
 
@@ -299,6 +341,9 @@ pub fn output_name(s: &Value, source: &str, info: &Value, index: usize, stem_ove
     let mut name = file_safe(&name);
     if name.is_empty() {
         name = stem;
+    }
+    if let Some(folder) = formats::get(s["format"].as_str().unwrap_or("")).ok().and_then(|f| f["folder"].as_str()) {
+        return format!("{name}_{folder}");
     }
     let ext = extension(s);
     if formats::is_image(s["format"].as_str().unwrap_or("")) && s["video"]["sequence"].as_bool().unwrap_or(false) {

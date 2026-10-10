@@ -133,6 +133,11 @@ export function fieldControl(f: FieldSpec, onChange: (key: string, value: unknow
   row.dataset.field = f.key;
   q(row, '.fe-field-label').textContent = f.label;
   const ctl = q(row, '.fe-field-ctl');
+  if (f.type === 'note') {
+    row.classList.add('fe-field-note');
+    ctl.textContent = String(f.value ?? '');
+    return { row, set: () => undefined, setDisabled: () => undefined };
+  }
   if (f.type === 'bool') {
     const c = el<HTMLInputElement>('<input type="checkbox" class="fx-check">');
     c.addEventListener('change', () => onChange(f.key, c.checked));

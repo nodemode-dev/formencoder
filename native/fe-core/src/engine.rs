@@ -399,6 +399,9 @@ impl Engine {
         if let Some(p) = output["path"].as_str().filter(|p| !p.is_empty()) {
             let mut pb = PathBuf::from(p);
             let want = settings::extension(s);
+            if formats::get(s["format"].as_str().unwrap_or("")).map(|f| f.get("folder").is_some()).unwrap_or(false) {
+                return pb.to_string_lossy().into_owned();
+            }
             if formats::is_image(s["format"].as_str().unwrap_or("")) && s["video"]["sequence"].as_bool().unwrap_or(false) && !p.contains("%0") {
                 let stem = pb.file_stem().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default();
                 return pb.with_file_name(format!("{stem}_%06d.{want}")).to_string_lossy().into_owned();
