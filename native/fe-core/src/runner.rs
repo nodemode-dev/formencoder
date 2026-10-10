@@ -289,17 +289,35 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         return Err("stopped".into());
     }
     let opt = BuildOptions { preview_at: None, preview_width: None, still_duration: ctx.prefs["stillDuration"].as_f64().unwrap_or(5.0), threads: ctx.prefs["threads"].as_i64().unwrap_or(0), measured: &measured };
-    let plan = pipeline::build(&src, &s, &out_path, &work, &opt)?;
+    let mut plan = pipeline::build(&src, &s, &out_path, &work, &opt)?;
     ctx.push(json!({"status": "encoding", "path": out_path, "encoder": plan.encoder, "audioEncoder": plan.audio_encoder, "command": plan.command_line(), "notes": plan.notes,
                     "duration": plan.duration, "frames": plan.frames, "width": plan.width, "height": plan.height, "fps": plan.fps, "summary": settings::summary(&s, &src.info)}));
-    let total = plan.passes.len().max(1);
-    for (i, command) in plan.passes.iter().enumerate() {
-        let label = if total > 1 { format!("pass {} of {total}", i + 1) } else { "encoding".to_string() };
-        run_pass(ctx, command, &plan, base + (1.0 - base) * i as f64 / total as f64, (1.0 - base) / total as f64, &label)?;
-        if ctx.stopped() {
-            return Err("stopped".into());
+    let part_path = if out_path.contains("%0") {
+        None
+    } else {
+        let p = Path::new(&out_path);
+        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let ext = p.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+        Some(p.with_file_name(format!(".{name}.fe-part{ext}")).to_string_lossy().into_owned())
+    };
+    if let Some(part) = &part_path {
+        for pass in plan.passes.iter_mut() {
+            for a in pass.iter_mut() {
+                if *a == out_path {
+                    *a = part.clone();
+                }
+            }
         }
     }
+    let encoded = encode_passes(ctx, &plan, base);
+    if let Some(part) = &part_path {
+        if encoded.is_ok() && Path::new(part).is_file() {
+            fs::rename(part, &out_path).map_err(|e| format!("cannot move the finished file into place at {out_path}: {e}"))?;
+        } else {
+            let _ = fs::remove_file(part);
+        }
+    }
+    encoded?;
     let mut files: Vec<String> = Vec::new();
     if out_path.contains("%0") {
         let p = Path::new(&out_path);
@@ -351,6 +369,18 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
     }
     let _ = fs::remove_dir_all(&work);
     Ok(result)
+}
+
+fn encode_passes(ctx: &Ctx, plan: &Plan, base: f64) -> Res<()> {
+    let total = plan.passes.len().max(1);
+    for (i, command) in plan.passes.iter().enumerate() {
+        let label = if total > 1 { format!("pass {} of {total}", i + 1) } else { "encoding".to_string() };
+        run_pass(ctx, command, plan, base + (1.0 - base) * i as f64 / total as f64, (1.0 - base) / total as f64, &label)?;
+        if ctx.stopped() {
+            return Err("stopped".into());
+        }
+    }
+    Ok(())
 }
 
 fn run_pass(ctx: &Ctx, command: &[String], plan: &Plan, base: f64, span: f64, label: &str) -> Res<()> {
