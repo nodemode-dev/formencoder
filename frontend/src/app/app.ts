@@ -74,6 +74,7 @@ class App {
         Help: () => [
           { label: 'formencoder on GitHub', run: () => window.open('https://github.com/nodemode-ai/formencoder', '_blank') },
           { label: 'Report an Issue', run: () => window.open('https://github.com/nodemode-ai/formencoder/issues', '_blank') },
+          { label: 'Download formencoder’s FFmpeg (LGPL)', run: () => void ctx.client.call('ffmpeg.fetch').catch((e: Error) => toast(e.message, 'error')) },
           '-',
           { label: 'About formencoder', run: () => void this.about() },
         ],
@@ -198,6 +199,7 @@ class App {
     ctx.client.events.on('activity', (ev) => {
       if (String(ev.source) !== 'ui') setText(q(this.status, '.fx-st-act'), `${String(ev.source).replace(/^mcp:/, '')} · ${ev.command}`);
     });
+    ctx.client.events.on('ffmpegFetch', (ev) => setText(q(this.status, '.fe-st-ffmpeg'), `${String(ev.message)} ${Math.round(Number(ev.progress) * 100)}%`));
     ctx.store.events.on('run', (st) => {
       const f = st.ffmpeg ?? {};
       setText(q(this.status, '.fe-st-ffmpeg'), f.found === false ? 'FFmpeg not found: set it in Preferences > Media and Hardware' : f.version ? `FFmpeg ${f.version}${f.licence ? ` (${f.licence})` : ''}${st.hardware?.length ? ` · ${st.hardware.length} hardware encoder${st.hardware.length === 1 ? '' : 's'}` : ''}` : '');

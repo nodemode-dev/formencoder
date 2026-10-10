@@ -114,6 +114,28 @@ async def family_add(p: dict, source: str) -> Any:
     return await execute("family.queue", {"spec": spec, **{k: p[k] for k in _QUEUE_KEYS if k in p}}, source)
 
 
+async def fetch_ffmpeg() -> dict:
+    from .. import ffmpeg_fetch
+
+    def report(p: float, message: str) -> None:
+        host.bus.publish({"type": "ffmpegFetch", "progress": round(p, 3), "message": message})
+
+    out = await _bridge(ffmpeg_fetch.fetch, report)
+    current = await execute("prefs.get", {}, "engine")
+    await execute("prefs.set", {"values": {"ffmpegDir": (current.get("prefs") or {}).get("ffmpegDir") or ""}}, "engine")
+    host.bus.publish({"type": "toast", "text": f"FFmpeg installed in {out['folder']}", "kind": "ok"})
+    return out
+
+
+def ffmpeg_missing() -> bool:
+    try:
+        from .. import native
+
+        return not json.loads(native.module().ffmpeg_info()).get("version", {}).get("found", False)
+    except BaseException:
+        return False
+
+
 async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
     p = params if isinstance(params, dict) else {}
     try:
@@ -169,6 +191,8 @@ async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
                 files = [files]
             sent = await _bridge(family.send, str(p.get("app") or ""), files, p.get("project"))
             return {"sent": sent}
+        if method == "ffmpeg.fetch":
+            return await fetch_ffmpeg()
         if method == "publish.destinations":
             from . import publish
 

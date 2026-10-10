@@ -21,6 +21,7 @@ export interface ClientEvents {
   finished: ServerEvent;
   queue: ServerEvent;
   notify: ServerEvent;
+  ffmpegFetch: ServerEvent;
 }
 
 interface Pending {
@@ -128,5 +129,5 @@ export class Client {
 }
 
 const KNOWN: Record<string, true> = {
-  changed: true, toast: true, activity: true, consent: true, uiAction: true, progress: true, finished: true, queue: true, notify: true,
+  changed: true, toast: true, activity: true, consent: true, uiAction: true, progress: true, finished: true, queue: true, notify: true, ffmpegFetch: true,
 };

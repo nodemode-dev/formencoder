@@ -9,7 +9,7 @@ from ..engine import rpc
 from ..engine.host import host
 
 router = APIRouter(tags=["live"])
-_SLOW = {"frame.png", "engine.info", "encode.wait", "family.discover", "family.sources", "family.add", "family.addLink", "family.send"}
+_SLOW = {"frame.png", "engine.info", "encode.wait", "family.discover", "family.sources", "family.add", "family.addLink", "family.send", "ffmpeg.fetch"}
 
 
 @router.websocket("/api/live")

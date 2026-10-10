@@ -37,7 +37,13 @@ async def lifespan(app: FastAPI):
             discovery.publish(f"http://127.0.0.1:{config.PORT}", __version__)
         except OSError:
             pass
+    fetching = None
+    if host.available and os.environ.get("FORMENCODER_FFMPEG_AUTO", "1") != "0" and await loop.run_in_executor(None, engine_rpc.ffmpeg_missing):
+        fetching = asyncio.create_task(engine_rpc.fetch_ffmpeg())
+        fetching.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
     yield
+    if fetching and not fetching.done():
+        fetching.cancel()
     host.stop()
     discovery.withdraw()
 
