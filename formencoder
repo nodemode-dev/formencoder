@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -e
+cd "$(dirname "$0")"
+usage() {
+  printf 'formencoder %s · the media encoder of the form family\n' "$(sed -n "s/^export const VERSION = '\(.*\)';$/\1/p" frontend/src/version.ts 2>/dev/null)"
+  cat << 'EOF'
+
+usage: ./formencoder [command] [options]
+
+  (none) | boot         boot the engine (8270) and the interface (5270) together
+  install [--dev]       install the engine service, build the encoding engine and install the interface
+  install-native [--dev]          rebuild the encoding engine (native/fe-core) into the engine's venv
+  install-desktop       install PyInstaller and check the Rust and Tauri toolchain
+  backend               boot the engine only
+  frontend              boot the interface only
+  build                 production build of the interface into frontend/dist
+  serve                 serve the built interface from the engine on 127.0.0.1:8270
+  freeze                freeze the engine service and the encoding engine into the Tauri sidecar binary
+  desktop dev|build     run or bundle the desktop app
+  doctor                check the toolchain, FFmpeg, installs and ports
+
+  encode FILE... [--preset ID] [--folder DIR]   queue files, encode them, wait and print the results
+  queue                 the queue with every output's status
+  exec ID [JSON]        run one formencoder command in the running app (prints the JSON result)
+  batch JSON|FILE       run several commands as one undo step
+  commands [FILTER]     list the commands (id, label, params)
+  describe ID           one command with its JSON Schema
+  presets [QUERY]       search the presets
+  probe FILE            media information of a file
+  frame OUT.png [--output ID|#n] [--path FILE --preset ID] [--time S] [--count N]  save a preview frame or contact sheet
+  wait                  wait until the queue is idle
+
+  mcp                   formencoder over MCP's stdio transport (starts the engine when needed)
+  agents install|sync|status  set Claude Code, Codex and Cursor up (install), refresh the skill references (sync)
+  clean [--all]         remove build output (--all also venv and node_modules)
+  help                  this text
+EOF
+}
+cmd="${1:-boot}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+  boot|dev) exec setup/boot_all "$@" ;;
+  install) exec setup/install_all "$@" ;;
+  install-native) exec setup/build_native "$@" ;;
+  install-desktop) exec setup/install_desktop "$@" ;;
+  backend) exec setup/boot_backend "$@" ;;
+  frontend) exec setup/boot_frontend "$@" ;;
+  build) exec setup/build_frontend "$@" ;;
+  serve) exec setup/serve "$@" ;;
+  freeze) exec setup/freeze_backend "$@" ;;
+  desktop)
+    sub="${1:-dev}"
+    [ $# -gt 0 ] && shift
+    case "$sub" in
+      dev) exec setup/desktop_dev "$@" ;;
+      build) exec setup/desktop_build "$@" ;;
+      *) usage; exit 2 ;;
+    esac ;;
+  doctor) exec setup/doctor "$@" ;;
+  encode|queue|exec|batch|commands|describe|presets|probe|frame|wait)
+    py=python3
+    [ -x backend/venv/bin/python ] && py=backend/venv/bin/python
+    exec "$py" setup/fe.py "$cmd" "$@" ;;
+  mcp)
+    py=python3
+    [ -x backend/venv/bin/python ] && py=backend/venv/bin/python
+    exec "$py" setup/mcp_stdio.py "$@" ;;
+  agents)
+    py=python3
+    [ -x backend/venv/bin/python ] && py=backend/venv/bin/python
+    exec "$py" setup/agents.py "$@" ;;
+  clean) exec setup/clean "$@" ;;
+  help|-h|--help) usage ;;
+  *) printf '[formencoder] unknown command: %s\n\n' "$cmd"; usage; exit 2 ;;
+esac

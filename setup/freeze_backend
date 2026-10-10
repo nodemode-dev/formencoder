@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/lib.sh"
+fe_venv
+python -c "import PyInstaller" 2>/dev/null || fe_die "PyInstaller missing, run ./formencoder install-desktop"
+python -c "import fe_core" 2>/dev/null || fe_die "the encoding engine is not built, run ./formencoder install-native"
+triple="$(fe_target_triple)" || fe_die "rustc not found; install Rust or set FORMENCODER_TARGET"
+[ -f "$FORMENCODER_ROOT/frontend/dist/index.html" ] || "$FORMENCODER_ROOT/setup/build_frontend"
+cd "$FORMENCODER_ROOT/backend"
+sep=":"
+[ "$(fe_os)" = windows ] && sep=";"
+ext="$(fe_exe)"
+rm -rf build/pyinstaller dist-engine
+pyinstaller --noconfirm --clean --onefile --name formencoder-engine \
+  --distpath dist-engine --workpath build/pyinstaller --specpath build/pyinstaller \
+  --add-data "$FORMENCODER_ROOT/frontend/dist${sep}frontend_dist" \
+  --add-data "$FORMENCODER_ROOT/backend/app/agent/templates${sep}agent_templates" \
+  --add-data "$FORMENCODER_ROOT/.claude/skills${sep}skills" \
+  --add-data "$FORMENCODER_ROOT/backend/app/resources${sep}resources" \
+  --add-data "$FORMENCODER_ROOT/src-tauri/binaries/ffmpeg-licence.json${sep}." \
+  --collect-all fe_core --collect-submodules app --collect-submodules uvicorn \
+  "$FORMENCODER_ROOT/backend/formencoder_engine.py"
+mkdir -p "$FORMENCODER_ROOT/src-tauri/binaries"
+out="$FORMENCODER_ROOT/src-tauri/binaries/formencoder-engine-${triple}${ext}"
+rm -f "$out"
+cp "dist-engine/formencoder-engine${ext}" "$out"
+chmod +x "$out"
+"$out" --selfcheck
+fe_say "sidecar ready: $out"

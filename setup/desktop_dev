@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/lib.sh"
+triple="$(fe_target_triple)" || fe_die "rustc not found; run ./formencoder install-desktop"
+[ -x "$FORMENCODER_ROOT/src-tauri/binaries/formencoder-engine-${triple}$(fe_exe)" ] || "$FORMENCODER_ROOT/setup/freeze_backend"
+cd "$FORMENCODER_ROOT"
+exec frontend/node_modules/.bin/tauri dev "$@"

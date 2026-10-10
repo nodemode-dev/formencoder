@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/lib.sh"
+fe_say "installing the engine service"
+( cd "$FORMENCODER_ROOT/backend" && ./oc_install )
+fe_say "building the encoding engine (the first build takes a few minutes)"
+"$FORMENCODER_ROOT/setup/build_native" "$@" || fe_die "the encoding engine did not build; run ./formencoder doctor"
+fe_say "installing the interface"
+( cd "$FORMENCODER_ROOT/frontend" && ./oc_install )
+[ -f "$FORMENCODER_ROOT/backend/.env" ] || cp "$FORMENCODER_ROOT/backend/.env.example" "$FORMENCODER_ROOT/backend/.env"
+fe_say "done. Boot with ./formencoder"

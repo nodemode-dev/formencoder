@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/lib.sh"
+fe_venv
+cd "$FORMENCODER_ROOT/backend"
+if [ "$(fe_os)" = macos ]; then pip install -r requirements_desktop_macos.txt; else pip install -r requirements_desktop.txt; fi
+if ! command -v cargo >/dev/null 2>&1; then
+  fe_say "Rust is not installed. Install it from https://rustup.rs then rerun ./formencoder install-desktop"
+  exit 1
+fi
+if [ "$(fe_os)" = linux ] && ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
+  fe_say "Tauri needs system libraries. On Debian or Ubuntu run:"
+  fe_say "sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf"
+  exit 1
+fi
+[ -x "$FORMENCODER_ROOT/frontend/node_modules/.bin/tauri" ] || ( cd "$FORMENCODER_ROOT/frontend" && npm install )
+fe_say "desktop toolchain ready: rustc $(rustc --version | awk '{print $2}')"

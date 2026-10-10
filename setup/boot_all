@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/lib.sh"
+cd "$FORMENCODER_ROOT"
+pids=()
+( cd backend && ./boot_backend ) &
+pids+=($!)
+( cd frontend && ./boot_frontend ) &
+pids+=($!)
+trap 'kill "${pids[@]}" 2>/dev/null' EXIT INT TERM
+fe_say "interface http://localhost:5270 · engine http://127.0.0.1:${FORMENCODER_PORT:-8270}"
+wait

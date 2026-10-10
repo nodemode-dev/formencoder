@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+source "$(dirname "$0")/lib.sh"
+[ -f "$FORMENCODER_ROOT/frontend/dist/index.html" ] || "$FORMENCODER_ROOT/setup/build_frontend"
+fe_venv
+cd "$FORMENCODER_ROOT/backend"
+export FORMENCODER_DIST="$FORMENCODER_ROOT/frontend/dist"
+fe_say "serving http://127.0.0.1:${FORMENCODER_PORT:-8270}"
+exec uvicorn app.main:app --host "${FORMENCODER_HOST:-127.0.0.1}" --port "${FORMENCODER_PORT:-8270}"
