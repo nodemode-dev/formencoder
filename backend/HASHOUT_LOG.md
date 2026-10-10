@@ -33,6 +33,16 @@ A FastAPI process around the Rust engine (`fe_core`, built from `native/fe-core`
 - formcut: `project.export` (exact, high quality), poll `job.status`, `job.result`, download the file when it is not on this disk. formvfx: Dynamic Link frames from `/api/link/frame.png` at the comp's rate plus `/api/link/audio`, written as a PNG sequence and a WAV that the engine reads as one source. formwav: the session document posted to `/api/render?format=wav&what=mix`. formvis: the library image.
 - Sending back: formcut `media.import`, formvfx `file.import`.
 
+## formcut exports arriving on their own (`engine/links.py`, `routers/hooks.py`)
+
+- `family.linkFormcut` registers formencoder's receiver (`/api/family/hooks/formcut`) as a webhook in the running formcut with `sendFile: true` and keeps formcut's secret, the preset, folder and start choice in `family_links.json` (mode 600). formcut then posts every finished export, multipart: the JSON as `payload` and the video as `file`.
+- The receiver is loopback-only like every route, but it is the one POST that does not need `x-formencoder-local`, because formcut does not send it; instead it needs formcut's signature (`sha256=` HMAC of timestamp, a full stop and the payload under the link's secret, within five minutes), and the file's SHA-256 must match what formcut signed. The file lands in `imports/formcut` and is queued with `queue.addSource` as source `formcut`.
+- `family.unlinkFormcut` deletes the webhook in formcut when formcut is running and forgets the link either way.
+
+## Headless family engines (`engine/family.py`)
+
+When an app is not running, `_need` starts its engine on its own: `{APP}_ENGINE` if set, otherwise `{app}-engine` on the PATH or in the usual install folders (the Tauri sidecar each family app ships), with `{APP}_PORT=0` so it binds a free port and publishes its `engine.json`, which `locate` already reads. formencoder waits up to 90 s for it to answer, logs it to `logs/{app}-engine.log`, and stops what it started when it shuts down. `FORMENCODER_FAMILY_HEADLESS=0` turns this off; `family.discover` reports `canStart`.
+
 ## Publish (`engine/publish.py`)
 
 Folder, FTP (with TLS and retries), S3-compatible storage signed with SigV4 (no SDK), webhook (JSON, HMAC-SHA256 signature), and a family app. `deleteLocal` removes the local files only when every destination succeeded. XMP and loudness reports are written by the Rust engine, not here.

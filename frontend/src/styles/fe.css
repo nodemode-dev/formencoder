@@ -177,6 +177,10 @@
 .fe-f-kind { min-width: 0; overflow: hidden; color: var(--text-muted); font-size: var(--fs-11); text-overflow: ellipsis; white-space: nowrap; }
 .fe-f-open { height: 24px; font-size: var(--fs-11); }
 .fe-f-gives { color: var(--text-secondary); font-size: var(--fs-11); line-height: 1.4; }
+.fe-f-link { display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.fe-f-link[hidden] { display: none; }
+.fe-f-linktext { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fe-f-linkbtn { min-width: 130px; }
 .fe-f-sources { display: flex; flex-direction: column; border-top: 1px solid var(--line-0); }
 .fe-f-sources[hidden] { display: none; }
 .fe-f-sources:empty::after { content: 'No sources found in this app.'; padding: 6px 0; color: var(--text-muted); font-size: var(--fs-11); }

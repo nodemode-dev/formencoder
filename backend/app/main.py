@@ -12,9 +12,9 @@ from .core import config, discovery
 from .core.security import LocalOnly
 from .engine import rpc as engine_rpc
 from .engine.host import host
-from .routers import agents, files, live, mcp, rpc, system, terminal
+from .routers import agents, files, hooks, live, mcp, rpc, system, terminal
 
-ROUTERS = (system.router, rpc.router, live.router, files.router, terminal.router, mcp.router, agents.router)
+ROUTERS = (system.router, rpc.router, live.router, files.router, terminal.router, mcp.router, agents.router, hooks.router)
 
 
 @asynccontextmanager
@@ -52,6 +52,9 @@ async def lifespan(app: FastAPI):
     if fetching and not fetching.done():
         fetching.cancel()
     host.stop()
+    from .engine import family as family_engines
+
+    family_engines.stop_started()
     discovery.withdraw()
 
 

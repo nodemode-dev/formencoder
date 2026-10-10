@@ -225,6 +225,18 @@ async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
             return await fetch_openh264()
         if method == "model.fetch":
             return await fetch_model(str(p.get("model") or "base"))
+        if method == "family.linkFormcut":
+            from . import links
+
+            return await _bridge(links.link_formcut, p.get("preset"), p.get("folder"), bool(p.get("start", True)))
+        if method == "family.unlinkFormcut":
+            from . import links
+
+            return await _bridge(links.unlink_formcut)
+        if method == "family.links":
+            from . import links
+
+            return links.status()
         if method == "publish.destinations":
             from . import publish
 

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -50,6 +53,13 @@ def _post(url: str, header: str, body: Any, timeout: float = 60.0, raw: bool = F
     return out if raw else json.loads(out.decode() or "null")
 
 
+def _delete(url: str, header: str, timeout: float = 30.0) -> Any:
+    req = urllib.request.Request(url, method="DELETE", headers={header: "1", "x-formcut-source": "formencoder"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        out = r.read()
+    return json.loads(out.decode() or "null")
+
+
 def _health(url: str, header: str) -> dict | None:
     try:
         body = _get(f"{url}/api/health", header, 1.0)
@@ -77,11 +87,66 @@ def locate(app: str) -> dict:
         health = _health(url, spec["header"])
         if health:
             return {"app": app, "running": True, "url": url, "found": how, "version": health.get("version"), "label": spec["label"], "kind": spec["kind"], "alt": spec["alt"], "gives": spec["gives"]}
-    return {"app": app, "running": False, "url": None, "label": spec["label"], "kind": spec["kind"], "alt": spec["alt"], "gives": spec["gives"]}
+    return {"app": app, "running": False, "url": None, "label": spec["label"], "kind": spec["kind"], "alt": spec["alt"], "gives": spec["gives"], "canStart": engine_command(app) is not None}
 
 
 def discover() -> list[dict]:
     return [locate(a) for a in APPS]
+
+
+_started: dict[str, subprocess.Popen] = {}
+
+
+def engine_command(app: str) -> list[str] | None:
+    env = os.environ.get(f"{app.upper()}_ENGINE", "").strip()
+    if env:
+        return shlex.split(env, posix=os.name != "nt")
+    exe = f"{app}-engine" + (".exe" if os.name == "nt" else "")
+    found = shutil.which(exe)
+    if found:
+        return [found]
+    places: list[Path] = []
+    if sys.platform == "darwin":
+        places += [Path("/Applications") / f"{app}.app" / "Contents" / "MacOS" / exe, Path.home() / "Applications" / f"{app}.app" / "Contents" / "MacOS" / exe]
+    elif os.name == "nt":
+        for base in (os.environ.get("LOCALAPPDATA"), os.environ.get("ProgramFiles")):
+            if base:
+                places += [Path(base) / app / exe, Path(base) / "Programs" / app / exe]
+    else:
+        places += [Path("/usr/bin") / exe, Path("/usr/lib") / app / exe, Path("/opt") / app / exe]
+    for p in places:
+        if p.is_file():
+            return [str(p)]
+    return None
+
+
+def start_headless(app: str, wait: float = 90.0) -> dict:
+    cmd = engine_command(app)
+    if not cmd:
+        raise ValueError(f"{app} is not running and its engine was not found (looked for {app}-engine on the PATH and in the usual install folders; {app.upper()}_ENGINE names it)")
+    log = config.sub("logs") / f"{app}-engine.log"
+    env = {**os.environ, f"{app.upper()}_PORT": "0"}
+    flags = 0x08000000 if os.name == "nt" else 0
+    with open(log, "ab") as out:
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT, env=env, creationflags=flags, start_new_session=os.name != "nt")
+    _started[app] = proc
+    end = time.monotonic() + wait
+    while time.monotonic() < end:
+        where = locate(app)
+        if where["running"]:
+            where["started"] = True
+            return where
+        if proc.poll() is not None:
+            raise ValueError(f"{app}'s engine exited ({proc.returncode}); see {log}")
+        time.sleep(0.5)
+    raise ValueError(f"{app}'s engine did not answer within {int(wait)} s; see {log}")
+
+
+def stop_started() -> None:
+    for proc in _started.values():
+        if proc.poll() is None:
+            proc.terminate()
+    _started.clear()
 
 
 def _need(app: str) -> dict:
@@ -89,7 +154,9 @@ def _need(app: str) -> dict:
         raise ValueError(f"no family app {app!r}: {', '.join(APPS)}")
     where = locate(app)
     if not where["running"]:
-        raise ValueError(f"{app} is not running on this computer (looked at its engine record and port {APPS[app]['port']}); open {app} and retry")
+        if os.environ.get("FORMENCODER_FAMILY_HEADLESS", "1") != "0" and engine_command(app):
+            return start_headless(app)
+        raise ValueError(f"{app} is not running on this computer (looked at its engine record and port {APPS[app]['port']}) and its engine was not found to start it; open {app} and retry")
     return where
 
 
@@ -190,7 +257,7 @@ def materialize(spec: dict, report: Callable[[float, str], None], cancelled: Cal
         return {"pattern": str(folder / "frame_%06d.png"), "frameRate": fps, "count": frames, "audio": audio_path, "folder": str(folder)}
     if app == "formcut":
         job = _cut_rpc(url, "project.export", {"id": spec["id"], "format": "mp4", "quality": "high", "exact": True})
-        job_id = job.get("id") if isinstance(job, dict) else job
+        job_id = (job.get("job_id") or job.get("id")) if isinstance(job, dict) else job
         while True:
             if cancelled():
                 _cut_rpc(url, "job.cancel", {"id": job_id})

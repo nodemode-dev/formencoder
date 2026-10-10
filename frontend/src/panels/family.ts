@@ -17,6 +17,15 @@ interface App {
   alt: string;
   gives: string;
   version?: string;
+  canStart?: boolean;
+}
+
+interface LinkState {
+  linked: boolean;
+  receiver: string;
+  preset?: string;
+  received?: number;
+  last?: { at: number; file: string; project?: string } | null;
 }
 
 interface Source {
@@ -41,6 +50,7 @@ export class FamilyPanel implements Panel {
   private sources = new Map<string, Source[]>();
   private open = new Set<string>();
   private busy = false;
+  private link: LinkState = { linked: false, receiver: '' };
 
   constructor(private readonly ctx: Ctx) {
     this.el = el(`<div class="fe-family">
@@ -75,6 +85,7 @@ export class FamilyPanel implements Panel {
     const done = pendingClass(q(this.el, '.fe-pending'));
     try {
       this.apps = await this.ctx.client.call<App[]>('family.discover');
+      this.link = (await this.ctx.client.call<{ formcut: LinkState }>('family.links').catch(() => null))?.formcut ?? this.link;
       for (const a of this.apps) if (a.running && this.open.has(a.app)) await this.loadSources(a.app);
       this.render();
     } catch (e) {
@@ -102,8 +113,19 @@ export class FamilyPanel implements Panel {
         const n = el(`<div class="fe-f-app">
           <div class="fe-f-head"><span class="fe-dot"></span><span class="fe-f-name"></span><span class="fe-f-kind"></span><span class="fx-flex"></span><button class="cv-btn fe-f-open" type="button"></button></div>
           <div class="fe-f-gives"></div>
+          <div class="fe-f-link" hidden><span class="fx-note fe-f-linktext"></span><span class="fx-flex"></span><button class="cv-btn fe-f-linkbtn" type="button"></button></div>
           <div class="fe-f-sources"></div>
         </div>`);
+        q(n, '.fe-f-linkbtn').addEventListener('click', (e) => {
+          if (this.link.linked) {
+            void this.setLink(null);
+            return;
+          }
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          void presetEntries(this.ctx, DEFAULT_PRESET.formcut, (p) => void this.setLink(p)).then((entries) =>
+            contextMenu(rect.left, rect.bottom + 2, [{ label: 'Encode with Match Source - High bitrate', run: () => void this.setLink(DEFAULT_PRESET.formcut) }, '-', ...entries]),
+          );
+        });
         q(n, '.fe-f-open').addEventListener('click', async () => {
           const app = n.dataset.key as string;
           if (this.open.has(app)) this.open.delete(app);
@@ -120,11 +142,19 @@ export class FamilyPanel implements Panel {
         setText(q(n, '.fe-f-name'), a.label);
         setText(q(n, '.fe-f-kind'), `${a.kind} · like ${a.alt}`);
         setTitle(q(n, '.fe-f-head'), a.running ? `${a.url} · ${a.version ?? ''}` : `${a.label} is not running on this computer`);
-        setText(q(n, '.fe-f-gives'), a.running ? a.gives : `Not running. Open ${a.label} and refresh.`);
-        const open = this.open.has(a.app) && a.running;
+        setText(q(n, '.fe-f-gives'), a.running ? a.gives : a.canStart ? `Not running. Its engine starts on its own when you open its sources or queue from it.` : `Not running. Open ${a.label} and refresh.`);
+        const linkRow = q(n, '.fe-f-link');
+        setHidden(linkRow, a.app !== 'formcut');
+        if (a.app === 'formcut') {
+          const l = this.link;
+          setText(q(linkRow, '.fe-f-linktext'), l.linked ? `Every formcut export comes here and encodes with ${l.preset || 'the default preset'} (${l.received ?? 0} so far)` : 'Send formcut exports here as they finish');
+          setText(q(linkRow, '.fe-f-linkbtn'), l.linked ? 'Stop Receiving' : 'Receive Exports');
+          q<HTMLButtonElement>(linkRow, '.fe-f-linkbtn').disabled = !l.linked && !a.running;
+        }
+        const open = this.open.has(a.app) && (a.running || !!a.canStart);
         const btn = q<HTMLButtonElement>(n, '.fe-f-open');
         setText(btn, open ? 'Hide' : 'Sources');
-        btn.disabled = !a.running;
+        btn.disabled = !a.running && !a.canStart;
         const box = q(n, '.fe-f-sources');
         setHidden(box, !open);
         if (!open) return;
@@ -149,6 +179,17 @@ export class FamilyPanel implements Panel {
         });
       },
     });
+  }
+
+  private async setLink(preset: string | null): Promise<void> {
+    try {
+      const r = preset === null ? await this.ctx.client.call<{ formcut: LinkState }>('family.unlinkFormcut') : await this.ctx.client.call<{ formcut: LinkState }>('family.linkFormcut', { preset, start: true });
+      this.link = r.formcut;
+      toast(this.link.linked ? 'formcut exports now come to formencoder' : 'formcut exports no longer come here', 'ok');
+    } catch (e) {
+      toast(String((e as Error).message), 'error');
+    }
+    this.render();
   }
 
   private async queue(app: string, id: string, preset?: string): Promise<void> {

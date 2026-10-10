@@ -4,6 +4,7 @@ from urllib.parse import urlsplit
 from starlette.responses import PlainTextResponse
 
 LOCAL_HEADER = "x-formencoder-local"
+SIGNED_PREFIX = "/api/family/hooks/"
 
 
 def loopback(value: str) -> bool:
@@ -44,6 +45,7 @@ class LocalOnly:
             and scope["type"] == "http"
             and scope.get("method") in ("POST", "PUT", "PATCH", "DELETE")
             and path.startswith("/api/")
+            and not path.startswith(SIGNED_PREFIX)
         ):
             allowed = headers.get(LOCAL_HEADER) == "1"
         if not allowed:
