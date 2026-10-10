@@ -311,6 +311,14 @@ fn set_settings(e: &mut Engine, p: &Value) -> Res {
     Ok(json!({"outputs": done}))
 }
 
+fn get_settings(e: &mut Engine, p: &Value) -> Res {
+    let (i, j) = e.output_ref(&p["output"])?;
+    let it = e.items()[i].clone();
+    let o = &it["outputs"][j];
+    let s0 = settings::normalize(&o["settings"])?;
+    Ok(json!({"output": o["id"], "item": it["id"], "source": it["path"], "path": e.output_path(&it, o), "kind": o["kind"], "settings": s0, "summary": settings::summary(&s0, &it["info"]), "sourceInfo": ffmpeg::light(&it["info"])}))
+}
+
 fn set_output(e: &mut Engine, p: &Value) -> Res {
     let pairs = e.refs(&p["refs"])?;
     if s(p, "path").is_some() && pairs.len() > 1 {
@@ -1156,6 +1164,7 @@ pub fn all() -> &'static Vec<Cmd> {
             c("queue.setFormat", "Set Format", "Queue", p!("refs" => refs_s(), "format" => format_s()), &["refs", "format"], true, false, "", "", set_format),
             c("queue.setSettings", "Export Settings...", "Edit", p!("refs" => refs_s(), "settings" => ob(), "replace" => bo()), &["refs", "settings"], true, false, "Cmd+E",
               "Changes export settings: settings is merged into each output's settings (nested, or dotted keys such as video.targetBitrate); replace swaps the whole object. format.describe lists the fields of a format.", set_settings),
+            c("queue.getSettings", "Output Settings", "Queue", p!("output" => st()), &["output"], false, true, "", "One output's complete export settings, its summary, its file and its source.", get_settings),
             c("queue.setOutput", "Set Output File...", "Queue", p!("refs" => refs_s(), "path" => st(), "folder" => st(), "name" => st()), &["refs"], true, false, "",
               "Sets one output's file (path), the folder of several outputs at once, or the output name template ({source} {preset} {format} {date} {time} {width} {height} {fps} {index}).", set_output),
             c("queue.setRange", "Set Source Range", "Queue", p!("refs" => refs_s(), "mode" => en(&["entire", "inout", "custom", "workArea"]), "in" => nu(), "out" => nu()), &["refs"], true, false, "", "In and out points in source seconds.", set_range),

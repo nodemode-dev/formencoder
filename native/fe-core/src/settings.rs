@@ -285,8 +285,14 @@ pub fn summary(s: &Value, info: &Value) -> Value {
     let a = &s["audio"];
     let src = &info["video"];
     let match_source = v["matchSource"].as_bool().unwrap_or(true);
-    let w = if match_source { None } else { v["width"].as_i64() }.or_else(|| src["width"].as_i64());
-    let h = if match_source { None } else { v["height"].as_i64() }.or_else(|| src["height"].as_i64());
+    let (sw, sh) = (src["width"].as_i64(), src["height"].as_i64());
+    let (vw, vh) = if match_source { (None, None) } else { (v["width"].as_i64(), v["height"].as_i64()) };
+    let even = |x: f64| ((x / 2.0).round() as i64 * 2).max(2);
+    let (w, h) = match (vw, vh, sw, sh) {
+        (Some(w), None, Some(a), Some(b)) if a > 0 => (Some(w), Some(even(w as f64 * b as f64 / a as f64))),
+        (None, Some(h), Some(a), Some(b)) if b > 0 => (Some(even(h as f64 * a as f64 / b as f64)), Some(h)),
+        _ => (vw.or(sw), vh.or(sh)),
+    };
     let fps = v["frameRate"].as_f64().or_else(|| src["fps"].as_f64());
     let vc = vcodec(v["codec"].as_str().unwrap_or(""));
     let flavor = vc.get("flavors").and_then(Value::as_array).and_then(|fl| fl.iter().find(|x| x[0] == v["flavor"])).and_then(|x| x[1].as_str()).map(String::from);
