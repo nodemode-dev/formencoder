@@ -1,0 +1,135 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  interface:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  engine-hosts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: native/fe-core
+      - name: The encoding engine compiles without warnings on this host
+        working-directory: native/fe-core
+        env:
+          RUSTFLAGS: -D warnings
+        run: cargo check --locked
+
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: native/fe-core
+      - name: FFmpeg for the test encodes (the runner's own; never shipped)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Engine venv and the encoding engine (dev profile)
+        run: |
+          (cd backend && ./oc_install)
+          ./formencoder install-native --dev
+      - name: Compile and self-check
+        run: |
+          source backend/venv/bin/activate
+          cd backend
+          python -m compileall -q app formencoder_engine.py
+          python formencoder_engine.py --selfcheck
+      - name: Skill references are in step with the engine
+        run: ./formencoder agents sync --check
+      - name: Boot the engine, encode over MCP and verify
+        env:
+          FORMENCODER_AGENTS: allow
+          FORMENCODER_FFMPEG_AUTO: '0'
+          FORMENCODER_DATA_DIR: ${{ runner.temp }}/fedata
+        run: |
+          source backend/venv/bin/activate
+          clip="${{ runner.temp }}/ci_clip.mp4"
+          ffmpeg -loglevel error -y -f lavfi -i testsrc2=size=1280x720:rate=25:duration=3 -f lavfi -i sine=frequency=440:duration=3 -c:v mpeg4 -c:a aac -shortest "$clip"
+          (cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8270 &)
+          for i in $(seq 1 60); do curl -sf -H 'x-formencoder-local: 1' http://127.0.0.1:8270/api/health && break; sleep 1; done
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"ci"},"capabilities":{}}}' \
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+            "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"preview_frame\",\"arguments\":{\"path\":\"$clip\",\"preset\":\"system/youtube-1080p\",\"time\":1,\"width\":320}}}" \
+            "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"encode\",\"arguments\":{\"paths\":[\"$clip\"],\"preset\":\"system/webm-vp9-1080p\",\"folder\":\"${{ runner.temp }}/out\",\"timeout\":600}}}" \
+            | FORMENCODER_URL=http://127.0.0.1:8270 python setup/mcp_stdio.py > mcp.out
+          python - <<'PY'
+          import json
+          lines = [json.loads(l) for l in open('mcp.out')]
+          tools = lines[1]['result']['tools']
+          assert len(tools) >= 21, len(tools)
+          assert any(c['type'] == 'image' for c in lines[2]['result']['content']), lines[2]
+          enc = lines[3]['result']
+          assert not enc.get('isError'), enc
+          text = enc['content'][0]['text']
+          assert '"done"' in text and '"passed": true' in text, text[:2000]
+          print('mcp ok:', len(tools), 'tools, preview and a verified encode')
+          PY
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax
+        run: |
+          for f in formencoder formencoder_oc_install backend/oc_install backend/boot_backend frontend/oc_install frontend/boot_frontend setup/*; do
+            case "$f" in *.bat|*.py|*.sh) continue ;; esac
+            bash -n "$f"
+          done
+          bash -n setup/lib.sh
+      - name: No pictographs or em dashes
+        run: python3 setup/lint_text.py .
+      - name: Python syntax of the setup scripts
+        run: python3 -m py_compile setup/*.py
+
+  desktop-shell:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Webview packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: cargo check the Tauri shell
+        run: |
+          mkdir -p frontend/dist
+          printf '<!doctype html><title>formencoder</title>' > frontend/dist/index.html
+          touch "src-tauri/binaries/formencoder-engine-$(rustc -vV | awk '/^host:/ {print $2}')"
+          cd src-tauri && cargo check --locked
