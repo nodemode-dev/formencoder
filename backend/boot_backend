@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+cd "$(dirname "$0")"
+[ -f venv/bin/activate ] || { echo "[formencoder] engine venv missing, run ./formencoder install" >&2; exit 1; }
+# shellcheck disable=SC1091
+source venv/bin/activate
+exec uvicorn app.main:app --reload --reload-dir app --host "${FORMENCODER_HOST:-127.0.0.1}" --port "${FORMENCODER_PORT:-8270}"
