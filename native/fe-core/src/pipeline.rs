@@ -124,7 +124,30 @@ pub fn geometry(info: &Value, s: &Value, interp: &Value) -> Geometry {
     Geometry { w, h, crop_w, crop_h, crop: (cl, ct, cr, cb), sar, fps }
 }
 
+pub const BLURAY_SIZES: &[(u32, u32)] = &[(1920, 1080), (1440, 1080), (1280, 720), (720, 576), (720, 480)];
+pub const BLURAY_RATES: &[f64] = &[23.976, 24.0, 25.0, 29.97, 50.0, 59.94];
+
+fn is_bluray(s: &Value) -> bool {
+    formats::get(s["format"].as_str().unwrap_or("")).map(|f| f.get("bluray").is_some()).unwrap_or(false)
+}
+
 pub fn output_size(s: &Value, g: &Geometry) -> (u32, u32) {
+    let (w, h) = output_size_free(s, g);
+    if !is_bluray(s) || BLURAY_SIZES.contains(&(w, h)) {
+        return (w, h);
+    }
+    if h >= 1000 {
+        (1920, 1080)
+    } else if h >= 700 {
+        (1280, 720)
+    } else if h > 500 {
+        (720, 576)
+    } else {
+        (720, 480)
+    }
+}
+
+fn output_size_free(s: &Value, g: &Geometry) -> (u32, u32) {
     let v = &s["video"];
     if s["format"] == "mpeg2_dvd" {
         let pal = (v["frameRate"].as_f64().unwrap_or(g.fps) - 25.0).abs() < 0.5;
@@ -144,13 +167,36 @@ pub fn output_size(s: &Value, g: &Geometry) -> (u32, u32) {
 }
 
 pub fn out_fps(s: &Value, g: &Geometry, info: &Value) -> f64 {
-    if let Some(r) = s["video"]["frameRate"].as_f64().filter(|r| *r > 0.0) {
+    let r = if let Some(r) = s["video"]["frameRate"].as_f64().filter(|r| *r > 0.0) {
+        r
+    } else if info["kind"] == "image" {
+        25.0
+    } else {
+        g.fps
+    };
+    if !is_bluray(s) {
         return r;
     }
-    if info["kind"] == "image" {
-        return 25.0;
+    let (_, h) = output_size(s, g);
+    let allowed: Vec<f64> = BLURAY_RATES.iter().cloned().filter(|x| if h == 720 { [23.976, 24.0, 50.0, 59.94].contains(x) } else if h >= 1080 { [23.976, 24.0, 25.0, 29.97].contains(x) } else { [25.0, 29.97].contains(x) }).collect();
+    allowed.into_iter().fold(f64::NAN, |best, x| if best.is_nan() || (x - r).abs() < (best - r).abs() { x } else { best })
+}
+
+fn bluray_args(codec: &str, encoder: &str, s: &Value, fps: f64) -> Vec<String> {
+    let v = &s["video"];
+    let peak = v["maxBitrate"].as_f64().unwrap_or(v["targetBitrate"].as_f64().unwrap_or(25.0)).clamp(1.0, 40.0);
+    let target = v["targetBitrate"].as_f64().unwrap_or(25.0).clamp(1.0, peak);
+    let gop = if codec == "mpeg2" { if (fps - 25.0).abs() < 0.5 || (fps - 50.0).abs() < 0.5 { 12 } else { 15 } } else { fps.round().max(1.0) as i64 };
+    let mut a = sv(&["-b:v", &bits(target), "-maxrate", &bits(peak), "-g", &gop.to_string()]);
+    if codec == "mpeg2" {
+        a.extend(sv(&["-bufsize", "9781k", "-bf", "2"]));
+    } else {
+        a.extend(sv(&["-bufsize", "30000k", "-profile:v", "high", "-level:v", "4.1"]));
+        if !encoders::is_hardware(encoder) || encoder.ends_with("_nvenc") {
+            a.extend(sv(&["-bf", "3"]));
+        }
     }
-    g.fps
+    a
 }
 
 pub fn range_of(s: &Value, info: &Value, item_range: &Value) -> Res<(f64, f64)> {
@@ -462,6 +508,10 @@ fn audio_codec_args(s: &Value) -> Res<(Vec<String>, String)> {
     let a = &s["audio"];
     let codec = a["codec"].as_str().unwrap_or("aac");
     let depth = a["bitDepth"].as_i64().unwrap_or(16);
+    if codec == "pcm" && s["multiplexer"]["container"] == "m2ts" {
+        let enc = "pcm_bluray".to_string();
+        return Ok((sv(&["-c:a", &enc, "-sample_fmt", if depth >= 24 { "s32" } else { "s16" }]), enc));
+    }
     if codec == "pcm" {
         let big = s["format"] == "aiff";
         let enc = if a["float"].as_bool().unwrap_or(false) && depth == 32 {
@@ -1216,6 +1266,9 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     if fmt_id == "bwf" {
         mux.extend(sv(&["-write_bext", "1", "-rf64", "auto"]));
     }
+    if container == "m2ts" {
+        mux.extend(sv(&["-mpegts_m2ts_mode", "1"]));
+    }
     if fmt_id == "wav" {
         mux.extend(sv(&["-rf64", "auto"]));
     }
@@ -1261,7 +1314,10 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     let maps_v = if has_video { sv(&["-map", "[vout]"]) } else { vec![] };
     let two = has_video && s["video"]["rateControl"] == "vbr2" && ["libx264", "libx265", "libvpx-vp9", "libvpx", "mpeg2video", "mpeg4"].contains(&encoder.as_str());
     let mut notes = Vec::new();
-    let vargs1 = if has_video { video_codec_args(&vcodec_id, &encoder, s, fps, w, h, if two { 1 } else { 0 }, &passlog, &mut notes) } else { vec![] };
+    let mut vargs1 = if has_video { video_codec_args(&vcodec_id, &encoder, s, fps, w, h, if two { 1 } else { 0 }, &passlog, &mut notes) } else { vec![] };
+    if has_video && is_bluray(s) {
+        vargs1.extend(bluray_args(&vcodec_id, &encoder, s, fps));
+    }
     plan.notes.extend(notes);
     let mut rate_args = if has_video && !image && fmt_id != "gif" { sv(&["-r", &r]) } else { vec![] };
     if fmt_id == "mpeg2_dvd" && has_video {
@@ -1269,7 +1325,7 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     }
     let mut elementary_audio = None;
     if container == "none" && has_audio && has_video {
-        let ext = match s["audio"]["codec"].as_str().unwrap_or("aac") { "ac3" => "ac3", "eac3" => "eac3", "mp3" => "mp3", _ => "aac" };
+        let ext = match s["audio"]["codec"].as_str().unwrap_or("aac") { "ac3" => "ac3", "eac3" => "eac3", "mp3" => "mp3", "pcm" => "wav", _ => "aac" };
         let p = Path::new(output).with_extension(ext).to_string_lossy().into_owned();
         plan.extra_outputs.push(p.clone());
         elementary_audio = Some(p);

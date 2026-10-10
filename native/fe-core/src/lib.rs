@@ -1,3 +1,5 @@
+#![recursion_limit = "512"]
+
 pub mod captions;
 pub mod colour;
 pub mod commands;
