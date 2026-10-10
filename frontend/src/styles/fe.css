@@ -190,6 +190,18 @@
 
 .fe-field { display: grid; grid-template-columns: minmax(120px, 0.9fr) minmax(0, 1.6fr); align-items: center; gap: 10px; min-height: 30px; color: var(--text-secondary); font-size: var(--fs-12); }
 .fe-field[hidden] { display: none; }
+.fe-field-wide { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 6px; }
+.fe-route { display: flex; flex-direction: column; gap: 8px; }
+.fe-route-tracks { display: flex; flex-direction: column; gap: 8px; }
+.fe-route-track { border: 1px solid var(--line-0); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.fe-route-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.fe-route-name { color: var(--text-primary); font-weight: 600; min-width: 56px; }
+.fe-route-layout { width: 96px; height: 24px; }
+.fe-route-chans { display: flex; flex-direction: column; gap: 3px; }
+.fe-route-chan { display: grid; grid-template-columns: 40px minmax(0, 1fr) 64px 20px; align-items: center; gap: 6px; min-height: 26px; }
+.fe-route-label { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-11); }
+.fe-route-src { height: 24px; min-width: 0; }
+.fe-route-add { align-self: flex-start; }
 .fe-field-ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .fe-field-ctl > .fx-select, .fe-field-ctl > .cv-input:not(.fe-num) { flex: 1; min-width: 0; height: 26px; }
 .fe-dd { flex: 1; min-width: 0; height: 28px; padding: 0 26px 0 10px; border: 1px solid var(--line-2); border-radius: 7px; background-color: var(--surface-field); background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 13px) 50%, calc(100% - 9px) 50%; background-size: 4px 4px; background-repeat: no-repeat; color: var(--text-primary); font: inherit; font-size: var(--fs-12); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }

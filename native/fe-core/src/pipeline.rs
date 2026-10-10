@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use crate::captions::{self, Cue};
 use crate::formats::{self, acodec, vcodec};
-use crate::settings::loudness_standards;
+use crate::settings::{self, loudness_standards};
 use crate::text::{self, Rgba, Timecode};
 use crate::util::{Res, rate_str};
 use crate::{colour, encoders, ffmpeg};
@@ -1064,7 +1064,53 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
             chain.push(format!("aresample={rv}"));
         }
         let plain = src.stitch.is_empty() && src.audio_path.is_none();
-        if ach == "tracks" && src_audio > 1 && plain {
+        let routing = s["audio"]["routing"].as_array().cloned().unwrap_or_default();
+        if ach == "custom" && !routing.is_empty() {
+            let pool_tracks: Vec<(String, usize)> = if plain {
+                (0..src_audio).map(|i| (format!("[0:a:{i}]"), info["audio"][i]["channels"].as_u64().unwrap_or(2).max(1) as usize)).collect()
+            } else {
+                vec![(alabel.clone(), info["audio"][0]["channels"].as_u64().unwrap_or(2).max(1) as usize)]
+            };
+            let mut offsets = Vec::new();
+            let mut total = 0usize;
+            for (_, c) in &pool_tracks {
+                offsets.push(total);
+                total += c;
+            }
+            let pool = if pool_tracks.len() == 1 {
+                pool_tracks[0].0.clone()
+            } else {
+                let ins: String = pool_tracks.iter().map(|(l, _)| l.as_str()).collect();
+                graph.push(format!("{ins}amerge=inputs={}[apool]", pool_tracks.len()));
+                "[apool]".to_string()
+            };
+            let outs: Vec<String> = (0..routing.len()).map(|i| format!("[apr{i}]")).collect();
+            if routing.len() == 1 {
+                graph.push(format!("{pool}anull{}", outs[0]));
+            } else {
+                graph.push(format!("{pool}asplit={}{}", routing.len(), outs.concat()));
+            }
+            for (ti, t) in routing.iter().enumerate() {
+                let layout = t["layout"].as_str().unwrap_or("stereo");
+                let n = settings::layout_channels(layout);
+                let terms: Vec<String> = (0..n)
+                    .map(|c| {
+                        let e = &t["channels"][c];
+                        match (e["track"].as_u64(), e["channel"].as_u64()) {
+                            (Some(tr), Some(ch)) if (tr as usize) < pool_tracks.len() && (ch as usize) < pool_tracks[tr as usize].1 => {
+                                let g = 10f64.powf(e["gain"].as_f64().unwrap_or(0.0) / 20.0);
+                                format!("c{c}={g:.6}*c{}", offsets[tr as usize] + ch as usize)
+                            }
+                            _ => format!("c{c}=0*c0"),
+                        }
+                    })
+                    .collect();
+                let mut tail = vec![format!("pan={}|{}", if layout == "quad" { "quad" } else { layout }, terms.join("|"))];
+                tail.extend(chain.iter().filter(|x| !x.starts_with("aformat=")).cloned());
+                graph.push(format!("{}{}[aout{ti}]", outs[ti], tail.join(",")));
+                audio_maps.extend(sv(&["-map", &format!("[aout{ti}]")]));
+            }
+        } else if ach == "tracks" && src_audio > 1 && plain {
             for i in 0..src_audio {
                 audio_maps.extend(sv(&["-map", &format!("0:a:{i}")]));
             }

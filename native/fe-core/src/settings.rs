@@ -73,7 +73,7 @@ pub fn default(fmt: &str) -> Res {
                   "fieldOrder": "progressive", "pixelAspect": "1:1", "profile": profile, "level": "auto", "bitDepth": bit_depth, "chroma": "420", "rateControl": rate,
                   "targetBitrate": 10.0, "maxBitrate": 12.0, "quality": 75, "keyframeDistance": null, "hardware": "auto", "encoder": null, "colorSpace": "rec709",
                   "hdr10": false, "maxCLL": 1000, "maxFALL": 400, "alpha": false, "sequence": false, "startNumber": 0, "loop": true, "dither": "sierra2_4a"},
-        "audio": {"codec": if ac_id.is_empty() { Value::Null } else { json!(ac_id) }, "sampleRate": 48000, "channels": "stereo", "bitrate": abitrate, "bitDepth": adepth, "float": false},
+        "audio": {"codec": if ac_id.is_empty() { Value::Null } else { json!(ac_id) }, "sampleRate": 48000, "channels": "stereo", "bitrate": abitrate, "bitDepth": adepth, "float": false, "routing": []},
         "multiplexer": {"container": f["containers"].get(0).cloned().unwrap_or(Value::Null), "fastStart": true},
         "range": {"mode": "entire", "in": null, "out": null},
         "crop": {"left": 0, "top": 0, "right": 0, "bottom": 0},
@@ -170,7 +170,34 @@ pub fn normalize(settings: &Value) -> Res {
     if !out["publish"].is_array() {
         out["publish"] = json!([]);
     }
+    out["audio"]["routing"] = normalize_routing(&out["audio"]["routing"]);
     Ok(out)
+}
+
+pub const ROUTING_LAYOUTS: &[(&str, usize)] = &[("mono", 1), ("stereo", 2), ("quad", 4), ("5.1", 6), ("7.1", 8)];
+
+pub fn layout_channels(layout: &str) -> usize {
+    ROUTING_LAYOUTS.iter().find(|(k, _)| *k == layout).map(|(_, n)| *n).unwrap_or(2)
+}
+
+fn normalize_routing(v: &Value) -> Value {
+    let tracks = v.as_array().cloned().unwrap_or_default();
+    let mut out = Vec::new();
+    for t in tracks.into_iter().take(32) {
+        let layout = t["layout"].as_str().filter(|l| ROUTING_LAYOUTS.iter().any(|(k, _)| k == l)).unwrap_or("stereo").to_string();
+        let n = layout_channels(&layout);
+        let given = t["channels"].as_array().cloned().unwrap_or_default();
+        let chans: Vec<Value> = (0..n)
+            .map(|i| match given.get(i) {
+                Some(c) if c.is_object() && c["track"].is_u64() && c["channel"].is_u64() => {
+                    json!({"track": c["track"], "channel": c["channel"], "gain": c["gain"].as_f64().unwrap_or(0.0).clamp(-96.0, 24.0)})
+                }
+                _ => Value::Null,
+            })
+            .collect();
+        out.push(json!({"layout": layout, "channels": chans}));
+    }
+    Value::Array(out)
 }
 
 pub fn apply_patch(settings: &Value, patch: &Value) -> Res {
@@ -319,7 +346,7 @@ pub fn summary(s: &Value, info: &Value) -> Value {
     if s["exportAudio"].as_bool().unwrap_or(false) {
         if let Some(ac_id) = a["codec"].as_str() {
             let ac = acodec(ac_id);
-            let ch = match a["channels"].as_str().unwrap_or("stereo") { "stereo" => "Stereo", "mono" => "Mono", "5.1" => "5.1", "7.1" => "7.1", "source" => "Channels as source", "tracks" => "Tracks as source", _ => "Discrete" };
+            let ch = match a["channels"].as_str().unwrap_or("stereo") { "stereo" => "Stereo", "mono" => "Mono", "5.1" => "5.1", "7.1" => "7.1", "source" => "Channels as source", "tracks" => "Tracks as source", "custom" => "Custom routing", _ => "Discrete" };
             let tail = if ac.get("lossy").is_some() { format!("{} kb/s", a["bitrate"].as_i64().unwrap_or(192)) } else { format!("{}-bit", a["bitDepth"].as_i64().unwrap_or(16)) };
             let rate = a["sampleRate"].as_i64().map(|r| format!("{r} Hz")).unwrap_or_else(|| "Same sample rate as source".into());
             audio_line = format!("{}, {}, {}, {}", ac["label"].as_str().unwrap_or(ac_id), rate, ch, tail);

@@ -192,7 +192,7 @@ pub const FIELD_ORDERS: &[(&str, &str)] = &[("source", "Same as source"), ("prog
 pub const FRAME_RATES: &[f64] = &[10.0, 12.0, 12.5, 15.0, 23.976, 24.0, 25.0, 29.97, 30.0, 47.952, 48.0, 50.0, 59.94, 60.0, 100.0, 119.88, 120.0];
 pub const COLOR_SPACES: &[(&str, &str)] = &[("source", "Same as source"), ("rec709", "Rec. 709"), ("rec601", "Rec. 601"), ("rec2020", "Rec. 2020"), ("rec2100pq", "Rec. 2100 PQ (HDR10)"), ("rec2100hlg", "Rec. 2100 HLG"), ("p3d65", "Display P3 / P3-D65")];
 pub const PIXEL_ASPECTS: &[(&str, &str)] = &[("source", "Same as source"), ("1:1", "Square Pixels (1.0)"), ("10:11", "D1/DV NTSC (0.9091)"), ("40:33", "D1/DV NTSC Widescreen (1.2121)"), ("12:11", "D1/DV PAL (1.0940)"), ("16:11", "D1/DV PAL Widescreen (1.4587)"), ("4:3", "HDV 1080 / DVCPRO HD 720 (1.333)"), ("3:2", "DVCPRO HD 1080 (1.5)"), ("2:1", "Anamorphic 2:1 (2.0)")];
-pub const CHANNEL_LAYOUTS: &[(&str, &str)] = &[("source", "Same as source"), ("mono", "Mono"), ("stereo", "Stereo"), ("5.1", "5.1"), ("7.1", "7.1"), ("tracks", "Each source track as its own track"), ("discrete", "Discrete channels (one track)")];
+pub const CHANNEL_LAYOUTS: &[(&str, &str)] = &[("source", "Same as source"), ("mono", "Mono"), ("stereo", "Stereo"), ("5.1", "5.1"), ("7.1", "7.1"), ("tracks", "Each source track as its own track"), ("discrete", "Discrete channels (one track)"), ("custom", "Custom channel routing")];
 
 pub fn rate_label(r: &str) -> &'static str {
     match r {
@@ -332,6 +332,7 @@ pub fn fields(fmt: &str, settings: Option<&Value>) -> Res {
         rates.extend(ac["rates"].as_array().cloned().unwrap_or_default().into_iter().map(|r| json!([r, format!("{} Hz", r)])));
         audio.push(field("audio.sampleRate", "Sample Rate", "select", json!({"options": rates, "nullable": true})));
         audio.push(field("audio.channels", "Channels", "select", json!({"options": pairs(CHANNEL_LAYOUTS)})));
+        audio.push(field("audio.routing", "Channel Routing", "routing", json!({"showIf": "audio.channels=custom", "layouts": ["mono", "stereo", "quad", "5.1", "7.1"]})));
         if ac.get("lossy").is_some() {
             audio.push(field("audio.bitrate", "Bitrate", "select", json!({"options": ac["bitrates"].as_array().cloned().unwrap_or_default().into_iter().map(|b| json!([b, format!("{} kb/s", b)])).collect::<Vec<_>>()})));
         }

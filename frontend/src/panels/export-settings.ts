@@ -204,7 +204,7 @@ export class ExportSettings {
       key: (x) => (x ? `${x.key}|${(x.options ?? []).map((o) => String(o[0])).join(',')}` : '__empty'),
       create: (x) => {
         if (!x) return el('<p class="fx-note fe-es-empty"></p>');
-        const c = fieldControl(x, (k, v) => void this.patch({ [k]: v }));
+        const c = fieldControl(x, (k, v) => void this.patch({ [k]: v }), { sources: () => ((this.info?.sourceInfo as { audio?: Array<{ channels?: number }> } | undefined)?.audio ?? []) });
         this.controls.set(x.key, c);
         return c.row;
       },

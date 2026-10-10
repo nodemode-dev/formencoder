@@ -144,7 +144,7 @@ export interface PresetRow {
 export interface FieldSpec {
   key: string;
   label: string;
-  type: 'bool' | 'int' | 'number' | 'select' | 'text' | 'color' | 'path';
+  type: 'bool' | 'int' | 'number' | 'select' | 'text' | 'color' | 'path' | 'routing';
   options?: Array<[unknown, string]>;
   min?: number;
   max?: number;
