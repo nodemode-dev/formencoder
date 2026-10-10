@@ -311,6 +311,23 @@ fn set_settings(e: &mut Engine, p: &Value) -> Res {
     Ok(json!({"outputs": done}))
 }
 
+fn apply_settings(e: &mut Engine, p: &Value) -> Res {
+    let base = settings::normalize(&p["settings"])?;
+    let s0 = match p.get("patch").filter(|x| x.is_object()) {
+        Some(patch) => settings::apply_patch(&base, patch)?,
+        None => base,
+    };
+    let (info, range) = match s(p, "output") {
+        Some(o) => {
+            let (i, _) = e.output_ref(&json!(o))?;
+            (e.items()[i]["info"].clone(), e.items()[i]["range"].clone())
+        }
+        None => (json!({}), json!({})),
+    };
+    let estimate = if info.get("duration").is_some() { pipeline::estimate(&s0, &info, &range) } else { Value::Null };
+    Ok(json!({"settings": s0, "summary": settings::summary(&s0, &info), "estimate": estimate}))
+}
+
 fn get_settings(e: &mut Engine, p: &Value) -> Res {
     let (i, j) = e.output_ref(&p["output"])?;
     let it = e.items()[i].clone();
@@ -842,7 +859,11 @@ fn format_describe(e: &mut Engine, p: &Value) -> Res {
         fmt = st["format"].as_str().map(String::from);
         sopt = Some(st);
     }
-    let fmt = fmt.ok_or("pass format or output")?;
+    if let Some(st) = p.get("settings").filter(|x| x.is_object()) {
+        fmt = st["format"].as_str().map(String::from).or(fmt);
+        sopt = Some(st.clone());
+    }
+    let fmt = fmt.ok_or("pass format, output or settings")?;
     let det = encoders::detect(false);
     let f = formats::get(&fmt)?;
     let mut out = formats::fields(&fmt, sopt.as_ref())?;
@@ -1165,6 +1186,8 @@ pub fn all() -> &'static Vec<Cmd> {
             c("queue.setSettings", "Export Settings...", "Edit", p!("refs" => refs_s(), "settings" => ob(), "replace" => bo()), &["refs", "settings"], true, false, "Cmd+E",
               "Changes export settings: settings is merged into each output's settings (nested, or dotted keys such as video.targetBitrate); replace swaps the whole object. format.describe lists the fields of a format.", set_settings),
             c("queue.getSettings", "Output Settings", "Queue", p!("output" => st()), &["output"], false, true, "", "One output's complete export settings, its summary, its file and its source.", get_settings),
+            c("settings.apply", "Apply Settings Patch", "", p!("settings" => ob(), "patch" => ob(), "output" => st()), &["settings"], false, true, "",
+              "Normalises settings and applies a patch to them without touching the queue (format switches keep range, effects and publish); with output, also the summary and estimated size against that output's source.", apply_settings),
             c("queue.setOutput", "Set Output File...", "Queue", p!("refs" => refs_s(), "path" => st(), "folder" => st(), "name" => st()), &["refs"], true, false, "",
               "Sets one output's file (path), the folder of several outputs at once, or the output name template ({source} {preset} {format} {date} {time} {width} {height} {fps} {index}).", set_output),
             c("queue.setRange", "Set Source Range", "Queue", p!("refs" => refs_s(), "mode" => en(&["entire", "inout", "custom", "workArea"]), "in" => nu(), "out" => nu()), &["refs"], true, false, "", "In and out points in source seconds.", set_range),
@@ -1212,7 +1235,7 @@ pub fn all() -> &'static Vec<Cmd> {
             c("watch.removeOutput", "Remove Watch Folder Output", "Watch", p!("output" => st()), &["output"], true, false, "", "", watch_remove_output),
             c("watch.scan", "Scan Watch Folders Now", "Watch", p!(), &[], false, false, "", "Queues what is in the active watch folders now, without waiting for files to settle.", watch_scan),
             c("format.list", "Formats", "Window", p!(), &[], false, true, "", "", format_list),
-            c("format.describe", "Format Settings", "Window", p!("format" => format_s(), "output" => st()), &[], false, true, "", "The export settings fields of a format (or an output's) with keys, types and options, its codecs and the encoders this machine has for them.", format_describe),
+            c("format.describe", "Format Settings", "Window", p!("format" => format_s(), "output" => st(), "settings" => ob()), &[], false, true, "", "The export settings fields of a format (or an output's, or of a settings object) with keys, types and options, its codecs and the encoders this machine has for them.", format_describe),
             c("format.encoders", "Hardware And Encoders", "Window", p!("refresh" => bo()), &[], false, true, "", "", format_encoders),
             c("media.roots", "Media Browser Locations", "Window", p!(), &[], false, true, "", "", media_roots),
             c("media.browse", "Media Browser", "Window", p!("path" => st(), "filter" => en(&["all", "video", "audio", "image", "media"]), "query" => st(), "probe" => bo()), &["path"], false, true, "Cmd+5", "", media_browse),

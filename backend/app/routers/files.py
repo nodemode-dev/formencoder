@@ -55,6 +55,30 @@ def roots() -> dict:
     return {"places": places, "home": str(Path.home()), "sep": os.sep}
 
 
+@router.get("/api/fs/list")
+def listing(path: str | None = None, hidden: bool = False) -> dict:
+    p = _resolve(path)
+    if not p.is_dir():
+        raise HTTPException(404, f"not a folder: {p}")
+    entries = []
+    try:
+        with os.scandir(p) as it:
+            for e in it:
+                if not hidden and e.name.startswith("."):
+                    continue
+                try:
+                    is_dir = e.is_dir()
+                    st = e.stat()
+                except OSError:
+                    continue
+                entries.append({"name": e.name, "path": str(Path(p) / e.name), "dir": is_dir, "size": 0 if is_dir else st.st_size, "mtime": st.st_mtime})
+    except PermissionError:
+        raise HTTPException(403, f"cannot read {p}") from None
+    entries.sort(key=lambda x: (not x["dir"], x["name"].lower()))
+    parent = str(p.parent) if p.parent != p else None
+    return {"path": str(p), "parent": parent, "entries": entries}
+
+
 @router.post("/api/fs/mkdir")
 async def mkdir(request: Request) -> dict:
     body = await request.json()
