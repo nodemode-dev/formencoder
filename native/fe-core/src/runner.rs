@@ -340,7 +340,8 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         written.push(p.clone());
     }
     if s["metadata"]["xmpSidecar"].as_bool().unwrap_or(false) {
-        written.push(sidecars::write_xmp(&out_path, &s["metadata"]["fields"], s["format"].as_str().unwrap_or(""), item["path"].as_str().unwrap_or(""))?);
+        let fields: serde_json::Map<String, Value> = crate::metadata::resolve(&s["metadata"], &src.info["tags"], src.stitch.is_empty()).into_iter().map(|(k, v)| (k, json!(v))).collect();
+        written.push(sidecars::write_xmp(&out_path, &Value::Object(fields), s["format"].as_str().unwrap_or(""), item["path"].as_str().unwrap_or(""))?);
     }
     let bytes: u64 = files.iter().take(5000).filter_map(|f| fs::metadata(f).ok()).map(|m| m.len()).sum();
     let mut result = json!({"path": out_path, "files": files.iter().take(2000).collect::<Vec<_>>(), "count": files.len(), "sidecars": written, "bytes": bytes, "notes": plan.notes,

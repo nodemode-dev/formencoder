@@ -193,6 +193,7 @@
 .fe-field[hidden] { display: none; }
 .fe-field-wide { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 6px; }
 .fe-route { display: flex; flex-direction: column; gap: 8px; }
+.fe-md-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; min-height: 78px; }
 .fe-route-tracks { display: flex; flex-direction: column; gap: 8px; }
 .fe-route-track { border: 1px solid var(--line-0); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
 .fe-route-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }

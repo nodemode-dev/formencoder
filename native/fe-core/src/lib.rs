@@ -6,6 +6,7 @@ pub mod engine;
 pub mod ffmpeg;
 pub mod formats;
 pub mod logs;
+pub mod metadata;
 pub mod paths;
 pub mod pipeline;
 pub mod prefs;

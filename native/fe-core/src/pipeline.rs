@@ -10,7 +10,7 @@ use crate::formats::{self, acodec, vcodec};
 use crate::settings::{self, loudness_standards};
 use crate::text::{self, Rgba, Timecode};
 use crate::util::{Res, rate_str};
-use crate::{colour, encoders, ffmpeg};
+use crate::{colour, encoders, ffmpeg, metadata};
 
 #[derive(Clone, Default)]
 pub struct Source {
@@ -1168,16 +1168,11 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     let meta = &s["metadata"];
     if meta["mode"] == "clear" {
         common.extend(sv(&["-map_metadata", "-1"]));
-    } else if src.stitch.is_empty() {
-        common.extend(sv(&["-map_metadata", "0"]));
+    } else {
+        common.extend(sv(&["-map_metadata:g", "-1"]));
     }
-    if let Some(fields) = meta["fields"].as_object() {
-        for (k, v) in fields {
-            let val = match v { Value::String(x) => x.clone(), Value::Null => String::new(), other => other.to_string() };
-            if !val.is_empty() {
-                common.extend(sv(&["-metadata", &format!("{k}={val}")]));
-            }
-        }
+    for (k, val) in metadata::resolve(meta, &src.info["tags"], src.stitch.is_empty()) {
+        common.extend(sv(&["-metadata", &format!("{k}={val}")]));
     }
     common.extend(sv(&["-metadata", "encoder=formencoder"]));
     let image = formats::is_image(fmt_id);

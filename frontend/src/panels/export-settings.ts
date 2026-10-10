@@ -374,6 +374,55 @@ export class ExportSettings {
       this.controls.set(x.key, c);
       host.appendChild(c.row);
     }
+    const tpl = el(`<div class="fe-field"><span class="fe-field-label">Template</span><span class="fe-field-ctl"><select class="fx-select fe-md-tpl"><option value="">None</option></select><button class="cv-icon-btn" type="button" data-md="save" title="Save these fields as a template">${icon('preset', 14)}</button></span></div>`);
+    const rules = el(`<div class="fe-field fe-field-wide"><span class="fe-field-label">Preservation Rules (remove from the source)</span><div class="fe-md-rules"></div></div>`);
+    host.insertBefore(rules, host.children[1] ?? null);
+    host.insertBefore(tpl, rules);
+    const sel = q<HTMLSelectElement>(tpl, 'select');
+    sel.addEventListener('change', () => void this.patch({ 'metadata.template': sel.value || null }));
+    const load = async (): Promise<void> => {
+      const r = await this.ctx.run<{ templates: Array<{ name: string }>; categories: Array<[string, string]> }>('metadata.templates', {});
+      if (!r) return;
+      const want = ['', ...r.templates.map((t) => t.name)].join('|');
+      if (sel.dataset.sig !== want) {
+        sel.dataset.sig = want;
+        sel.replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: 'None' }), ...r.templates.map((t) => Object.assign(document.createElement('option'), { value: t.name, textContent: t.name })));
+      }
+      const box = q(rules, '.fe-md-rules');
+      if (!box.childElementCount) {
+        for (const [id, label] of r.categories) {
+          const c = el<HTMLLabelElement>(`<label class="fe-check-label"><input type="checkbox" class="fx-check" data-rule="${id}"><span></span></label>`);
+          q(c, 'span').textContent = label;
+          q<HTMLInputElement>(c, 'input').addEventListener('change', () => {
+            const drop = Array.from(box.querySelectorAll<HTMLInputElement>('[data-rule]')).filter((x) => x.checked).map((x) => x.dataset.rule as string);
+            void this.patch({ 'metadata.rules.drop': drop });
+          });
+          box.appendChild(c);
+        }
+      }
+      this.refreshMetadataExtras();
+    };
+    q(tpl, '[data-md="save"]').addEventListener('click', async () => {
+      const name = await promptName('Save Metadata Template', '', 'Save');
+      if (!name) return;
+      await this.ctx.run('metadata.saveTemplate', { name, fields: this.get('metadata.fields') ?? {} });
+      await load();
+      void this.patch({ 'metadata.template': name });
+    });
+    void load();
+  }
+
+  private refreshMetadataExtras(): void {
+    const sel = this.scrim.querySelector<HTMLSelectElement>('.fe-md-tpl');
+    if (sel) {
+      const v = String(this.get('metadata.template') ?? '');
+      if ([...sel.options].some((o) => o.value === v) && sel.value !== v && document.activeElement !== sel) sel.value = v;
+    }
+    const drop = (this.get('metadata.rules.drop') as string[] | undefined) ?? [];
+    for (const c of Array.from(this.scrim.querySelectorAll<HTMLInputElement>('[data-rule]'))) {
+      const on = drop.includes(c.dataset.rule as string);
+      if (c.checked !== on) c.checked = on;
+    }
   }
 
   private showTab(t: Tab): void {
@@ -550,6 +599,7 @@ export class ExportSettings {
     for (const fx of EFFECTS) setClass(q(this.scrim, `[data-fx="${fx.key}"]`), 'is-on', this.get(`effects.${fx.key}.enabled`) === true);
     this.renderPublish();
     this.renderRange();
+    this.refreshMetadataExtras();
     setText(q(this.scrim, '[data-sum="out"]'), [this.summary.format, this.summary.video, this.summary.audio].filter(Boolean).join(' · '));
   }
 

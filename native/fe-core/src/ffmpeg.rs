@@ -538,7 +538,7 @@ fn probe_by_ffmpeg(target: &str, pre: &[String]) -> Option<Value> {
 
 pub fn light(info: &Value) -> Value {
     let mut out = serde_json::Map::new();
-    for k in ["path", "name", "size", "kind", "duration", "bitrate", "container", "video", "audio", "subtitles", "timecode", "sequence", "error"] {
+    for k in ["path", "name", "size", "kind", "duration", "bitrate", "container", "video", "audio", "subtitles", "timecode", "sequence", "error", "tags"] {
         if let Some(v) = info.get(k) {
             out.insert(k.to_string(), v.clone());
         }

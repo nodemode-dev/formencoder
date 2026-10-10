@@ -81,7 +81,7 @@ pub fn default(fmt: &str) -> Res {
         "startTimecode": null, "alphaOnly": false, "maxFileSize": null,
         "effects": effects_default(),
         "captions": {"mode": "none", "source": "auto", "format": "srt", "language": "eng", "size": 36, "color": "#ffffff", "background": 60, "position": "bottom"},
-        "metadata": {"mode": "retain", "fields": {}, "xmpSidecar": false},
+        "metadata": {"mode": "retain", "template": null, "rules": {"keep": [], "drop": []}, "fields": {}, "xmpSidecar": false},
         "publish": []
     }))
 }

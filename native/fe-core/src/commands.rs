@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use crate::engine::Engine;
 use crate::util::{Res, new_id, now};
-use crate::{captions, colour, encoders, ffmpeg, formats, logs, paths, pipeline, prefs, presets, settings};
+use crate::{captions, colour, encoders, ffmpeg, formats, logs, metadata, paths, pipeline, prefs, presets, settings};
 
 pub type Run = fn(&mut Engine, &Value) -> Res;
 
@@ -801,6 +801,24 @@ fn watch_active(e: &mut Engine, p: &Value) -> Res {
     Ok(json!({"watch": e.doc["watch"][i]["id"], "active": on}))
 }
 
+fn metadata_templates(_: &mut Engine, _: &Value) -> Res {
+    Ok(json!({"templates": metadata::list_templates(), "categories": metadata::CATEGORIES.iter().map(|(id, label, _)| json!([id, label])).collect::<Vec<_>>()}))
+}
+
+fn metadata_save_template(e: &mut Engine, p: &Value) -> Res {
+    let fields = if let Some(oid) = s(p, "fromOutput") {
+        let (i, j) = e.output_ref(&json!(oid))?;
+        e.items()[i]["outputs"][j]["settings"]["metadata"]["fields"].clone()
+    } else {
+        p["fields"].clone()
+    };
+    metadata::save_template(s(p, "name").unwrap_or(""), &fields)
+}
+
+fn metadata_delete_template(_: &mut Engine, p: &Value) -> Res {
+    metadata::delete_template(s(p, "name").unwrap_or(""))
+}
+
 fn watch_chain(e: &mut Engine, p: &Value) -> Res {
     let i = e.watch_index(s(p, "watch").unwrap_or(""))?;
     let from = e.doc["watch"][i]["id"].clone();
@@ -1275,6 +1293,11 @@ pub fn all() -> &'static Vec<Cmd> {
             c("media.probe", "Media Info", "Window", p!("path" => st(), "frameRate" => nu(), "loudness" => bo()), &["path"], false, true, "", "", media_probe),
             c("captions.read", "Read Captions", "File", p!("path" => st()), &["path"], false, true, "", "", captions_read),
             c("captions.convert", "Convert Captions", "File", p!("path" => st(), "to" => en(&["srt", "vtt", "scc", "ttml"]), "output" => st()), &["path", "to"], false, false, "", "", captions_convert),
+            c("metadata.templates", "Metadata Templates", "Metadata", p!(), &[], false, true, "",
+              "Saved metadata templates and the categories metadata.rules keep or drop (descriptive, rights, dates, camera, location).", metadata_templates),
+            c("metadata.saveTemplate", "Save Metadata Template", "Metadata", p!("name" => st(), "fields" => json!({"type": "object"}), "fromOutput" => st()), &["name"], false, false, "",
+              "Saves fields (or an output's metadata fields) as a named template that outputs apply with metadata.template.", metadata_save_template),
+            c("metadata.deleteTemplate", "Delete Metadata Template", "Metadata", p!("name" => st()), &["name"], false, false, "", "", metadata_delete_template),
             c("lut.list", "LUTs", "Effects", p!(), &[], false, true, "", "", lut_list),
             c("lut.install", "Install LUT...", "Effects", p!("path" => st()), &["path"], false, false, "", "", lut_install),
             c("log.read", "Show Log", "File", p!("kind" => en(&["encoding", "error"]), "limit" => int()), &[], false, true, "Cmd+L", "", log_read),
