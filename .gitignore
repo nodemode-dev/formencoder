@@ -13,6 +13,9 @@ __pycache__/
 !.env.example
 src-tauri/target/
 src-tauri/gen/
+build/tools-src/
+src-tauri/tools/*
+!src-tauri/tools/README.md
 src-tauri/binaries/*
 !src-tauri/binaries/.gitkeep
 !src-tauri/binaries/LGPL-2.1.txt

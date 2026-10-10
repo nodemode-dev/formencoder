@@ -31,7 +31,7 @@
     "longDescription": "formencoder is a media encoder: a queue of sources with several outputs each, 86 presets across web, social, broadcast, mezzanine, image sequence, audio, archive, proxy and ingest, watch folders, card ingest with verification, LUTs, HDR to SDR conform, overlays, Time Tuner, loudness normalisation, captions, metadata and publishing, connected to formcut, formvfx, formwav and formvis, with an agent terminal that drives every tool.",
     "copyright": "Copyright 2026 nodemode-ai.",
     "externalBin": ["binaries/formencoder-engine"],
-    "resources": { "ffmpeg/": "ffmpeg/" },
+    "resources": { "ffmpeg/": "ffmpeg/", "tools/": "tools/" },
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "macOS": {
       "minimumSystemVersion": "12.0",

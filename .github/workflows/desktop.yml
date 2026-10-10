@@ -43,7 +43,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf uuid-dev
       - name: Install (macOS, Linux)
         if: runner.os != 'Windows'
         run: |
@@ -55,6 +55,8 @@ jobs:
         run: |
           call formencoder.bat install || exit /b 1
           call formencoder.bat install-desktop || exit /b 1
+      - name: Delivery tools from pinned tags (bmx, asdcplib, OpenJPEG; BSD)
+        run: python setup/install_tools.py --stage
       - name: Build the desktop bundle with the pinned LGPL FFmpeg (macOS, Linux)
         if: runner.os != 'Windows'
         env:

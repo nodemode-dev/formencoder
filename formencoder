@@ -11,6 +11,7 @@ usage: ./formencoder [command] [options]
   install [--dev]       install the engine service, build the encoding engine and install the interface
   install-native [--dev]          rebuild the encoding engine (native/fe-core) into the engine's venv
   install-desktop       install PyInstaller and check the Rust and Tauri toolchain
+  install-tools [TOOL...] [--stage]  build bmx, asdcplib and OpenJPEG from pinned tags (AS-10, AS-11, P2, DCP)
   backend               boot the engine only
   frontend              boot the interface only
   build                 production build of the interface into frontend/dist
@@ -44,6 +45,7 @@ case "$cmd" in
   install) exec setup/install_all "$@" ;;
   install-native) exec setup/build_native "$@" ;;
   install-desktop) exec setup/install_desktop "$@" ;;
+  install-tools) exec python3 setup/install_tools.py "$@" ;;
   backend) exec setup/boot_backend "$@" ;;
   frontend) exec setup/boot_frontend "$@" ;;
   build) exec setup/build_frontend "$@" ;;

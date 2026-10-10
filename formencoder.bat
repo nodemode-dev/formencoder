@@ -8,6 +8,7 @@ if /i "%CMD%"=="dev" ( call setup\boot_all.bat & goto :eof )
 if /i "%CMD%"=="install" ( call setup\install_all.bat %2 & goto :eof )
 if /i "%CMD%"=="install-native" ( call setup\build_native.bat %2 %3 & goto :eof )
 if /i "%CMD%"=="install-desktop" ( call setup\install_desktop.bat & goto :eof )
+if /i "%CMD%"=="install-tools" ( call :py setup\install_tools.py %2 %3 %4 %5 & goto :eof )
 if /i "%CMD%"=="backend" ( call setup\boot_backend.bat & goto :eof )
 if /i "%CMD%"=="frontend" ( call setup\boot_frontend.bat & goto :eof )
 if /i "%CMD%"=="build" ( call setup\build_frontend.bat & goto :eof )
@@ -32,7 +33,7 @@ if exist backend\venv\Scripts\python.exe ( backend\venv\Scripts\python.exe %* ) 
 exit /b %errorlevel%
 :usage
 echo formencoder.bat [command]
-echo   boot ^| install [--dev] ^| install-native [--dev] ^| install-desktop ^| backend ^| frontend
+echo   boot ^| install [--dev] ^| install-native [--dev] ^| install-desktop ^| install-tools [TOOL] [--stage] ^| backend ^| frontend
 echo   build ^| serve ^| freeze ^| desktop dev ^| desktop build ^| doctor
 echo   encode FILE... [--preset ID] ^| queue ^| exec ID [JSON] ^| batch JSON ^| commands [FILTER] ^| describe ID
 echo   presets [QUERY] ^| probe FILE ^| frame OUT.png ^| wait ^| mcp ^| agents install^|sync^|status ^| counts ^| clean [--all] ^| help
