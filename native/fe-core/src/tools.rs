@@ -21,6 +21,8 @@ pub const TOOLS: &[Tool] = &[
     Tool { id: "bmx", label: "BBC bmx", programs: &["bmxtranswrap", "mxf2raw"], version: "v1.6", licence: "BSD-3-Clause", source: "https://github.com/bbc/bmx", used_for: "AS-10, AS-11 and P2 (OP-Atom) MXF wrapping" },
     Tool { id: "asdcplib", label: "asdcplib", programs: &["asdcp-wrap", "asdcp-info"], version: "rel_2_13_2", licence: "BSD-3-Clause", source: "https://github.com/cinecert/asdcplib", used_for: "DCP picture and sound track files" },
     Tool { id: "openjpeg", label: "OpenJPEG", programs: &["opj_compress"], version: "v2.5.3", licence: "BSD-2-Clause", source: "https://github.com/uclouvain/openjpeg", used_for: "DCI cinema-profile JPEG 2000 for DCP" },
+    Tool { id: "kvazaar", label: "Kvazaar", programs: &["kvazaar"], version: "v2.3.2", licence: "BSD-3-Clause", source: "https://github.com/ultravideo/kvazaar", used_for: "software HEVC encoding when the FFmpeg has no libx265" },
+    Tool { id: "lame", label: "LAME", programs: &["lame"], version: "3.100", licence: "LGPL-2.0-or-later", source: "https://lame.sourceforge.io", used_for: "MP3 audio files when the FFmpeg has no libmp3lame" },
 ];
 
 fn exe(name: &str) -> String {
@@ -75,16 +77,19 @@ pub fn require(program: &str, purpose: &str) -> Res<PathBuf> {
 }
 
 pub fn listing() -> Value {
-    Value::Array(
-        TOOLS
-            .iter()
-            .map(|t| {
-                let progs: Vec<Value> = t.programs.iter().map(|p| json!({"program": p, "path": find(p).map(|x| x.to_string_lossy().into_owned())})).collect();
-                let installed = progs.iter().all(|p| !p["path"].is_null());
-                json!({"id": t.id, "label": t.label, "version": t.version, "licence": t.licence, "source": t.source, "usedFor": t.used_for, "installed": installed, "programs": progs})
-            })
-            .collect(),
-    )
+    let mut rows: Vec<Value> = TOOLS
+        .iter()
+        .map(|t| {
+            let progs: Vec<Value> = t.programs.iter().map(|p| json!({"program": p, "path": find(p).map(|x| x.to_string_lossy().into_owned())})).collect();
+            let installed = progs.iter().all(|p| !p["path"].is_null());
+            json!({"id": t.id, "label": t.label, "version": t.version, "licence": t.licence, "source": t.source, "usedFor": t.used_for, "installed": installed, "programs": progs})
+        })
+        .collect();
+    let lib = crate::openh264::library();
+    rows.push(json!({"id": "openh264", "label": "OpenH264", "version": crate::openh264::VERSION, "licence": "BSD-2-Clause (Cisco binary)", "source": "https://www.openh264.org",
+                     "usedFor": "software H.264 encoding when the FFmpeg has no libx264; downloaded from Cisco, never bundled", "installed": lib.is_some(),
+                     "programs": [{"program": crate::openh264::file_name(), "path": lib.map(|p| p.to_string_lossy().into_owned())}], "attribution": crate::openh264::ATTRIBUTION, "download": true}));
+    Value::Array(rows)
 }
 
 pub fn run(program: &Path, args: &[String], cwd: Option<&Path>) -> Res<String> {

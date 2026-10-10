@@ -46,11 +46,57 @@ pub struct Plan {
     pub loudness: Option<Value>,
     pub in_point: f64,
     pub tuner_factor: f64,
+    pub external: Option<External>,
+    pub post: Vec<Vec<String>>,
+}
+
+#[derive(Clone, Default)]
+pub struct External {
+    pub encoder: String,
+    pub width: u32,
+    pub height: u32,
+    pub fps: f64,
+    pub bitrate: u32,
+    pub max_bitrate: u32,
+    pub quality: Option<u32>,
+    pub keyint: u32,
+    pub profile: String,
+    pub threads: u32,
+    pub bt709: bool,
+    pub stream: String,
+}
+
+impl External {
+    pub fn args(&self, program: &str) -> Vec<String> {
+        let mut a = vec![program.to_string(), "-i".into(), "-".into(), "--input-res".into(), format!("{}x{}", self.width, self.height), "--input-fps".into(), crate::util::fmt_g(self.fps)];
+        let period = ((self.keyint as f64 / 16.0).round() as u32).max(1) * 16;
+        a.extend(["--preset".into(), "medium".into(), "--gop".into(), "lp-g4d3t1".into(), "--period".into(), period.to_string()]);
+        match self.quality {
+            Some(q) => a.extend(["--qp".into(), q.to_string()]),
+            None => a.extend(["--bitrate".into(), self.bitrate.to_string()]),
+        }
+        if self.threads > 0 {
+            a.extend(["--threads".into(), self.threads.to_string()]);
+        }
+        if self.bt709 {
+            a.extend(["--colorprim".into(), "bt709".into(), "--transfer".into(), "bt709".into(), "--colormatrix".into(), "bt709".into()]);
+        }
+        a.extend(["-o".into(), self.stream.clone()]);
+        a
+    }
 }
 
 impl Plan {
     pub fn command_line(&self) -> String {
-        self.passes.iter().map(|p| p.iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" ")).collect::<Vec<_>>().join("\n")
+        let mut lines: Vec<String> = self.passes.iter().map(|p| p.iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" ")).collect();
+        if let Some(x) = &self.external {
+            let enc = if x.encoder == "kvazaar" { x.args("kvazaar").iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" ") } else { format!("OpenH264 {} (Cisco) {}x{} -> {}", crate::openh264::VERSION, x.width, x.height, shell_quote(&x.stream)) };
+            if let Some(first) = lines.first_mut() {
+                *first = format!("{first} | {enc}");
+            }
+        }
+        lines.extend(self.post.iter().map(|p| p.iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" ")));
+        lines.join("\n")
     }
 }
 
@@ -584,7 +630,11 @@ fn audio_codec_args(s: &Value) -> Res<(Vec<String>, String)> {
     }
     let ac = acodec(codec);
     let family = ac["family"].as_str().unwrap_or(codec);
-    let enc = encoders::choose_audio(family).ok_or_else(|| format!("no {} encoder in this ffmpeg; choose another audio codec or point Preferences > FFmpeg at a build that has one", ac["label"].as_str().unwrap_or(codec)))?;
+    let hint = if codec == "mp3" { "; for MP3 build LAME (./formencoder install-tools lame)" } else { "" };
+    let enc = encoders::choose_audio(family).ok_or_else(|| format!("no {} encoder in this ffmpeg; choose another audio codec or point Preferences > FFmpeg at a build that has one{hint}", ac["label"].as_str().unwrap_or(codec)))?;
+    if encoders::is_external(&enc) {
+        return Ok((sv(&["-c:a", "pcm_s16le"]), enc));
+    }
     let mut out = sv(&["-c:a", &enc]);
     if ac.get("lossy").is_some() {
         out.extend(sv(&["-b:a", &format!("{}k", a["bitrate"].as_i64().unwrap_or(192))]));
@@ -781,7 +831,7 @@ fn caption_concat(cues: &[Cue], end: f64, folder: &Path, w: u32, h: u32, size: f
 }
 
 pub fn missing_encoder(label: &str) -> String {
-    format!("no {label} encoder works in this ffmpeg on this computer. The bundled LGPL ffmpeg encodes H.264 and HEVC only through the GPU's own encoder; choose another codec, or point Preferences > FFmpeg at a build that has one (format.encoders lists what this machine has)")
+    format!("no {label} encoder works in this ffmpeg on this computer. The bundled LGPL ffmpeg encodes H.264 and HEVC only through the GPU's own encoder; for software encoding download OpenH264 from Cisco (Preferences > Delivery Tools, or ./formencoder install-tools openh264) or build Kvazaar for HEVC (./formencoder install-tools kvazaar), or point Preferences > FFmpeg at a build that has one (format.encoders lists what this machine has)")
 }
 
 pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOptions) -> Res<Plan> {
@@ -1422,6 +1472,110 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
         let p = Path::new(output).with_extension(ext).to_string_lossy().into_owned();
         plan.extra_outputs.push(p.clone());
         elementary_audio = Some(p);
+    }
+    if plan.audio_encoder.as_deref() == Some("lame") {
+        if has_video {
+            return Err("MP3 audio inside a video file needs an FFmpeg with libmp3lame; LAME makes MP3 audio files (choose the MP3 format, or another audio codec)".into());
+        }
+        let lame = crate::tools::require("lame", "MP3")?;
+        let wav = work.join("lame_in.wav").to_string_lossy().into_owned();
+        let mut p1 = base.clone();
+        p1.extend(fc);
+        p1.extend(audio_maps);
+        p1.extend(sv(&["-c:a", "pcm_s16le", "-f", "wav", &wav]));
+        let mut post = vec![lame.to_string_lossy().into_owned(), "--quiet".into(), "-q".into(), "2".into(), "-b".into(), s["audio"]["bitrate"].as_i64().unwrap_or(320).to_string(), "--cbr".into()];
+        let tags: Vec<(String, String)> = metadata::resolve(&s["metadata"], &src.info["tags"], src.stitch.is_empty());
+        for (key, flag) in [("title", "--tt"), ("artist", "--ta"), ("album", "--tl"), ("date", "--ty"), ("comment", "--tc"), ("genre", "--tg")] {
+            if let Some((_, val)) = tags.iter().find(|(k, _)| k == key) {
+                post.extend([flag.to_string(), if key == "date" { val.chars().take(4).collect() } else { val.clone() }]);
+            }
+        }
+        post.push("--ignore-tag-errors".into());
+        post.extend([wav, output.to_string()]);
+        plan.post = vec![post];
+        plan.passes = vec![p1];
+        return Ok(plan);
+    }
+    if has_video && encoders::is_external(&encoder) {
+        let v = &s["video"];
+        let ext_name = if encoder == "kvazaar" { "hevc" } else { "264" };
+        let stream = work.join(format!("video.{ext_name}")).to_string_lossy().into_owned();
+        let q = v["quality"].as_f64().unwrap_or(75.0);
+        let mbps = |k: &str, d: f64| (v[k].as_f64().unwrap_or(d).max(0.05) * 1_000_000.0) as u32;
+        let rc = v["rateControl"].as_str().unwrap_or("vbr1");
+        let target = mbps("targetBitrate", 10.0);
+        let peak = if rc == "cbr" { target } else { mbps("maxBitrate", 12.0).max(target) };
+        let profile = v["profile"].as_str().unwrap_or("high");
+        if v["bitDepth"].as_i64().unwrap_or(8) > 8 || v["chroma"] == "422" || profile == "high10" || profile == "high422" {
+            plan.notes.push(format!("{encoder} encodes 8-bit 4:2:0; the output is 8-bit 4:2:0"));
+        }
+        if s["video"]["rateControl"] == "vbr2" {
+            plan.notes.push(format!("{encoder} encodes in one pass; VBR 2 pass ran as VBR 1 pass"));
+        }
+        if encoder == "openh264" {
+            plan.notes.push(crate::openh264::ATTRIBUTION.to_string());
+        }
+        plan.external = Some(External {
+            encoder: encoder.clone(),
+            width: w,
+            height: h,
+            fps,
+            bitrate: target,
+            max_bitrate: peak,
+            quality: (rc == "quality").then(|| quality_crf(q, 16.0, 42.0).clamp(10, 51) as u32),
+            keyint: v["keyframeDistance"].as_i64().map(|k| k.max(1) as u32).unwrap_or((fps * 2.0).round().max(1.0) as u32),
+            profile: if profile == "baseline" || profile == "main" { profile.to_string() } else { "high".to_string() },
+            threads: if opt.threads > 0 { opt.threads as u32 } else { std::thread::available_parallelism().map(|n| n.get() as u32).unwrap_or(4) },
+            bt709: matches!(s["video"]["colorSpace"].as_str().unwrap_or("rec709"), "rec709" | "source"),
+            stream: stream.clone(),
+        });
+        let mut p1: Vec<String> = Vec::new();
+        let mut skip = false;
+        for (i, a) in base.iter().enumerate() {
+            if skip {
+                skip = false;
+                continue;
+            }
+            if a == "-progress" && base.get(i + 1).map(|x| x == "pipe:1").unwrap_or(false) {
+                skip = true;
+                continue;
+            }
+            p1.push(a.clone());
+        }
+        p1.extend(fc);
+        p1.extend(maps_v);
+        p1.extend(rate_args);
+        p1.extend(sv(&["-f", "rawvideo", "-pix_fmt", "yuv420p", "-"]));
+        let audio_file = if has_audio {
+            let f = elementary_audio.clone().unwrap_or_else(|| work.join("audio.mka").to_string_lossy().into_owned());
+            p1.extend(audio_maps.clone());
+            p1.extend(a_out_args.clone());
+            if elementary_audio.is_none() {
+                p1.extend(sv(&["-f", "matroska"]));
+            }
+            p1.push(f.clone());
+            Some(f)
+        } else {
+            None
+        };
+        let mut p2 = sv(&[&ffmpeg::ffmpeg(), "-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats", "-loglevel", "warning", "-framerate", &r, "-i", &stream]);
+        let stamps = format!("setts=ts=N/(({r})*TB):duration=1/(({r})*TB)");
+        if container == "none" {
+            p2.extend(sv(&["-c", "copy", "-f", if encoder == "kvazaar" { "hevc" } else { "h264" }, output]));
+        } else {
+            if let (Some(af), None) = (&audio_file, &elementary_audio) {
+                p2.extend(sv(&["-i", af, "-map", "0:v", "-map", "1:a"]));
+            }
+            if !sub_maps.is_empty() {
+                plan.notes.push("captions are not embedded when an outside encoder makes the video; use a sidecar".into());
+            }
+            p2.extend(sv(&["-c", "copy", "-bsf:v", &stamps]));
+            p2.extend(common);
+            p2.extend(mux);
+            p2.push(output.into());
+        }
+        plan.passes = vec![p1, p2];
+        return Ok(plan);
     }
     let vargs = if two {
         let mut p1 = base.clone();

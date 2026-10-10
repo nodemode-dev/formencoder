@@ -295,3 +295,10 @@
 .fe-prefs-hw { margin-top: 10px; line-height: 1.5; }
 .fe-prefs-cache { display: flex; align-items: center; gap: 10px; min-height: 34px; margin-top: 10px; }
 .fe-prefs-cacheinfo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fe-tool { display: grid; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line-0); }
+.fe-tool-head { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.fe-tool-name { color: var(--text-primary); font-size: var(--fs-12); }
+.fe-tool-state { flex: 1; min-width: 0; color: var(--text-muted); font-size: var(--fs-11); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fe-tool.is-installed .fe-tool-state { color: var(--text-secondary); }
+.fe-tool-get { min-width: 150px; }
+.fe-tool-path { min-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

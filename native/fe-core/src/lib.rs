@@ -9,6 +9,7 @@ pub mod ffmpeg;
 pub mod formats;
 pub mod logs;
 pub mod metadata;
+pub mod openh264;
 pub mod paths;
 pub mod pipeline;
 pub mod prefs;

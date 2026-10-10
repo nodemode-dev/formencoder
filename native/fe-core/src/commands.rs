@@ -597,7 +597,8 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
             let ok = (v["fps"].as_f64().unwrap_or(0.0) - rt["fps"].as_f64().unwrap_or(0.0)).abs() < 0.02;
             checks.push(json!({"check": "frame rate", "want": rt["fps"], "got": v["fps"], "ok": ok}));
         }
-        if rt["duration"].as_f64().unwrap_or(0.0) > 0.0 && !formats::is_image(fmt) {
+        let elementary = s0["multiplexer"]["container"] == "none" && package.is_none();
+        if rt["duration"].as_f64().unwrap_or(0.0) > 0.0 && !formats::is_image(fmt) && !elementary {
             let want = rt["duration"].as_f64().unwrap_or(0.0);
             let got = info["duration"].as_f64().unwrap_or(0.0);
             let tol = (2.0 / rt["fps"].as_f64().unwrap_or(25.0).max(1.0)).max(0.15);
@@ -613,7 +614,8 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
         }
         if s0["exportAudio"].as_bool().unwrap_or(false) && src_audio && !matches!(package, Some("p2" | "dcp")) {
             if let Some(ac) = s0["audio"]["codec"].as_str() {
-                let a = info["audio"].get(0).cloned().unwrap_or(Value::Null);
+                let side = if elementary { files.iter().find(|f| **f != probe_path).map(|f| ffmpeg::probe(f, None)) } else { None };
+                let a = side.as_ref().unwrap_or(&info)["audio"].get(0).cloned().unwrap_or(Value::Null);
                 let got = a["codec"].as_str().unwrap_or("");
                 checks.push(json!({"check": "audio", "want": ac, "got": got, "ok": !a.is_null() && got.starts_with(ac)}));
                 if let Some(r) = s0["audio"]["sampleRate"].as_i64() {

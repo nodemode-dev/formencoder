@@ -314,7 +314,7 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         Some(p.with_file_name(format!(".{name}.fe-part{ext}")).to_string_lossy().into_owned())
     };
     if let Some(part) = &part_path {
-        for pass in plan.passes.iter_mut() {
+        for pass in plan.passes.iter_mut().chain(plan.post.iter_mut()) {
             for a in pass.iter_mut() {
                 if *a == out_path {
                     *a = part.clone();
@@ -426,13 +426,169 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
 }
 
 fn encode_passes(ctx: &Ctx, plan: &Plan, base: f64) -> Res<()> {
-    let total = plan.passes.len().max(1);
-    for (i, command) in plan.passes.iter().enumerate() {
-        let label = if total > 1 { format!("pass {} of {total}", i + 1) } else { "encoding".to_string() };
-        run_pass(ctx, command, plan, base + (1.0 - base) * i as f64 / total as f64, (1.0 - base) / total as f64, &label)?;
+    if let Some(ext) = &plan.external {
+        run_pass_external(ctx, &plan.passes[0], plan, ext, base, (1.0 - base) * 0.97)?;
         if ctx.stopped() {
             return Err("stopped".into());
         }
+        for command in &plan.passes[1..] {
+            run_pass(ctx, command, plan, base + (1.0 - base) * 0.97, (1.0 - base) * 0.03, "muxing")?;
+        }
+        return Ok(());
+    }
+    let total = plan.passes.len().max(1);
+    let share = if plan.post.is_empty() { 1.0 } else { 0.7 };
+    for (i, command) in plan.passes.iter().enumerate() {
+        let label = if total > 1 { format!("pass {} of {total}", i + 1) } else { "encoding".to_string() };
+        run_pass(ctx, command, plan, base + (1.0 - base) * share * i as f64 / total as f64, (1.0 - base) * share / total as f64, &label)?;
+        if ctx.stopped() {
+            return Err("stopped".into());
+        }
+    }
+    for command in &plan.post {
+        let name = Path::new(&command[0]).file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        ctx.report(base + (1.0 - base) * share, &format!("encoding with {name}"));
+        crate::tools::run(Path::new(&command[0]), &command[1..], None)?;
+        if ctx.stopped() {
+            return Err("stopped".into());
+        }
+    }
+    Ok(())
+}
+
+enum Sink {
+    OpenH264(crate::openh264::Encoder),
+    Kvazaar(std::process::Child, std::process::ChildStdin, thread::JoinHandle<String>),
+}
+
+fn run_pass_external(ctx: &Ctx, command: &[String], plan: &Plan, ext: &pipeline::External, base: f64, span: f64) -> Res<()> {
+    ctx.tail.lock().unwrap().clear();
+    let mut sink = if ext.encoder == "kvazaar" {
+        let program = crate::tools::require("kvazaar", "HEVC")?;
+        let args = ext.args(&program.to_string_lossy());
+        let mut cmd = std::process::Command::new(&args[0]);
+        cmd.args(&args[1..]).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        let mut child = cmd.spawn().map_err(|e| format!("kvazaar could not start: {e}"))?;
+        let stdin = child.stdin.take().ok_or("kvazaar has no input")?;
+        let mut err = child.stderr.take();
+        let log = thread::spawn(move || {
+            let mut s = String::new();
+            if let Some(e) = err.as_mut() {
+                let _ = e.read_to_string(&mut s);
+            }
+            s
+        });
+        Sink::Kvazaar(child, stdin, log)
+    } else {
+        let lib = crate::openh264::library().ok_or("OpenH264 is not installed; download it from Cisco in Preferences > Delivery Tools or with ./formencoder install-tools openh264")?;
+        let s = crate::openh264::Settings { width: ext.width, height: ext.height, fps: ext.fps, bitrate: ext.bitrate, max_bitrate: ext.max_bitrate, quality: ext.quality, keyint: ext.keyint, profile: ext.profile.clone(), threads: ext.threads, bt709: ext.bt709 };
+        Sink::OpenH264(crate::openh264::Encoder::new(&lib, &s, Path::new(&ext.stream))?)
+    };
+    let mut cmd = ffmpeg::command(&command[0]);
+    cmd.args(&command[1..]).stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(if plan.timecode.is_some() { Stdio::piped() } else { Stdio::null() });
+    let mut child = cmd.spawn().map_err(|e| format!("ffmpeg could not start: {e}"))?;
+    let pid = child.id();
+    {
+        let mut s = ctx.shared.lock().unwrap();
+        s.pid = Some(pid);
+        if s.paused {
+            suspend(pid, true);
+        }
+    }
+    if let (Some(tc), Some(mut stdin)) = (plan.timecode.clone(), child.stdin.take()) {
+        thread::spawn(move || {
+            for i in 0..(tc.frames + 2) {
+                if stdin.write_all(&tc.frame(i).px).is_err() {
+                    break;
+                }
+            }
+        });
+    }
+    let stderr = child.stderr.take();
+    let tail = ctx.tail.clone();
+    let err_thread = thread::spawn(move || {
+        if let Some(se) = stderr {
+            for line in BufReader::new(se).lines().map_while(Result::ok) {
+                let line = line.trim_end().to_string();
+                if line.is_empty() {
+                    continue;
+                }
+                let mut t = tail.lock().unwrap();
+                t.push_back(line);
+                while t.len() > 60 {
+                    t.pop_front();
+                }
+            }
+        }
+    });
+    let frame_bytes = (ext.width * ext.height * 3 / 2) as usize;
+    let mut frame = vec![0u8; frame_bytes];
+    let mut done: i64 = 0;
+    let mut last = Instant::now() - Duration::from_secs(1);
+    let started = Instant::now();
+    let mut failure: Option<String> = None;
+    if let Some(mut out) = child.stdout.take() {
+        loop {
+            match out.read_exact(&mut frame) {
+                Ok(()) => {}
+                Err(_) => break,
+            }
+            let r = match &mut sink {
+                Sink::OpenH264(e) => e.encode(&mut frame),
+                Sink::Kvazaar(_, stdin, _) => stdin.write_all(&frame).map_err(|e| format!("kvazaar stopped taking frames: {e}")),
+            };
+            if let Err(e) = r {
+                failure = Some(e);
+                kill(pid);
+                break;
+            }
+            done += 1;
+            if last.elapsed() >= Duration::from_millis(250) {
+                last = Instant::now();
+                let frac = if plan.frames > 0 { done as f64 / plan.frames as f64 } else { 0.0 };
+                ctx.report(base + span * frac.min(1.0), &format!("encoding with {}", ext.encoder));
+                let secs = started.elapsed().as_secs_f64().max(0.001);
+                ctx.push(json!({"fps": (done as f64 / secs * 10.0).round() / 10.0, "frame": done, "outTime": (done as f64 / ext.fps.max(1.0) * 1000.0).round() / 1000.0}));
+            }
+        }
+    }
+    let status = child.wait().map_err(|e| e.to_string())?;
+    let _ = err_thread.join();
+    ctx.shared.lock().unwrap().pid = None;
+    let finished = match sink {
+        Sink::OpenH264(e) => e.finish().map(|_| ()),
+        Sink::Kvazaar(mut k, stdin, log) => {
+            drop(stdin);
+            let ok = k.wait().map(|s| s.success()).unwrap_or(false);
+            let text = log.join().unwrap_or_default();
+            if ok {
+                Ok(())
+            } else {
+                let line = text.lines().find(|l| l.contains("error") || l.contains("Failed")).or(text.lines().rev().find(|l| !l.trim().is_empty())).unwrap_or("").trim().to_string();
+                failure = Some(format!("kvazaar failed: {line}"));
+                Ok(())
+            }
+        }
+    };
+    if ctx.stopped() {
+        return Err("stopped".into());
+    }
+    if let Some(f) = failure {
+        return Err(f);
+    }
+    if !status.success() {
+        let t = ctx.tail.lock().unwrap();
+        let msg = t.iter().rev().find(|l| l.contains("rror") || l.contains("nvalid") || l.contains("not")).or(t.back()).cloned().unwrap_or_else(|| format!("ffmpeg exited with {status}"));
+        return Err(format!("ffmpeg failed ({}): {msg}", status.code().unwrap_or(-1)));
+    }
+    finished?;
+    if done == 0 {
+        return Err("ffmpeg produced no frames for the encoder".into());
     }
     Ok(())
 }

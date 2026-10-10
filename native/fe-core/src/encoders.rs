@@ -51,6 +51,25 @@ pub const AUDIO: &[(&str, &[&str])] = &[
 pub const HARDWARE_SUFFIX: &[&str] = &["_videotoolbox", "_nvenc", "_qsv", "_amf", "_vaapi", "_mf", "_v4l2m2m"];
 pub const VAAPI_DEVICE: &str = "/dev/dri/renderD128";
 
+pub const EXTERNAL: &[&str] = &["openh264", "kvazaar", "lame"];
+
+pub fn external() -> Vec<String> {
+    let mut out = Vec::new();
+    if crate::openh264::library().is_some() {
+        out.push("openh264".to_string());
+    }
+    for p in ["kvazaar", "lame"] {
+        if crate::tools::find(p).is_some() {
+            out.push(p.to_string());
+        }
+    }
+    out
+}
+
+pub fn is_external(name: &str) -> bool {
+    EXTERNAL.contains(&name)
+}
+
 pub fn is_hardware(name: &str) -> bool {
     HARDWARE_SUFFIX.iter().any(|s| name.ends_with(s))
 }
@@ -94,7 +113,7 @@ fn works(encoder: &str) -> bool {
 fn identity() -> String {
     let path = ffmpeg::ffmpeg();
     match fs::metadata(&path) {
-        Ok(m) => format!("{path}|{}|{:?}|{}", m.len(), m.modified().ok(), VIDEO.len()),
+        Ok(m) => format!("{path}|{}|{:?}|{}|{}", m.len(), m.modified().ok(), VIDEO.len(), external().join(",")),
         Err(_) => path,
     }
 }
@@ -131,6 +150,13 @@ pub fn detect(refresh: bool) -> Detected {
     let mut audio = BTreeMap::new();
     for (codec, opts) in AUDIO {
         audio.insert(codec.to_string(), opts.iter().filter(|n| listed.contains(**n)).map(|n| n.to_string()).collect());
+    }
+    let ext = external();
+    for (name, family, is_video) in [("openh264", "h264", true), ("kvazaar", "hevc", true), ("lame", "mp3", false)] {
+        if ext.iter().any(|e| e == name) {
+            let map = if is_video { &mut video } else { &mut audio };
+            map.entry(family.to_string()).or_insert_with(Vec::new).push(name.to_string());
+        }
     }
     let d = Detected { identity: ident.clone(), video, audio };
     let _ = fs::write(&record, serde_json::to_string_pretty(&json!({"identity": ident, "video": d.video, "audio": d.audio})).unwrap_or_default());

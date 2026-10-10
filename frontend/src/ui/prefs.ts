@@ -7,6 +7,18 @@ import { fieldControl, type FieldControl } from './fields';
 import { readChoice, setAccent, setIntensity, setTheme, THEMES } from './themes';
 import { toast } from './toast';
 
+interface ToolRow {
+  id: string;
+  label: string;
+  version: string;
+  licence: string;
+  usedFor: string;
+  installed: boolean;
+  download?: boolean;
+  attribution?: string;
+  programs: Array<{ program: string; path: string | null }>;
+}
+
 interface Page {
   id: string;
   label: string;
@@ -20,6 +32,7 @@ const PAGES: Page[] = [
   { id: 'notify', label: 'Notifications', fields: [['chime', 'bool'], ['notify', 'select', { options: [['item', 'After each item'], ['queue', 'When the queue finishes'], ['never', 'Never']] }], ['previewWhileEncoding', 'bool']] },
   { id: 'media', label: 'Media and Hardware', fields: [['ffmpegDir', 'path'], ['hardware', 'select', { options: [['auto', 'Hardware encoding when available'], ['on', 'Hardware encoding'], ['off', 'Software encoding']] }], ['threads', 'int', { min: 0, max: 256 }]] },
   { id: 'cache', label: 'Memory and Cache', fields: [['memoryReserveGB', 'number', { min: 0, max: 512, step: 0.5, unit: 'GB' }], ['hwDecode', 'select', { options: [['off', 'Decode on the CPU'], ['auto', 'Decode on the GPU when it can']] }], ['cacheFolder', 'path'], ['cacheLimitGB', 'number', { min: 0, max: 4096, step: 1, unit: 'GB' }]] },
+  { id: 'tools', label: 'Delivery Tools', fields: [] },
   { id: 'logs', label: 'Logs', fields: [['logFolder', 'path']] },
   { id: 'appearance', label: 'Appearance', fields: [] },
 ];
@@ -39,6 +52,7 @@ export class Preferences {
     this.show(page);
     void this.hardware();
     void this.cacheInfo();
+    void this.tools();
     this.dialog!.open();
   }
 
@@ -75,6 +89,7 @@ export class Preferences {
         });
         pane.appendChild(row);
       }
+      if (pg.id === 'tools') await this.toolRows(pane);
       if (pg.id === 'appearance') this.appearance(pane);
       if (pg.id === 'general') pane.appendChild(el('<p class="fx-prefs-note fe-prefs-data"></p>'));
       panes.appendChild(pane);
@@ -94,6 +109,52 @@ export class Preferences {
     if (!r || !node) return;
     const mem = r.availableMemory ? ` · ${(r.availableMemory / 1024 ** 3).toFixed(1)} GB memory free now` : '';
     setText(node, `${(r.bytes / 1024 ** 2).toFixed(1)} MB in ${r.files} files at ${r.folder}${mem}`);
+  }
+
+  private async toolRows(pane: HTMLElement): Promise<void> {
+    const r = await this.ctx.run<{ tools: ToolRow[] }>('tools.list', {}, true);
+    pane.appendChild(el('<p class="fx-prefs-note">Separate programs formencoder runs for packaged deliverables and software encoding. They are built from pinned sources with ./formencoder install-tools, or bundled with the desktop app; OpenH264 is downloaded from Cisco on request and is never bundled.</p>'));
+    for (const t of r?.tools ?? []) {
+      const row = el(`<div class="fe-tool" data-tool="${t.id}"><div class="fe-tool-head"><span class="fe-tool-name"></span><span class="fe-tool-state"></span></div><div class="fx-note fe-tool-use"></div><div class="fx-note fe-tool-path"></div></div>`);
+      setText(q(row, '.fe-tool-name'), `${t.label} ${t.version} · ${t.licence}`);
+      setText(q(row, '.fe-tool-use'), t.attribution ? `${t.usedFor}. ${t.attribution}` : t.usedFor);
+      if (t.download) {
+        const b = el<HTMLButtonElement>('<button class="cv-btn fe-tool-get" type="button">Download from Cisco</button>');
+        b.addEventListener('click', async () => {
+          b.disabled = true;
+          try {
+            await this.ctx.client.call('openh264.fetch');
+          } catch (e) {
+            toast((e as Error).message, 'error');
+          }
+          b.disabled = false;
+          void this.tools();
+        });
+        q(row, '.fe-tool-head').appendChild(b);
+      }
+      pane.appendChild(row);
+    }
+    this.paintTools(r?.tools ?? [], pane);
+  }
+
+  private async tools(): Promise<void> {
+    const r = await this.ctx.run<{ tools: ToolRow[] }>('tools.list', {}, true);
+    if (r) this.paintTools(r.tools);
+  }
+
+  private paintTools(rows: ToolRow[], root?: HTMLElement): void {
+    const body = root ?? this.dialog?.body;
+    if (!body) return;
+    for (const t of rows) {
+      const row = body.querySelector<HTMLElement>(`.fe-tool[data-tool="${t.id}"]`);
+      if (!row) continue;
+      setText(q(row, '.fe-tool-state'), t.installed ? 'Installed' : t.download ? 'Not downloaded' : `Not installed: ./formencoder install-tools ${t.id}`);
+      setClass(row, 'is-installed', t.installed);
+      const found = t.programs.map((p) => p.path).filter(Boolean).join(' · ');
+      setText(q(row, '.fe-tool-path'), found || ' ');
+      const get = row.querySelector<HTMLButtonElement>('.fe-tool-get');
+      if (get) get.textContent = t.installed ? 'Download Again' : 'Download from Cisco';
+    }
   }
 
   private appearance(pane: HTMLElement): void {
