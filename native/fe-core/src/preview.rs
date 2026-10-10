@@ -44,7 +44,10 @@ impl PreviewJob {
             } else {
                 settings::default(p["format"].as_str().unwrap_or("h264"))?
             };
-            let s = settings::normalize(&base)?;
+            let mut s = settings::normalize(&base)?;
+            if let Some(patch) = p.get("patch").filter(|x| x.is_object()) {
+                s = settings::apply_patch(&s, patch)?;
+            }
             let src = pipeline::Source { path: path.clone(), info, interpret: json!({}), range: json!({}), audio_path: None, stitch: vec![] };
             (src, s, crate::util::file_safe(&settings::source_stem(&path)))
         } else {
