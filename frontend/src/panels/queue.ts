@@ -69,6 +69,12 @@ export class QueuePanel implements Panel {
         ]);
       }
     });
+    this.list.addEventListener('dblclick', (e) => {
+      if (e.target === this.list) void ctx.invoke('queue.addSource');
+    });
+    this.empty.addEventListener('dblclick', (e) => {
+      if (!(e.target as HTMLElement).closest('button')) void ctx.invoke('queue.addSource');
+    });
     ctx.store.events.on('items', (st) => this.render(st));
     ctx.store.events.on('selection', () => this.markSelection());
     ctx.store.events.on('run', (st) => this.renderRun(st));
@@ -369,8 +375,18 @@ export class QueuePanel implements Panel {
       { label: 'Show FFmpeg Command', run: () => void this.showCommand(id) },
       { label: 'Verify Output', enabled: done, run: () => void this.verify(id) },
       { label: 'Copy Output Path', enabled: !!o?.path, run: () => void navigator.clipboard?.writeText(o?.path ?? '').then(() => toast('Path copied')) },
+      { label: 'Send to formcut', enabled: done && !!o?.path, run: () => void this.send('formcut', o?.path ?? '') },
+      { label: 'Send to formvfx', enabled: done && !!o?.path, run: () => void this.send('formvfx', o?.path ?? '') },
       { label: 'Save Settings As Preset...', run: () => void this.ctx.invoke('preset.create', { fromOutput: id }) },
     ];
+  }
+
+  private async send(app: string, path: string): Promise<void> {
+    const r = await this.ctx.client.call<{ sent?: string[] }>('family.send', { app, files: [path] }).catch((e: Error) => {
+      toast(e.message, 'error');
+      return null;
+    });
+    if (r) toast(`Sent to ${app}`, 'ok');
   }
 
   private refs(id: string): string[] {
