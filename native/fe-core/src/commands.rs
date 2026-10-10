@@ -1102,6 +1102,20 @@ fn prefs_set(e: &mut Engine, p: &Value) -> Res {
     Ok(json!({"prefs": out}))
 }
 
+fn cache_info(_: &mut Engine, _: &Value) -> Res {
+    let (bytes, files) = paths::cache_usage();
+    let p = prefs::load();
+    Ok(json!({"folder": paths::cache_dir().to_string_lossy(), "bytes": bytes, "files": files, "limitGB": p["cacheLimitGB"], "availableMemory": crate::util::available_memory(), "memoryReserveGB": p["memoryReserveGB"]}))
+}
+
+fn cache_clean(e: &mut Engine, p: &Value) -> Res {
+    let keep: Vec<String> = e.jobs_running();
+    let limit = if bv(p, "all", false) { 0 } else { (prefs::load()["cacheLimitGB"].as_f64().unwrap_or(20.0).max(0.0) * 1024.0 * 1024.0 * 1024.0) as u64 };
+    let (freed, removed) = paths::trim_cache(limit, &keep);
+    let (bytes, files) = paths::cache_usage();
+    Ok(json!({"freed": freed, "removed": removed, "bytes": bytes, "files": files}))
+}
+
 fn prefs_reset(_: &mut Engine, _: &Value) -> Res {
     Ok(json!({"prefs": prefs::reset()}))
 }
@@ -1305,6 +1319,9 @@ pub fn all() -> &'static Vec<Cmd> {
             c("prefs.get", "Preferences...", "Edit", p!(), &[], false, true, "Cmd+,", "", prefs_get),
             c("prefs.set", "Set Preferences", "Edit", p!("values" => ob()), &["values"], false, false, "", "", prefs_set),
             c("prefs.reset", "Reset Preferences", "Edit", p!(), &[], false, false, "", "", prefs_reset),
+            c("prefs.cacheInfo", "Media Cache", "Edit", p!(), &[], false, true, "", "The media cache folder, its size and file count, the cache limit, and the memory free and reserved.", cache_info),
+            c("prefs.cleanCache", "Clean Media Cache", "Edit", p!("all" => bo()), &[], false, false, "",
+              "Removes the oldest cache files until the cache is under its limit (all: everything not in use by a running encode).", cache_clean),
             c("family.queue", "Queue Family Source", "File", p!("spec" => ob(), "preset" => preset_s(), "format" => format_s(), "settings" => ob(), "folder" => st(), "outputs" => objs(), "start" => bo()), &["spec"], true, false, "",
               "Queues a source described by the family bridge (family.add finds it in the app and calls this).", family_queue),
             c("family.resolved", "Family Media Ready", "File", p!("output" => st(), "media" => ob(), "error" => st()), &["output"], false, true, "", "The service hands a waiting output the media the family app produced.", family_resolved),

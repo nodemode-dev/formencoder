@@ -12,7 +12,8 @@ pub fn defaults() -> Value {
         "watchInterval": 2.0, "watchSettle": 4.0, "watchSequences": true, "watchSequenceWait": 6.0,
         "outputFolder": "", "outputBesideSource": true, "incrementNames": true, "removeCompletedOnExit": false,
         "chime": true, "notify": "queue", "previewWhileEncoding": true, "stopOnDecodeErrors": false, "skipMissing": true,
-        "stillDuration": 5.0, "ffmpegDir": "", "threads": 0, "hardware": "auto", "defaultPreset": "system/match-source-high", "logFolder": ""
+        "stillDuration": 5.0, "ffmpegDir": "", "threads": 0, "hardware": "auto", "defaultPreset": "system/match-source-high", "logFolder": "",
+        "hwDecode": "off", "cacheFolder": "", "cacheLimitGB": 20.0, "memoryReserveGB": 4.0
     })
 }
 
@@ -41,7 +42,11 @@ pub fn descriptions() -> Value {
         "threads": "Threads per encode (0: ffmpeg decides)",
         "hardware": "Default Performance for H.264 and HEVC (auto, on, off)",
         "defaultPreset": "Preset given to sources added without one",
-        "logFolder": "Folder for the encoding and error logs (empty: the data folder's logs)"
+        "logFolder": "Folder for the encoding and error logs (empty: the data folder's logs)",
+        "hwDecode": "Decode sources on the GPU when it can (auto, off)",
+        "cacheFolder": "Media cache folder for previews, thumbnails, plans and work files (empty: the data folder's cache)",
+        "cacheLimitGB": "Largest size the media cache may grow to before the oldest files are removed",
+        "memoryReserveGB": "Memory to leave for other applications: no further parallel encode starts while less than this is free"
     })
 }
 

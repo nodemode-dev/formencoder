@@ -292,3 +292,5 @@
 .fe-prefs-panes { min-width: 0; min-height: 0; overflow: auto; }
 .fe-prefs-row { grid-template-columns: minmax(0, 1fr) 260px; }
 .fe-prefs-hw { margin-top: 10px; line-height: 1.5; }
+.fe-prefs-cache { display: flex; align-items: center; gap: 10px; min-height: 34px; margin-top: 10px; }
+.fe-prefs-cacheinfo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

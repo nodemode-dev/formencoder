@@ -110,6 +110,36 @@ pub fn rate_str(fps: f64) -> String {
     fmt_g(fps)
 }
 
+#[cfg(target_os = "linux")]
+pub fn available_memory() -> Option<u64> {
+    let text = std::fs::read_to_string("/proc/meminfo").ok()?;
+    let line = text.lines().find(|l| l.starts_with("MemAvailable:"))?;
+    let kb: u64 = line.split_whitespace().nth(1)?.parse().ok()?;
+    Some(kb * 1024)
+}
+
+#[cfg(target_os = "macos")]
+pub fn available_memory() -> Option<u64> {
+    let out = std::process::Command::new("vm_stat").output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let page: u64 = text.lines().next().and_then(|l| l.split("page size of ").nth(1)).and_then(|r| r.split_whitespace().next()).and_then(|n| n.parse().ok()).unwrap_or(16384);
+    let pages = |name: &str| -> u64 { text.lines().find(|l| l.starts_with(name)).and_then(|l| l.rsplit(':').next()).map(|v| v.trim().trim_end_matches('.').parse().unwrap_or(0)).unwrap_or(0) };
+    Some((pages("Pages free") + pages("Pages inactive") + pages("Pages speculative") + pages("Pages purgeable")) * page)
+}
+
+#[cfg(windows)]
+pub fn available_memory() -> Option<u64> {
+    use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    let mut st: MEMORYSTATUSEX = unsafe { std::mem::zeroed() };
+    st.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+    if unsafe { GlobalMemoryStatusEx(&mut st) } != 0 { Some(st.ullAvailPhys) } else { None }
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
+pub fn available_memory() -> Option<u64> {
+    None
+}
+
 pub fn fmt_g(x: f64) -> String {
     if (x - x.round()).abs() < 1e-9 {
         format!("{}", x.round() as i64)

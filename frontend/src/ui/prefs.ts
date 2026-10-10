@@ -19,6 +19,7 @@ const PAGES: Page[] = [
   { id: 'watch', label: 'Watch Folders', fields: [['autoEncodeWatch', 'bool'], ['watchInterval', 'number', { min: 0.5, max: 600, step: 0.5, unit: 's' }], ['watchSettle', 'number', { min: 0, max: 600, step: 0.5, unit: 's' }], ['watchSequences', 'bool'], ['watchSequenceWait', 'number', { min: 0, max: 600, step: 0.5, unit: 's' }]] },
   { id: 'notify', label: 'Notifications', fields: [['chime', 'bool'], ['notify', 'select', { options: [['item', 'After each item'], ['queue', 'When the queue finishes'], ['never', 'Never']] }], ['previewWhileEncoding', 'bool']] },
   { id: 'media', label: 'Media and Hardware', fields: [['ffmpegDir', 'path'], ['hardware', 'select', { options: [['auto', 'Hardware encoding when available'], ['on', 'Hardware encoding'], ['off', 'Software encoding']] }], ['threads', 'int', { min: 0, max: 256 }]] },
+  { id: 'cache', label: 'Memory and Cache', fields: [['memoryReserveGB', 'number', { min: 0, max: 512, step: 0.5, unit: 'GB' }], ['hwDecode', 'select', { options: [['off', 'Decode on the CPU'], ['auto', 'Decode on the GPU when it can']] }], ['cacheFolder', 'path'], ['cacheLimitGB', 'number', { min: 0, max: 4096, step: 1, unit: 'GB' }]] },
   { id: 'logs', label: 'Logs', fields: [['logFolder', 'path']] },
   { id: 'appearance', label: 'Appearance', fields: [] },
 ];
@@ -37,6 +38,7 @@ export class Preferences {
     setText(q(this.dialog!.body, '.fe-prefs-data'), `Data folder: ${r.dataDir}`);
     this.show(page);
     void this.hardware();
+    void this.cacheInfo();
     this.dialog!.open();
   }
 
@@ -64,6 +66,15 @@ export class Preferences {
         pane.appendChild(c.row);
       }
       if (pg.id === 'media') pane.appendChild(el('<div class="fe-prefs-hw fx-note"></div>'));
+      if (pg.id === 'cache') {
+        const row = el(`<div class="fe-prefs-cache"><span class="fx-note fe-prefs-cacheinfo"></span><span class="fx-flex"></span><button class="cv-btn" type="button">Clean Cache</button></div>`);
+        q(row, 'button').addEventListener('click', async () => {
+          const r = await this.ctx.run<{ freed: number }>('prefs.cleanCache', { all: true });
+          if (r) toast(`Freed ${(r.freed / 1024 / 1024).toFixed(1)} MB`, 'ok');
+          void this.cacheInfo();
+        });
+        pane.appendChild(row);
+      }
       if (pg.id === 'appearance') this.appearance(pane);
       if (pg.id === 'general') pane.appendChild(el('<p class="fx-prefs-note fe-prefs-data"></p>'));
       panes.appendChild(pane);
@@ -75,6 +86,14 @@ export class Preferences {
     });
     reset.classList.add('cv-btn-apart');
     d.button('Done', 'primary', () => d.close());
+  }
+
+  private async cacheInfo(): Promise<void> {
+    const r = await this.ctx.run<{ folder: string; bytes: number; files: number; availableMemory: number | null }>('prefs.cacheInfo', {});
+    const node = this.dialog?.body.querySelector<HTMLElement>('.fe-prefs-cacheinfo');
+    if (!r || !node) return;
+    const mem = r.availableMemory ? ` · ${(r.availableMemory / 1024 ** 3).toFixed(1)} GB memory free now` : '';
+    setText(node, `${(r.bytes / 1024 ** 2).toFixed(1)} MB in ${r.files} files at ${r.folder}${mem}`);
   }
 
   private appearance(pane: HTMLElement): void {

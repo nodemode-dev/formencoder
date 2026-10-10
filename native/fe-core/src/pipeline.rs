@@ -508,6 +508,9 @@ pub fn input_args(src_path: &str, info: &Value, interp: &Value, a: f64, dur: f64
     if info["kind"] == "image" {
         return sv(&["-loop", "1", "-framerate", &rate_str(fps_hint), "-t", &format!("{dur:.6}"), "-i", src_path]);
     }
+    if info["kind"] == "video" && crate::prefs::load()["hwDecode"] == "auto" && ffmpeg::hwaccels_available() {
+        args.extend(sv(&["-hwaccel", "auto"]));
+    }
     if a > 0.0 {
         args.extend(sv(&["-ss", &format!("{a:.6}")]));
     }

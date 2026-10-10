@@ -203,12 +203,21 @@ fn table(flag: &str) -> BTreeSet<String> {
                         names.insert(parts[1].to_string());
                     }
                 }
+                "-hwaccels" => {
+                    if parts.len() == 1 && !line.contains(':') {
+                        names.insert(parts[0].to_string());
+                    }
+                }
                 _ => {}
             }
         }
     }
     caches().lock().unwrap().insert(key, names.clone());
     names
+}
+
+pub fn hwaccels_available() -> bool {
+    !table("-hwaccels").is_empty()
 }
 
 pub fn filters() -> BTreeSet<String> {

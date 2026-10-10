@@ -75,7 +75,15 @@ impl Engine {
             last_progress: HashMap::new(),
         };
         e.load();
+        let limit = (p["cacheLimitGB"].as_f64().unwrap_or(20.0).max(0.0) * 1024.0 * 1024.0 * 1024.0) as u64;
+        if limit > 0 {
+            std::thread::spawn(move || paths::trim_cache(limit, &[]));
+        }
         e
+    }
+
+    pub fn jobs_running(&self) -> Vec<String> {
+        self.jobs.keys().cloned().collect()
     }
 
     fn queue_file() -> PathBuf {
@@ -656,9 +664,17 @@ impl Engine {
             vec![]
         };
         let mut started = false;
+        let reserve = (p["memoryReserveGB"].as_f64().unwrap_or(4.0).max(0.0) * 1024.0 * 1024.0 * 1024.0) as u64;
         for (i, j) in pick {
             if self.jobs.len() >= slots {
                 break;
+            }
+            if !self.jobs.is_empty() && reserve > 0 {
+                if let Some(free) = crate::util::available_memory() {
+                    if free < reserve {
+                        break;
+                    }
+                }
             }
             let item = self.items()[i].clone();
             let output = item["outputs"][j].clone();
