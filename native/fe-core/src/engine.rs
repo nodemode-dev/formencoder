@@ -29,6 +29,7 @@ pub struct Engine {
     pub last_interaction: f64,
     watch_seen: HashMap<String, HashMap<String, (u64, f64, f64, bool)>>,
     watch_scanned: HashMap<String, f64>,
+    watch_online: HashMap<String, bool>,
     save_due: f64,
     pub encoder_status: Arc<Mutex<Option<Value>>>,
     pub queue_started: Option<f64>,
@@ -67,6 +68,7 @@ impl Engine {
             last_interaction: now(),
             watch_seen: HashMap::new(),
             watch_scanned: HashMap::new(),
+            watch_online: HashMap::new(),
             save_due: 0.0,
             encoder_status: status,
             queue_started: None,
@@ -684,13 +686,30 @@ impl Engine {
         }
     }
 
+    pub fn chain_folder(&self, w: &Value) -> Option<PathBuf> {
+        let to = w["chainTo"].as_str()?;
+        self.doc["watch"].as_array()?.iter().find(|x| x["id"] == json!(to)).and_then(|x| x["folder"].as_str()).map(PathBuf::from)
+    }
+
     pub fn scan_watch(&mut self, wid: &str, p: &Value, immediate: bool) -> usize {
         let Ok(wi) = self.watch_index(wid) else { return 0 };
         let w = self.doc["watch"][wi].clone();
         let folder = PathBuf::from(w["folder"].as_str().unwrap_or(""));
-        if !folder.is_dir() {
+        let online = folder.is_dir();
+        let was = self.watch_online.insert(wid.to_string(), online);
+        if was.is_some() && was != Some(online) {
+            let fname = folder.file_name().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default();
+            if online {
+                self.toast(&format!("Watch folder {fname} is reachable again"), "ok");
+            } else {
+                self.toast(&format!("Watch folder {fname} cannot be reached; formencoder keeps checking"), "error");
+            }
+            self.changed(false, "watch");
+        }
+        if !online {
             return 0;
         }
+        let default_out = self.chain_folder(&w).unwrap_or_else(|| folder.join("Output"));
         let t = now();
         let settle = if immediate { 0.0 } else { p["watchSettle"].as_f64().unwrap_or(4.0) };
         let known: HashSet<String> = self.items().iter().flat_map(|it| {
@@ -789,7 +808,7 @@ impl Engine {
             let outs: Vec<Value> = w["outputs"].as_array().cloned().unwrap_or_default().into_iter().map(|mut o| {
                 o["id"] = json!(new_id("o"));
                 if o["folder"].is_null() || o["folder"] == "" {
-                    o["folder"] = json!(folder.join("Output").to_string_lossy());
+                    o["folder"] = json!(default_out.to_string_lossy());
                 }
                 o["skip"] = json!(false);
                 o
@@ -838,8 +857,10 @@ impl Engine {
         let mut watch = Vec::new();
         for w in self.doc["watch"].as_array().unwrap() {
             let folder = w["folder"].as_str().unwrap_or("");
-            let outs: Vec<Value> = w["outputs"].as_array().cloned().unwrap_or_default().iter().map(|o| json!({"id": o["id"], "format": o["settings"]["format"], "formatLabel": if o["kind"] == "analysis" { "Analysis".to_string() } else { formats::label(o["settings"]["format"].as_str().unwrap_or("")) }, "presetName": o["settings"]["presetName"], "folder": o["folder"].as_str().filter(|x| !x.is_empty()).map(String::from).unwrap_or_else(|| Path::new(folder).join("Output").to_string_lossy().into_owned())})).collect();
-            watch.push(json!({"id": w["id"], "folder": folder, "active": w["active"].as_bool().unwrap_or(true), "moveSources": w["moveSources"].as_bool().unwrap_or(true), "kind": w["kind"].as_str().unwrap_or("encode"), "outputs": outs, "lastScan": self.watch_scanned.get(w["id"].as_str().unwrap_or(""))}));
+            let default_out = self.chain_folder(w).unwrap_or_else(|| Path::new(folder).join("Output")).to_string_lossy().into_owned();
+            let outs: Vec<Value> = w["outputs"].as_array().cloned().unwrap_or_default().iter().map(|o| json!({"id": o["id"], "format": o["settings"]["format"], "formatLabel": if o["kind"] == "analysis" { "Analysis".to_string() } else { formats::label(o["settings"]["format"].as_str().unwrap_or("")) }, "presetName": o["settings"]["presetName"], "folder": o["folder"].as_str().filter(|x| !x.is_empty()).map(String::from).unwrap_or_else(|| default_out.clone())})).collect();
+            let wid = w["id"].as_str().unwrap_or("");
+            watch.push(json!({"id": w["id"], "folder": folder, "active": w["active"].as_bool().unwrap_or(true), "moveSources": w["moveSources"].as_bool().unwrap_or(true), "kind": w["kind"].as_str().unwrap_or("encode"), "outputs": outs, "lastScan": self.watch_scanned.get(wid), "online": self.watch_online.get(wid).copied().unwrap_or(true), "chainTo": w["chainTo"]}));
         }
         let p = prefs::load();
         let idle = if p["autoStartIdle"].as_bool().unwrap_or(false) && !self.running && self.has_ready() { Some((p["autoStartMinutes"].as_f64().unwrap_or(2.0) * 60.0 - (now() - self.last_interaction)).max(0.0)) } else { None };

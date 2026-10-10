@@ -109,6 +109,7 @@
 .fe-w-empty[hidden] { display: none; }
 .fe-w-item { border: 1px solid var(--line-1); border-radius: 10px; background: var(--surface-1); overflow: hidden; }
 .fe-w-item.is-off { opacity: 0.6; }
+.fe-w-item.is-offline .fe-w-path { color: var(--danger-text); }
 .fe-w-head { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px 0 10px; }
 .fe-w-ic { display: inline-flex; color: var(--accent-color); }
 .fe-w-name { flex: none; color: var(--text-primary); font-weight: 500; font-size: var(--fs-12); }

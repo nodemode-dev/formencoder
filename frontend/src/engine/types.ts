@@ -79,6 +79,8 @@ export interface Watch {
   kind: string;
   outputs: WatchOutput[];
   lastScan: number | null;
+  online?: boolean;
+  chainTo?: string | null;
 }
 
 export interface Counts {

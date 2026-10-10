@@ -84,6 +84,13 @@ export class WatchPanel implements Panel {
           contextMenu(r.left, r.bottom + 2, [
             { label: 'Scan Now', run: () => void this.ctx.run('watch.scan') },
             { label: 'Copy Folder Path', run: () => void navigator.clipboard?.writeText(w?.folder ?? '') },
+            {
+              label: 'Chain Outputs Into',
+              children: () => [
+                { label: 'No chain (Output folder)', run: () => void this.ctx.run('watch.chain', { watch: n.dataset.key, to: null }) },
+                ...(this.ctx.store.state?.watch ?? []).filter((x) => x.id !== n.dataset.key).map((x) => ({ label: basename(x.folder), run: () => void this.ctx.run('watch.chain', { watch: n.dataset.key, to: x.id }) })),
+              ],
+            },
             '-',
             { label: 'Remove Watch Folder', run: () => void this.ctx.run('watch.remove', { watch: n.dataset.key }) },
           ]);
@@ -108,7 +115,9 @@ export class WatchPanel implements Panel {
         if (box.checked !== w.active) box.checked = w.active;
         setClass(n, 'is-off', !w.active);
         setText(q(n, '.fe-w-name'), basename(w.folder));
-        setText(q(n, '.fe-w-path'), w.kind === 'analysis' ? `${w.folder} · analysis` : w.folder);
+        const chained = w.chainTo ? this.ctx.store.state?.watch.find((x) => x.id === w.chainTo) : undefined;
+        setClass(n, 'is-offline', w.online === false);
+        setText(q(n, '.fe-w-path'), [w.folder, w.kind === 'analysis' ? 'analysis' : '', chained ? `feeds ${basename(chained.folder)}` : '', w.online === false ? 'cannot be reached' : ''].filter(Boolean).join(' · '));
         setTitle(q(n, '.fe-w-path'), w.lastScan ? `Last scan ${new Date(w.lastScan * 1000).toLocaleTimeString()}` : 'Not scanned yet');
         patchList(q(n, '.fe-w-outs'), w.outputs, {
           key: (o) => o.id,

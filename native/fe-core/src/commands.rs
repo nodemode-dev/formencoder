@@ -801,6 +801,36 @@ fn watch_active(e: &mut Engine, p: &Value) -> Res {
     Ok(json!({"watch": e.doc["watch"][i]["id"], "active": on}))
 }
 
+fn watch_chain(e: &mut Engine, p: &Value) -> Res {
+    let i = e.watch_index(s(p, "watch").unwrap_or(""))?;
+    let from = e.doc["watch"][i]["id"].clone();
+    let to = match s(p, "to").filter(|x| !x.is_empty()) {
+        None => Value::Null,
+        Some(t) => {
+            let j = e.watch_index(t)?;
+            let target = e.doc["watch"][j]["id"].clone();
+            if target == from {
+                return Err("a watch folder cannot feed itself".into());
+            }
+            let mut cur = target.clone();
+            for _ in 0..64 {
+                let next = e.doc["watch"].as_array().unwrap().iter().find(|w| w["id"] == cur).map(|w| w["chainTo"].clone()).unwrap_or(Value::Null);
+                if next.is_null() {
+                    break;
+                }
+                if next == from {
+                    return Err("that chain would loop back to this watch folder".into());
+                }
+                cur = next;
+            }
+            target
+        }
+    };
+    e.watch_mut()[i]["chainTo"] = to.clone();
+    let folder = e.chain_folder(&e.doc["watch"][i].clone()).map(|p| p.to_string_lossy().into_owned());
+    Ok(json!({"watch": from, "chainTo": to, "outputsGoTo": folder}))
+}
+
 fn watch_add_output(e: &mut Engine, p: &Value) -> Res {
     let i = e.watch_index(s(p, "watch").unwrap_or(""))?;
     let preset = if s(p, "preset").is_none() && s(p, "format").is_none() && !p["settings"].is_object() { Some("system/match-source-high") } else { s(p, "preset") };
@@ -1231,6 +1261,8 @@ pub fn all() -> &'static Vec<Cmd> {
               "Watches a folder: dropped media is queued with the folder's outputs and encoded (Auto-Encode Watch Folders); outputs go to an Output subfolder and originals move to Source/[date-time].", watch_add),
             c("watch.remove", "Remove Watch Folder", "Watch", p!("watch" => st()), &["watch"], true, false, "", "", watch_remove),
             c("watch.setActive", "Watch Folder Active", "Watch", p!("watch" => st(), "active" => bo()), &["watch", "active"], true, false, "", "", watch_active),
+            c("watch.chain", "Chain Watch Folder", "Watch", p!("watch" => st(), "to" => json!({"type": ["string", "null"]})), &["watch"], true, false, "",
+              "Sends a watch folder's outputs (those without their own folder) into another watch folder, which then encodes them with its own outputs; to null ends the chain. Loops are refused.", watch_chain),
             c("watch.addOutput", "Add Watch Folder Output", "Watch", p!("watch" => st(), "preset" => preset_s(), "format" => format_s(), "settings" => ob(), "folder" => st()), &["watch"], true, false, "", "", watch_add_output),
             c("watch.setOutput", "Watch Folder Output Settings", "Watch", p!("output" => st(), "preset" => preset_s(), "settings" => ob(), "folder" => st()), &["output"], true, false, "", "", watch_set_output),
             c("watch.removeOutput", "Remove Watch Folder Output", "Watch", p!("output" => st()), &["output"], true, false, "", "", watch_remove_output),
