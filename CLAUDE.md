@@ -1,0 +1,21 @@
+# formencoder
+
+The media encoder of the form family (an Adobe Media Encoder alternative) beside formcut, formvfx, formwav and formvis: a vanilla TypeScript and Vite interface, a Python FastAPI engine service around formencoder's own Rust encoding engine (`fe_core`, wrapped with PyO3), FFmpeg (a pinned LGPL build) as the codec layer, and a Tauri 2 desktop shell.
+
+## Two kinds of work
+
+**Encoding with formencoder** (a file for YouTube, a broadcast master, proxies, a watch folder, loudness, captions, a formcut edit or formvfx comp to deliver): use the `formencoder` MCP server (`.mcp.json` runs `./formencoder mcp`, which starts the engine when needed) with the `formencoder-harness` skill in `.claude/skills/formencoder-harness`. Start with `status`, encode with `encode` or `queue.addSource` plus `export_settings`, look with `preview_frame`, and `verify` every output. The first change asks the person once in the formencoder window; agents started from formencoder's Terminal panel never ask.
+
+**Changing formencoder's code**: route through `.claude/skills/formencoder-skillset/SKILL.md` (subsystem map, rules, specialists) and read the living logs `frontend/HASHOUT_LOG.md`, `backend/HASHOUT_LOG.md` and `native/fe-core/HASHOUT_LOG.md` before editing.
+
+## Layout
+
+- `native/fe-core/` · the encoding engine (`fe_core`), written for formencoder in Rust: the queue and undo, commands, export settings, 33 formats, 86 presets, the FFmpeg graph planner and parallel runner, watch folders, ingest, captions, overlays, colour, loudness, previews and logs, exposed to Python with PyO3. Build with `./formencoder install-native`.
+- `backend/app/` · the engine service: `engine/` (the engine thread, bus, JSON-RPC, family bridge, publish), `routers/` (live socket, files and previews, terminal, MCP, agents), `agent/` (MCP tools, consent, workspace, CLI), `ffmpeg_fetch.py` (the pinned FFmpeg download).
+- `frontend/src/` · the interface: `engine/` (client, store; no DOM), `ui/` (dock, menus, palette, forms, widgets), `panels/`, `app/`.
+- `setup/` · install, boot, build, freeze and desktop scripts behind the `./formencoder` dispatcher; `setup/agents.py` regenerates the harness skill's references from the engine.
+- Planning documents (DEV_PLAN, BUILD_NOTES, TEST_PLAN, the root HASHOUT_LOG) ship in the planning sidecar zip, not in this tree.
+
+## After changing the MCP tools or the engine's commands, formats or presets
+
+Run `./formencoder agents sync` so `.claude/skills/formencoder-harness/references/` and the `.agents/skills` mirror follow; `./formencoder agents sync --check` fails while they drift.

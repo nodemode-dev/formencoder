@@ -1,0 +1,6 @@
+# formencoder for Codex in this repository (trusted projects only). From any folder: ./formencoder agents install codex.
+[mcp_servers.formencoder]
+command = "sh"
+args = ["-c", "exec \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/formencoder\" mcp"]
+startup_timeout_sec = 90
+tool_timeout_sec = 3600
