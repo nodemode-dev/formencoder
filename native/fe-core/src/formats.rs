@@ -303,6 +303,12 @@ pub fn fields(fmt: &str, settings: Option<&Value>) -> Res {
             video.push(field("video.hardware", "Performance", "select", json!({"options": [["auto", "Hardware Encoding when available"], ["on", "Hardware Encoding"], ["off", "Software Encoding"]]})));
         }
         video.push(field("video.colorSpace", "Color Space", "select", json!({"options": pairs(COLOR_SPACES)})));
+        if ["h264", "hevc", "av1", "prores"].contains(&codec_id.as_str()) && strs(&f["containers"]).iter().any(|c| c == "mp4" || c == "mov") {
+            video.push(field("video.vr.enabled", "Video Is VR", "bool", json!({})));
+            video.push(field("video.vr.layout", "Frame Layout", "select", json!({"options": [["mono", "Monoscopic"], ["topBottom", "Stereoscopic - Over/Under"], ["leftRight", "Stereoscopic - Side by Side"]], "showIf": "video.vr.enabled=true"})));
+            video.push(field("video.vr.hfov", "Horizontal Field of View", "select", json!({"options": [[360, "360°"], [180, "180°"]], "showIf": "video.vr.enabled=true"})));
+            video.push(field("video.vr.vfov", "Vertical Field of View", "select", json!({"options": [[180, "180°"], [90, "90°"]], "showIf": "video.vr.enabled=true"})));
+        }
         if codec.get("hdr").is_some() {
             video.push(field("video.hdr10", "Include HDR10 Metadata", "bool", json!({"showIf": "video.colorSpace=rec2100pq"})));
             video.push(field("video.maxCLL", "Maximum Content Light Level", "int", json!({"min": 0, "max": 10000, "unit": "nits", "showIf": "video.hdr10=true"})));

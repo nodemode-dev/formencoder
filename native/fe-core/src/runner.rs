@@ -318,6 +318,9 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         }
     }
     encoded?;
+    if crate::vr::wanted(&s) && ["mp4", "mov"].contains(&s["multiplexer"]["container"].as_str().unwrap_or("")) && Path::new(&out_path).is_file() {
+        crate::vr::inject(&out_path, &crate::vr::xml(&s, plan.width, plan.height)).map_err(|e| format!("could not write the VR metadata: {e}"))?;
+    }
     let mut files: Vec<String> = Vec::new();
     if out_path.contains("%0") {
         let p = Path::new(&out_path);

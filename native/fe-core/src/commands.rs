@@ -555,8 +555,11 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
     let mut sopt: Option<Value> = None;
     let mut path = s(p, "path").map(String::from);
     let mut rt = json!({});
+    let mut src_audio = true;
     if let Some(oid) = s(p, "output") {
         let (i, j) = e.output_ref(&json!(oid))?;
+        let it = &e.items()[i];
+        src_audio = it["kind"] == "family" || it["stitch"].is_array() || it["info"]["audio"].as_array().map(|a| !a.is_empty()).unwrap_or(true);
         sopt = Some(settings::normalize(&e.items()[i]["outputs"][j]["settings"])?);
         let real = e.items()[i]["outputs"][j]["id"].as_str().unwrap_or("").to_string();
         rt = e.runtime.get(&real).cloned().unwrap_or(json!({}));
@@ -592,7 +595,7 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
             let want = match codec { "dnxhr" => "dnxhd", "cineform" => "cfhd", "xdcam" | "mpeg2" => "mpeg2video", "jpeg" | "mjpeg" => "mjpeg", "uncompressed" => if s0["video"]["flavor"] == "v210" { "v210" } else { "rawvideo" }, other => other };
             checks.push(json!({"check": "video codec", "want": want, "got": v["codec"], "ok": v["codec"] == json!(want)}));
         }
-        if s0["exportAudio"].as_bool().unwrap_or(false) {
+        if s0["exportAudio"].as_bool().unwrap_or(false) && src_audio {
             if let Some(ac) = s0["audio"]["codec"].as_str() {
                 let a = info["audio"].get(0).cloned().unwrap_or(Value::Null);
                 let got = a["codec"].as_str().unwrap_or("");
@@ -605,7 +608,13 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
             }
         }
     }
-    let mut out = json!({"path": path, "probe": info, "checks": checks});
+    let vr_found = crate::vr::read(&probe_path);
+    if let Some(s0) = &sopt {
+        if crate::vr::wanted(s0) {
+            checks.push(json!({"check": "VR metadata", "want": "spherical", "got": if vr_found.is_some() { "spherical" } else { "none" }, "ok": vr_found.is_some()}));
+        }
+    }
+    let mut out = json!({"path": path, "probe": info, "checks": checks, "vr": vr_found});
     if bv(p, "loudness", false) && !info["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true) {
         let m = pipeline::measure_file(&probe_path);
         if let (Some(s0), Some(integrated)) = (&sopt, m["integrated"].as_f64()) {
