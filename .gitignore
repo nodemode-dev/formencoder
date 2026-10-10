@@ -13,7 +13,6 @@ __pycache__/
 !.env.example
 src-tauri/target/
 src-tauri/gen/
-src-tauri/ffmpeg/
 src-tauri/binaries/*
 !src-tauri/binaries/.gitkeep
 !src-tauri/binaries/LGPL-2.1.txt

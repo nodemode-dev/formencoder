@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "formencoder",
+  "version": "0.1.0",
+  "identifier": "dev.formai.formencoder",
+  "build": {
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "splash",
+        "title": "formencoder",
+        "url": "splash.html",
+        "width": 360,
+        "height": 180,
+        "resizable": false,
+        "decorations": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Video",
+    "shortDescription": "Media encoder",
+    "longDescription": "formencoder is a media encoder: a queue of sources with several outputs each, 86 presets across web, social, broadcast, mezzanine, image sequence, audio, archive, proxy and ingest, watch folders, card ingest with verification, LUTs, HDR to SDR conform, overlays, Time Tuner, loudness normalisation, captions, metadata and publishing, connected to formcut, formvfx, formwav and formvis, with an agent terminal that drives every tool.",
+    "copyright": "Copyright 2026 nodemode-ai.",
+    "externalBin": ["binaries/formencoder-engine"],
+    "resources": { "ffmpeg/": "ffmpeg/" },
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist"
+    },
+    "fileAssociations": [
+      { "ext": ["fequeue"], "name": "formencoder Queue", "description": "formencoder encoding queue", "role": "Editor", "mimeType": "application/x-formencoder-queue" },
+      { "ext": ["fepreset"], "name": "formencoder Preset", "description": "formencoder encoding preset", "role": "Viewer", "mimeType": "application/x-formencoder-preset" }
+    ],
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": ["https://github.com/nodemode-ai/formencoder/releases/latest/download/latest.json"]
+    }
+  }
+}

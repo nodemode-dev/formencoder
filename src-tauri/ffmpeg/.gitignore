@@ -1,0 +1,4 @@
+# Filled by setup/bundle_ffmpeg.py for a desktop build; binaries are never committed.
+*
+!.gitignore
+!README.md

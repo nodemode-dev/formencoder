@@ -28,10 +28,17 @@ async def lifespan(app: FastAPI):
         pass
     opening = [p for p in os.environ.get("FORMENCODER_OPEN", "").split(os.pathsep) if p.strip()]
     if opening and host.available:
-        try:
-            await engine_rpc.execute("queue.addSource", {"paths": opening}, "desktop")
-        except Exception:
-            pass
+        queues = [p for p in opening if p.lower().endswith(".fequeue")]
+        presets = [p for p in opening if p.lower().endswith(".fepreset")]
+        media = [p for p in opening if p not in queues and p not in presets]
+        steps = [("queue.open", {"path": p, "append": True}) for p in queues] + [("preset.import", {"path": p}) for p in presets]
+        if media:
+            steps.append(("queue.addSource", {"paths": media}))
+        for command, params in steps:
+            try:
+                await engine_rpc.execute(command, params, "desktop")
+            except Exception:
+                pass
     if not config.DESKTOP:
         try:
             discovery.publish(f"http://127.0.0.1:{config.PORT}", __version__)
