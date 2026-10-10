@@ -360,19 +360,19 @@ impl Engine {
     }
 
     pub fn make_output(&self, settings_v: Option<&Value>, preset: Option<&str>, fmt: Option<&str>, folder: Option<&str>, path: Option<&str>, kind: &str) -> Res {
+        let given = settings_v.filter(|v| v.is_object());
         let mut s = if let Some(p) = preset.filter(|p| !p.is_empty()) {
             presets::settings_for(p)?
-        } else if let Some(sv) = settings_v.filter(|v| v.is_object()) {
-            settings::normalize(sv)?
         } else {
-            settings::normalize(&json!({"format": fmt.unwrap_or("h264")}))?
+            let base_fmt = fmt.or_else(|| given.and_then(|g| g["format"].as_str())).unwrap_or("h264");
+            settings::normalize(&json!({"format": base_fmt}))?
         };
-        if let (Some(f), Some(_)) = (fmt, preset) {
+        if let Some(f) = fmt {
             if s["format"] != json!(f) {
                 s = settings::apply_patch(&s, &json!({"format": f}))?;
             }
         }
-        if let (Some(sv), Some(_)) = (settings_v.filter(|v| v.is_object()), preset) {
+        if let Some(sv) = given {
             s = settings::apply_patch(&s, sv)?;
         }
         Ok(json!({"id": new_id("o"), "kind": kind, "settings": s, "folder": folder.map(|f| paths::expand(f)), "path": path.map(|p| paths::expand(p)), "skip": false}))
