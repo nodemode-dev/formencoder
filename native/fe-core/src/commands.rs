@@ -41,8 +41,15 @@ impl Cmd {
         json!({"type": "object", "properties": self.params, "required": self.required, "additionalProperties": false})
     }
 
+    pub fn shortcut_now(&self) -> String {
+        match prefs::load()["shortcuts"].get(self.id).and_then(Value::as_str) {
+            Some(s) => s.to_string(),
+            None => self.shortcut.to_string(),
+        }
+    }
+
     pub fn row(&self, schemas: bool) -> Value {
-        let mut r = json!({"id": self.id, "label": self.label, "menu": self.menu, "params": self.summary(), "undoable": self.undoable, "query": self.query, "shortcut": self.shortcut, "enabled": true});
+        let mut r = json!({"id": self.id, "label": self.label, "menu": self.menu, "params": self.summary(), "undoable": self.undoable, "query": self.query, "shortcut": self.shortcut_now(), "defaultShortcut": self.shortcut, "enabled": true});
         if schemas {
             r["schema"] = self.schema();
             r["doc"] = json!(self.doc);
@@ -128,9 +135,15 @@ fn add_source(e: &mut Engine, p: &Value) -> Res {
         } else if Path::new(&f).is_dir() {
             return Err(format!("{f} is a folder; use queue.addFolder"));
         } else {
-            let info = ffmpeg::probe(&f, None);
-            if info.get("error").is_some() && info["video"].is_null() && info["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true) {
-                return Err(format!("ffmpeg cannot read {}: {}", Path::new(&f).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), info["error"].as_str().unwrap_or("")));
+            let mut info = ffmpeg::probe(&f, None);
+            let hooked = crate::raw::decoder_for(&f).is_some();
+            if info.get("error").is_some() && info["video"].is_null() && info["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true) && !hooked {
+                let ext = ffmpeg::ext_of(&f);
+                let hint = if ["r3d", "braw", "ari", "arx", "crm", "mxf"].contains(&ext.as_str()) { "; camera raw is decoded by the camera maker's own tool: add it under the rawDecoders preference (Preferences > Delivery Tools)" } else { "" };
+                return Err(format!("ffmpeg cannot read {}: {}{hint}", Path::new(&f).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), info["error"].as_str().unwrap_or("")));
+            }
+            if hooked {
+                info["rawDecoder"] = json!(true);
             }
             e.new_item(&f, &info, None)
         };
@@ -376,7 +389,7 @@ fn interpret(e: &mut Engine, p: &Value) -> Res {
     if !it["interpret"].is_object() {
         it["interpret"] = json!({});
     }
-    for k in ["frameRate", "pixelAspect", "fieldOrder", "alpha", "rotation"] {
+    for k in ["frameRate", "pixelAspect", "fieldOrder", "alpha", "rotation", "rawExposure", "rawTransfer"] {
         if let Some(v) = p.get(k) {
             if v.is_null() || v == "source" {
                 it["interpret"].as_object_mut().unwrap().remove(k);
@@ -612,6 +625,11 @@ fn verify(e: &mut Engine, p: &Value) -> Res {
         if let Some(k) = package {
             checks.extend(crate::wrap::verify(k, s0, &path, &files));
         }
+        if crate::credentials::wanted(s0) && crate::credentials::supported(&probe_path) {
+            let c = crate::credentials::check(&probe_path);
+            let got = if c["present"].as_bool().unwrap_or(false) { format!("{} manifest{}", c["generator"].as_str().unwrap_or("a"), c["issues"].as_array().filter(|a| !a.is_empty()).map(|a| format!(" ({})", a.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>().join(", "))).unwrap_or_default()) } else { "none".into() };
+            checks.push(json!({"check": "Content Credentials", "want": "a valid formencoder manifest", "got": got, "ok": c["valid"].as_bool().unwrap_or(false) && c["generator"] == "formencoder"}));
+        }
         if s0["exportAudio"].as_bool().unwrap_or(false) && src_audio && !matches!(package, Some("p2" | "dcp")) {
             if let Some(ac) = s0["audio"]["codec"].as_str() {
                 let side = if elementary { files.iter().find(|f| **f != probe_path).map(|f| ffmpeg::probe(f, None)) } else { None };
@@ -795,6 +813,35 @@ fn analyze(e: &mut Engine, p: &Value) -> Res {
         e.start_queue("analysis");
     }
     Ok(json!({"items": added}))
+}
+
+fn transcribe(e: &mut Engine, p: &Value) -> Res {
+    let mut added = Vec::new();
+    let spec = json!({"model": p["model"], "language": p["language"], "translate": p["translate"], "formats": p["formats"], "overwrite": p["overwrite"]});
+    let opts = crate::transcribe::options(&json!({"transcribe": spec}));
+    if crate::transcribe::model_path(opts["model"].as_str().unwrap_or("base")).is_none() {
+        return Err(format!("the speech model {} is not downloaded; get it in Preferences > Delivery Tools or with ./formencoder install-tools --model {}", opts["model"].as_str().unwrap_or(""), opts["model"].as_str().unwrap_or("")));
+    }
+    for f in path_list(p, "paths")? {
+        let info = ffmpeg::probe(&f, None);
+        if info["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true) {
+            return Err(format!("{f} has no audio to transcribe"));
+        }
+        let mut it = e.new_item(&f, &info, None);
+        let mut o = e.make_output(None, None, Some("h264"), s(p, "folder"), None, "transcribe")?;
+        o["transcribe"] = opts.clone();
+        added.push(json!({"item": it["id"], "output": o["id"]}));
+        it["outputs"] = json!([o]);
+        e.items_mut().push(it);
+    }
+    if bv(p, "start", true) {
+        e.start_queue("transcribe");
+    }
+    Ok(json!({"added": added, "options": opts}))
+}
+
+fn transcribe_models(_: &mut Engine, _: &Value) -> Res {
+    Ok(json!({"models": crate::transcribe::listing(), "folder": crate::transcribe::models_dir().to_string_lossy(), "formats": crate::transcribe::FORMATS, "whisper": crate::tools::find("whisper-cli").map(|p| p.to_string_lossy().into_owned())}))
 }
 
 fn watch_list(e: &mut Engine, _: &Value) -> Res {
@@ -1132,8 +1179,100 @@ fn prefs_set(e: &mut Engine, p: &Value) -> Res {
     Ok(json!({"prefs": out}))
 }
 
+pub const RESERVED_KEYS: &[&str] = &["Cmd+K", "Cmd+Shift+P", "`", "Cmd+,"];
+
+pub fn normalize_combo(text: &str) -> Res<String> {
+    let t = text.trim();
+    if t.is_empty() {
+        return Ok(String::new());
+    }
+    let (mut ctrl, mut cmd, mut alt, mut shift) = (false, false, false, false);
+    let mut key: Option<String> = None;
+    let parts: Vec<&str> = if t == "+" { vec!["+"] } else { t.split('+').map(str::trim).filter(|p| !p.is_empty()).collect() };
+    for p in parts {
+        match p.to_lowercase().as_str() {
+            "cmd" | "command" | "meta" | "mod" | "primary" | "super" => cmd = true,
+            "ctrl" | "control" => ctrl = true,
+            "alt" | "option" | "opt" => alt = true,
+            "shift" => shift = true,
+            _ => {
+                if key.is_some() {
+                    return Err(format!("{text:?} has more than one key; use modifiers (Cmd, Ctrl, Alt, Shift) and one key"));
+                }
+                let k = if p.chars().count() == 1 { p.to_uppercase() } else { let mut c = p.chars(); c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default() };
+                key = Some(k);
+            }
+        }
+    }
+    let key = key.ok_or_else(|| format!("{text:?} has no key"))?;
+    let mut out: Vec<String> = Vec::new();
+    if ctrl {
+        out.push("Ctrl".into());
+    }
+    if cmd {
+        out.push("Cmd".into());
+    }
+    if alt {
+        out.push("Alt".into());
+    }
+    if shift {
+        out.push("Shift".into());
+    }
+    out.push(key);
+    Ok(out.join("+"))
+}
+
+fn shortcuts_list(_: &mut Engine, _: &Value) -> Res {
+    let rows: Vec<Value> = all().iter().filter(|c| !c.menu.is_empty()).map(|c| json!({"id": c.id, "label": c.label, "menu": c.menu, "shortcut": c.shortcut_now(), "default": c.shortcut, "changed": c.shortcut_now() != c.shortcut})).collect();
+    Ok(json!({"shortcuts": rows, "reserved": RESERVED_KEYS}))
+}
+
+fn shortcuts_set(_: &mut Engine, p: &Value) -> Res {
+    let id = s(p, "command").ok_or("pass command")?;
+    let cmd = all().iter().find(|c| c.id == id).ok_or_else(|| format!("no command {id}"))?;
+    let mut map = prefs::load()["shortcuts"].as_object().cloned().unwrap_or_default();
+    let mut freed: Vec<String> = Vec::new();
+    match p.get("shortcut") {
+        None | Some(Value::Null) => {
+            map.remove(id);
+        }
+        Some(v) => {
+            let combo = normalize_combo(v.as_str().unwrap_or(""))?;
+            if RESERVED_KEYS.contains(&combo.as_str()) {
+                return Err(format!("{combo} is kept for the command palette, panel maximize or Preferences"));
+            }
+            if !combo.is_empty() {
+                if let Some(other) = all().iter().find(|c| c.id != id && c.shortcut_now() == combo) {
+                    if !bv(p, "force", false) {
+                        return Err(format!("{combo} already runs {} ({}); pass force to move it", other.label, other.id));
+                    }
+                    map.insert(other.id.to_string(), json!(""));
+                    freed.push(other.id.to_string());
+                }
+            }
+            if combo == cmd.shortcut {
+                map.remove(id);
+            } else {
+                map.insert(id.to_string(), json!(combo));
+            }
+        }
+    }
+    let mut vals = serde_json::Map::new();
+    vals.insert("shortcuts".into(), Value::Object(map));
+    prefs::save(&vals)?;
+    Ok(json!({"command": id, "shortcut": cmd.shortcut_now(), "default": cmd.shortcut, "freed": freed}))
+}
+
+fn shortcuts_reset(_: &mut Engine, _: &Value) -> Res {
+    let mut vals = serde_json::Map::new();
+    vals.insert("shortcuts".into(), json!({}));
+    prefs::save(&vals)?;
+    Ok(json!({"reset": true}))
+}
+
 fn tools_list(_: &mut Engine, _: &Value) -> Res {
-    Ok(json!({"tools": crate::tools::listing(), "folders": crate::tools::folders().iter().map(|(o, p)| json!({"origin": o, "path": p.to_string_lossy()})).collect::<Vec<_>>()}))
+    Ok(json!({"tools": crate::tools::listing(), "folders": crate::tools::folders().iter().map(|(o, p)| json!({"origin": o, "path": p.to_string_lossy()})).collect::<Vec<_>>(),
+              "vendorRaw": crate::raw::vendor_listing(), "rawDecoders": prefs::load()["rawDecoders"]}))
 }
 
 fn cache_info(_: &mut Engine, _: &Value) -> Res {
@@ -1288,7 +1427,7 @@ pub fn all() -> &'static Vec<Cmd> {
             c("queue.setOutput", "Set Output File...", "Queue", p!("refs" => refs_s(), "path" => st(), "folder" => st(), "name" => st()), &["refs"], true, false, "",
               "Sets one output's file (path), the folder of several outputs at once, or the output name template ({source} {preset} {format} {date} {time} {width} {height} {fps} {index}).", set_output),
             c("queue.setRange", "Set Source Range", "Queue", p!("refs" => refs_s(), "mode" => en(&["entire", "inout", "custom", "workArea"]), "in" => nu(), "out" => nu()), &["refs"], true, false, "", "In and out points in source seconds.", set_range),
-            c("queue.interpret", "Interpret Footage...", "File", p!("item" => st(), "frameRate" => nu(), "pixelAspect" => st(), "fieldOrder" => en(&["source", "progressive", "tff", "bff"]), "alpha" => en(&["source", "ignore", "straight", "premultiplied", "invert"]), "rotation" => int()), &["item"], true, false, "", "Overrides how a source is read.", interpret),
+            c("queue.interpret", "Interpret Footage...", "File", p!("item" => st(), "frameRate" => nu(), "pixelAspect" => st(), "fieldOrder" => en(&["source", "progressive", "tff", "bff"]), "alpha" => en(&["source", "ignore", "straight", "premultiplied", "invert"]), "rotation" => int(), "rawExposure" => nu(), "rawTransfer" => en(&["rec709", "linear"])), &["item"], true, false, "", "Overrides how a source is read. rawExposure (stops) and rawTransfer develop camera raw (CinemaDNG and other Bayer sources): the default is Rec. 709 at 0 stops.", interpret),
             c("queue.reorder", "Move In Queue", "Queue", p!("item" => st(), "to" => int()), &["item", "to"], true, false, "", "Moves an item to a 1-based position.", reorder),
             c("queue.skip", "Skip Selection", "Edit", p!("refs" => refs_s(), "skip" => bo()), &["refs"], true, false, "", "", skip),
             c("queue.resetStatus", "Reset Status", "Edit", p!("refs" => refs_s()), &["refs"], false, false, "Cmd+.", "Returns outputs to Ready so they encode again.", reset_status),
@@ -1321,6 +1460,9 @@ pub fn all() -> &'static Vec<Cmd> {
             c("ingest.copy", "Ingest...", "File", p!("paths" => paths_s(), "destination" => st(), "verify" => en(&["size", "md5", "bit"]), "preset" => preset_s(), "transcodeFolder" => st(), "start" => bo()), &["paths", "destination"], true, false, "",
               "Copies camera media (files or card folders) with verification, and with a preset also transcodes (an ingest preset or any encoding preset).", ingest),
             c("proxy.create", "Create Proxies", "File", p!("paths" => paths_s(), "preset" => preset_s(), "folder" => st(), "start" => bo()), &["paths"], true, false, "", "Queues proxies into a Proxies folder beside each source, named [source]_Proxy.", proxies),
+            c("captions.transcribe", "Speech to Text...", "File", p!("paths" => paths_s(), "model" => en(&crate::transcribe::MODELS.iter().map(|(k, _)| *k).collect::<Vec<_>>()), "language" => st(), "translate" => bo(), "formats" => json!({"type": "array", "items": {"type": "string", "enum": crate::transcribe::FORMATS}}), "folder" => st(), "overwrite" => bo(), "start" => bo()), &["paths"], true, false, "",
+              "Queues speech to text with whisper.cpp: an .srt (and .vtt, .txt or .json) transcript beside each source, which Captions then finds for burn-in, embedding or sidecars. language is a code such as en or auto; translate makes English; model is one of captions.models.", transcribe),
+            c("captions.models", "Speech Models", "File", p!(), &[], false, true, "", "The whisper.cpp speech models, which are downloaded, where they live, and whether whisper-cli is installed.", transcribe_models),
             c("analyze.media", "Analyze Media", "File", p!("paths" => paths_s(), "start" => bo()), &["paths"], true, false, "", "Queues analysis: a .feanalysis.json sidecar with scene changes, black frames, silences and loudness.", analyze),
             c("watch.list", "Watch Folders", "Window", p!(), &[], false, true, "Cmd+4", "", watch_list),
             c("watch.add", "Add Watch Folder...", "File", p!("folder" => st(), "preset" => preset_s(), "format" => format_s(), "outputs" => objs(), "kind" => en(&["encode", "analysis"]), "frameRate" => nu(), "moveSources" => bo()), &["folder"], true, false, "Cmd+Alt+I",
@@ -1354,6 +1496,10 @@ pub fn all() -> &'static Vec<Cmd> {
             c("prefs.set", "Set Preferences", "Edit", p!("values" => ob()), &["values"], false, false, "", "", prefs_set),
             c("prefs.reset", "Reset Preferences", "Edit", p!(), &[], false, false, "", "", prefs_reset),
             c("prefs.cacheInfo", "Media Cache", "Edit", p!(), &[], false, true, "", "The media cache folder, its size and file count, the cache limit, and the memory free and reserved.", cache_info),
+            c("shortcuts.list", "Keyboard Shortcuts", "", p!(), &[], false, true, "", "Every menu command with its shortcut now and its default, and the keys kept for the app itself.", shortcuts_list),
+            c("shortcuts.set", "Set Keyboard Shortcut", "", p!("command" => st(), "shortcut" => json!({"type": ["string", "null"], "description": "modifiers and one key, such as Cmd+Shift+E; empty removes it; null restores the default"}), "force" => bo()), &["command"], false, false, "",
+              "Changes one command's shortcut. A shortcut another command already uses is refused unless force, which takes it from that command.", shortcuts_set),
+            c("shortcuts.reset", "Reset Keyboard Shortcuts", "", p!(), &[], false, false, "", "Puts every shortcut back to its default.", shortcuts_reset),
             c("tools.list", "Delivery Tools", "Edit", p!(), &[], false, true, "",
               "The separate programs formencoder drives for packaged deliverables (bmx for AS-10, AS-11 and P2; asdcplib and OpenJPEG for DCP): version, licence, what each is for and where it was found.", tools_list),
             c("prefs.cleanCache", "Clean Media Cache", "Edit", p!("all" => bo()), &[], false, false, "",
@@ -1413,7 +1559,7 @@ pub fn menus() -> Value {
     let mut m: BTreeMap<String, Vec<Value>> = BTreeMap::new();
     for c in all() {
         if !c.menu.is_empty() {
-            m.entry(c.menu.to_string()).or_default().push(json!({"id": c.id, "label": c.label, "shortcut": c.shortcut}));
+            m.entry(c.menu.to_string()).or_default().push(json!({"id": c.id, "label": c.label, "shortcut": c.shortcut_now()}));
         }
     }
     json!(m)

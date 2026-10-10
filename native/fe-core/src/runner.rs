@@ -176,6 +176,13 @@ fn run(ctx: Ctx, item: Value, output: Value, out_path: String) {
             let c2 = &ctx;
             sidecars::analyze(item["path"].as_str().unwrap_or(""), &|f, m| c2.report(f, m), &|| c2.stopped())
         }
+        "transcribe" => {
+            let c2 = &ctx;
+            let work = paths::sub("cache").join("jobs").join(&ctx.oid);
+            let r = crate::transcribe::run(&item, &output, &work, &|f, m| c2.report(f, m), &|| c2.stopped());
+            let _ = fs::remove_dir_all(&work);
+            r
+        }
         _ => encode(&ctx, &item, &output, &out_path),
     };
     let mut rt = match outcome {
@@ -248,6 +255,29 @@ fn source_for(ctx: &Ctx, item: &Value) -> Res<(Source, Option<String>)> {
         return Ok((Source { path: item["path"].as_str().unwrap_or("").into(), info, interpret: json!({}), range: json!({}), audio_path: None, stitch: parts }, None));
     }
     let path = item["path"].as_str().unwrap_or("").to_string();
+    if kind == "file" {
+        if let Some(hook) = crate::raw::decoder_for(&path) {
+            let work = paths::sub("cache").join("raw").join(&ctx.oid);
+            let got = crate::raw::decode(&path, &hook, &work, &|f, m| ctx.report(f * 0.3, m), &|| ctx.stopped())?;
+            let fr = item["interpret"]["frameRate"].as_f64().or(got.frame_rate).unwrap_or(24.0);
+            let mut info = if got.path.contains("%0") { ffmpeg::probe(&got.path, Some(fr)) } else { ffmpeg::probe(&got.path, None) };
+            if got.path.contains("%0") {
+                let head = Path::new(&got.path).file_name().map(|n| n.to_string_lossy().split("%0").next().unwrap_or("").to_string()).unwrap_or_default();
+                let count = fs::read_dir(Path::new(&got.path).parent().unwrap_or(&work)).map(|rd| rd.flatten().filter(|e| e.file_name().to_string_lossy().starts_with(&head)).count()).unwrap_or(0);
+                info["kind"] = json!("sequence");
+                info["sequence"] = json!({"pattern": got.path, "first": 0, "count": count});
+                info["duration"] = json!(count as f64 / fr);
+                if !info["video"].is_null() {
+                    info["video"]["fps"] = json!(fr);
+                }
+            }
+            let mut interp = item["interpret"].clone();
+            if got.path.contains("%0") {
+                interp["frameRate"] = json!(fr);
+            }
+            return Ok((Source { path: got.path, info, interpret: interp, range: item["range"].clone(), audio_path: None, stitch: vec![] }, Some(work.to_string_lossy().into_owned())));
+        }
+    }
     let fr = item["interpret"]["frameRate"].as_f64();
     let info = if kind == "sequence" { ffmpeg::probe(&path, fr.or(Some(25.0))) } else { ffmpeg::probe(&path, None) };
     if info.get("error").is_some() && info["video"].is_null() && info["audio"].as_array().map(|a| a.is_empty()).unwrap_or(true) {
@@ -259,7 +289,7 @@ fn source_for(ctx: &Ctx, item: &Value) -> Res<(Source, Option<String>)> {
 fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
     let mut s = settings::normalize(&output["settings"])?;
     let (src, tmp) = source_for(ctx, item)?;
-    let base = if item["kind"] == "family" { 0.3 } else { 0.0 };
+    let base = if item["kind"] == "family" || (item["kind"] == "file" && crate::raw::decoder_for(item["path"].as_str().unwrap_or("")).is_some()) { 0.3 } else { 0.0 };
     if let Some(mb) = s["maxFileSize"].as_f64().filter(|x| *x > 0.0) {
         pipeline::cap_bitrate(&mut s, &src.info, mb, &src.range);
     }
@@ -382,6 +412,16 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
     if files.is_empty() {
         return Err("ffmpeg finished but wrote no file".into());
     }
+    let mut plan_notes = plan.notes.clone();
+    if crate::credentials::wanted(&s) {
+        let target = files[0].clone();
+        if package.is_none() && !out_path.contains("%0") && crate::credentials::supported(&target) {
+            ctx.report(0.99, "signing Content Credentials");
+            plan_notes.extend(crate::credentials::sign(&target, if item["kind"] == "file" { item["path"].as_str().unwrap_or("") } else { "" }, &s, &work)?);
+        } else {
+            plan_notes.push(format!("Content Credentials were not written: c2pa signs single MP4, MOV, M4A, JPEG, PNG, TIFF, WebP, WAV, MP3, AVI and GIF files, not {}", Path::new(&target).extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_else(|| "this output".into())));
+        }
+    }
     let mut written = Vec::new();
     for (p, text) in &plan.sidecars {
         fs::write(p, text).map_err(|e| e.to_string())?;
@@ -392,7 +432,7 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         written.push(sidecars::write_xmp(&out_path, &Value::Object(fields), s["format"].as_str().unwrap_or(""), item["path"].as_str().unwrap_or(""))?);
     }
     let bytes: u64 = files.iter().take(5000).filter_map(|f| fs::metadata(f).ok()).map(|m| m.len()).sum();
-    let mut result = json!({"path": out_path, "files": files.iter().take(2000).collect::<Vec<_>>(), "count": files.len(), "sidecars": written, "bytes": bytes, "notes": plan.notes,
+    let mut result = json!({"path": out_path, "files": files.iter().take(2000).collect::<Vec<_>>(), "count": files.len(), "sidecars": written, "bytes": bytes, "notes": plan_notes,
                             "encoder": plan.encoder, "audioEncoder": plan.audio_encoder, "width": plan.width, "height": plan.height, "fps": plan.fps, "duration": plan.duration});
     if let Some(l) = &plan.loudness {
         let measured_from = match package {

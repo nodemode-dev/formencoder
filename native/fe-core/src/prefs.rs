@@ -13,7 +13,7 @@ pub fn defaults() -> Value {
         "outputFolder": "", "outputBesideSource": true, "incrementNames": true, "removeCompletedOnExit": false,
         "chime": true, "notify": "queue", "previewWhileEncoding": true, "stopOnDecodeErrors": false, "skipMissing": true,
         "stillDuration": 5.0, "ffmpegDir": "", "threads": 0, "hardware": "auto", "defaultPreset": "system/match-source-high", "logFolder": "",
-        "hwDecode": "off", "cacheFolder": "", "cacheLimitGB": 20.0, "memoryReserveGB": 4.0
+        "hwDecode": "off", "cacheFolder": "", "cacheLimitGB": 20.0, "memoryReserveGB": 4.0, "rawDecoders": [], "shortcuts": {}
     })
 }
 
@@ -46,7 +46,9 @@ pub fn descriptions() -> Value {
         "hwDecode": "Decode sources on the GPU when it can (auto, off)",
         "cacheFolder": "Media cache folder for previews, thumbnails, plans and work files (empty: the data folder's cache)",
         "cacheLimitGB": "Largest size the media cache may grow to before the oldest files are removed",
-        "memoryReserveGB": "Memory to leave for other applications: no further parallel encode starts while less than this is free"
+        "memoryReserveGB": "Memory to leave for other applications: no further parallel encode starts while less than this is free",
+        "shortcuts": "Keyboard shortcuts changed from their defaults, by command id (an empty string removes a shortcut); shortcuts.set edits them",
+        "rawDecoders": "Camera raw decoders: a list of {extensions, command, output, frameRate}; command runs the camera maker's own tool with {input}, {folder} and {name} filled in, and output names what it writes ({folder}/{name}_%06d.exr for a sequence, or a movie file), which formencoder then encodes"
     })
 }
 
@@ -89,6 +91,16 @@ pub fn save(patch: &Map<String, Value>) -> Res {
             Value::Bool(_) => json!(v.as_bool().unwrap_or_else(|| v.as_str().map(|s| s == "true").unwrap_or(false))),
             Value::Number(n) if n.is_f64() => json!(v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())).unwrap_or(0.0)),
             Value::Number(_) => json!(v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())).unwrap_or(0.0) as i64),
+            Value::Object(_) => match v {
+                Value::Object(_) => v.clone(),
+                Value::String(s) => serde_json::from_str::<Value>(s).ok().filter(Value::is_object).ok_or_else(|| format!("{k} takes a JSON object"))?,
+                _ => json!({}),
+            },
+            Value::Array(_) => match v {
+                Value::Array(_) => v.clone(),
+                Value::String(s) => serde_json::from_str::<Value>(s).ok().filter(Value::is_array).ok_or_else(|| format!("{k} takes a JSON list"))?,
+                _ => json!([]),
+            },
             _ => json!(match v { Value::String(s) => s.clone(), Value::Null => String::new(), other => other.to_string() }),
         };
         cur[k] = coerced;

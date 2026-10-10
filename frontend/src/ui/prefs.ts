@@ -19,6 +19,12 @@ interface ToolRow {
   programs: Array<{ program: string; path: string | null }>;
 }
 
+interface ModelRow {
+  id: string;
+  label: string;
+  installed: boolean;
+}
+
 interface Page {
   id: string;
   label: string;
@@ -41,7 +47,14 @@ export class Preferences {
   private dialog: Dialog | null = null;
   private controls = new Map<string, FieldControl>();
 
-  constructor(private readonly ctx: Ctx) {}
+  constructor(private readonly ctx: Ctx) {
+    ctx.client.events.on('toolFetch', (ev) => {
+      const tool = String(ev.tool ?? '');
+      const sel = tool.startsWith('model:') ? `.fe-model[data-model="${tool.slice(6)}"]` : `.fe-tool[data-tool="${tool}"]`;
+      const row = this.dialog?.body.querySelector<HTMLElement>(sel);
+      if (row) setText(q(row, '.fe-tool-state'), `${Math.round(Number(ev.progress) * 100)}%`);
+    });
+  }
 
   async open(page = 'general'): Promise<void> {
     const r = await this.ctx.run<{ prefs: Record<string, unknown>; describe: Record<string, string>; dataDir: string }>('prefs.get', {});
@@ -112,7 +125,7 @@ export class Preferences {
   }
 
   private async toolRows(pane: HTMLElement): Promise<void> {
-    const r = await this.ctx.run<{ tools: ToolRow[] }>('tools.list', {}, true);
+    const r = await this.ctx.run<{ tools: ToolRow[]; vendorRaw: Array<{ label: string; found: string | null }>; rawDecoders: unknown[] }>('tools.list', {}, true);
     pane.appendChild(el('<p class="fx-prefs-note">Separate programs formencoder runs for packaged deliverables and software encoding. They are built from pinned sources with ./formencoder install-tools, or bundled with the desktop app; OpenH264 is downloaded from Cisco on request and is never bundled.</p>'));
     for (const t of r?.tools ?? []) {
       const row = el(`<div class="fe-tool" data-tool="${t.id}"><div class="fe-tool-head"><span class="fe-tool-name"></span><span class="fe-tool-state"></span></div><div class="fx-note fe-tool-use"></div><div class="fx-note fe-tool-path"></div></div>`);
@@ -135,11 +148,66 @@ export class Preferences {
       pane.appendChild(row);
     }
     this.paintTools(r?.tools ?? [], pane);
+    const m = await this.ctx.run<{ models: ModelRow[]; folder: string }>('captions.models', {}, true);
+    pane.appendChild(el('<div class="fx-prefs-section">Speech Models (whisper.cpp)</div>'));
+    for (const md of m?.models ?? []) {
+      const row = el(`<div class="fe-tool fe-model" data-model="${md.id}"><div class="fe-tool-head"><span class="fe-tool-name"></span><span class="fe-tool-state"></span><button class="cv-btn fe-tool-get" type="button">Download</button></div></div>`);
+      setText(q(row, '.fe-tool-name'), md.label);
+      const b = q<HTMLButtonElement>(row, 'button');
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          await this.ctx.client.call('model.fetch', { model: md.id });
+        } catch (e) {
+          toast((e as Error).message, 'error');
+        }
+        b.disabled = false;
+        void this.tools();
+      });
+      pane.appendChild(row);
+    }
+    this.paintModels(m?.models ?? [], pane);
+    pane.appendChild(el('<div class="fx-prefs-section">Camera Raw Decoders</div>'));
+    const vendor = el('<p class="fx-prefs-note fe-raw-vendor"></p>');
+    setText(vendor, `CinemaDNG decodes in formencoder. R3D, ARRIRAW, X-OCN, Canon RAW and Blackmagic RAW go through the camera maker's own tool, which formencoder runs when a source's extension is listed here. Found: ${(r?.vendorRaw ?? []).map((v) => `${v.label} ${v.found ? 'yes' : 'no'}`).join(' · ')}.`);
+    pane.appendChild(vendor);
+    const area = el<HTMLTextAreaElement>('<textarea class="cv-input fe-raw-json" spellcheck="false" rows="6"></textarea>');
+    area.placeholder = '[{"extensions": "r3d", "command": "REDline --i {input} --outDir {folder} --o {name} ...", "output": "{folder}/{name}_%06d.exr", "frameRate": 24}]';
+    area.value = JSON.stringify(r?.rawDecoders ?? [], null, 2);
+    const save = el<HTMLButtonElement>('<button class="cv-btn" type="button">Save Decoders</button>');
+    save.addEventListener('click', async () => {
+      let list: unknown;
+      try {
+        list = JSON.parse(area.value || '[]');
+      } catch (e) {
+        toast(`Not valid JSON: ${(e as Error).message}`, 'error');
+        return;
+      }
+      const ok = await this.ctx.run('prefs.set', { values: { rawDecoders: list } });
+      if (ok) toast('Raw decoders saved', 'ok');
+    });
+    const row = el('<div class="fe-raw-row"></div>');
+    row.append(area, save);
+    pane.appendChild(row);
+  }
+
+  private paintModels(rows: ModelRow[], root?: HTMLElement): void {
+    const body = root ?? this.dialog?.body;
+    if (!body) return;
+    for (const md of rows) {
+      const row = body.querySelector<HTMLElement>(`.fe-model[data-model="${md.id}"]`);
+      if (!row) continue;
+      setText(q(row, '.fe-tool-state'), md.installed ? 'Downloaded' : 'Not downloaded');
+      setClass(row, 'is-installed', md.installed);
+      setText(q(row, 'button'), md.installed ? 'Download Again' : 'Download');
+    }
   }
 
   private async tools(): Promise<void> {
     const r = await this.ctx.run<{ tools: ToolRow[] }>('tools.list', {}, true);
     if (r) this.paintTools(r.tools);
+    const m = await this.ctx.run<{ models: ModelRow[] }>('captions.models', {}, true);
+    if (m) this.paintModels(m.models);
   }
 
   private paintTools(rows: ToolRow[], root?: HTMLElement): void {

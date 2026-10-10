@@ -49,6 +49,22 @@ TOOLS = {
         "targets": ["kvazaar-bin"],
         "cmake": ["-DBUILD_SHARED_LIBS=OFF", "-DBUILD_TESTS=OFF"],
     },
+    "c2patool": {
+        "crate": "c2patool",
+        "tag": "0.27.22",
+        "licence": "MIT-OR-Apache-2.0",
+        "programs": {"c2patool": "bin"},
+    },
+    "whisper": {
+        "repo": "https://github.com/ggml-org/whisper.cpp.git",
+        "tag": "v1.9.5",
+        "commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "licence": "MIT",
+        "licence_file": "LICENSE",
+        "programs": {"whisper-cli": "bin"},
+        "targets": ["whisper-cli"],
+        "cmake": ["-DBUILD_SHARED_LIBS=OFF", "-DWHISPER_BUILD_TESTS=OFF", "-DWHISPER_BUILD_SERVER=OFF", "-DGGML_NATIVE=OFF", "-DWHISPER_SDL2=OFF"],
+    },
     "lame": {
         "tarball": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
         "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
@@ -152,7 +168,17 @@ def main() -> int:
     parser.add_argument("--stage", action="store_true", help="install into src-tauri/tools for the desktop bundle instead of the per-person tools folder")
     parser.add_argument("--work", default=str(ROOT / "build" / "tools-src"), help="where the sources are cloned and built")
     parser.add_argument("--keep-going", action="store_true", help="install what builds and report the rest instead of stopping at the first failure")
+    parser.add_argument("--model", action="append", default=[], help="download a whisper.cpp speech model (tiny, base, small, medium, large-v3-turbo, or the .en variants) into the per-person models folder; repeatable")
     args = parser.parse_args()
+    if args.model:
+        sys.path.insert(0, str(ROOT / "backend"))
+        from app import model_fetch
+
+        for m in args.model:
+            got = model_fetch.fetch(m, lambda p, msg: print(f"[install-tools] {msg}", flush=True) if p in (0.0, 1.0) else None)
+            print(f"[install-tools] speech model {m} -> {got['path']}")
+        if not args.tools:
+            return 0
     names = args.tools or list(TOOLS)
     unknown = [n for n in names if n not in TOOLS]
     if unknown:
@@ -161,6 +187,8 @@ def main() -> int:
     for n in names:
         if "repo" in TOOLS[n]:
             needs |= {"git", "cmake"}
+        if "crate" in TOOLS[n]:
+            needs.add("cargo")
     for need in sorted(needs):
         if not shutil.which(need):
             raise SystemExit(f"[install-tools] {need} is needed to build the tools; install it and run this again")
@@ -193,6 +221,14 @@ def install(name: str, spec: dict, dest: Path, notices: Path, work: Path, stage:
 
         got = openh264_fetch.fetch(lambda p, m: print(f"[install-tools] {m}", flush=True), dest)
         print(f"[install-tools] {got['attribution']} -> {got['path']}")
+        return
+    if "crate" in spec:
+        root = work / f"{spec['crate']}-{spec['tag']}"
+        run(["cargo", "install", "--locked", f"{spec['crate']}@{spec['tag']}", "--root", str(root)])
+        exe = spec["crate"] + (".exe" if os.name == "nt" else "")
+        shutil.copy2(root / "bin" / exe, dest / exe)
+        (notices / f"{name}-{spec['licence']}.txt").write_text(f"{spec['crate']} {spec['tag']} from crates.io, built with cargo install --locked.\nLicensed under the MIT License or the Apache License 2.0, at your option: https://github.com/contentauth/c2pa-rs\n", encoding="utf-8")
+        print(f"[install-tools] {spec['crate']} -> {dest / exe}")
         return
     src = fetch(name, spec, work)
     out = build(name, spec, src)

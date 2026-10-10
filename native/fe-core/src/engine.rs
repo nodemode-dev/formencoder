@@ -853,12 +853,12 @@ impl Engine {
                 let s = &o["settings"];
                 let status = self.status_of(&o);
                 let kind = o["kind"].as_str().unwrap_or("encode");
-                let path = if FINAL.contains(&status.as_str()) && rt["path"].is_string() { rt["path"].as_str().unwrap().to_string() } else if kind == "copy" { o["destination"].as_str().unwrap_or("").to_string() } else { self.output_path(it, &o) };
+                let path = if FINAL.contains(&status.as_str()) && rt["path"].is_string() { rt["path"].as_str().unwrap().to_string() } else if kind == "copy" { o["destination"].as_str().unwrap_or("").to_string() } else if kind == "transcribe" { crate::transcribe::planned(it, &o) } else { self.output_path(it, &o) };
                 let effects: Vec<String> = s["effects"].as_object().map(|m| m.iter().filter(|(_, e)| e["enabled"].as_bool().unwrap_or(false)).map(|(k, _)| k.clone()).collect()).unwrap_or_default();
                 outs.push(json!({
                     "id": oid, "kind": kind, "format": s["format"],
-                    "formatLabel": match kind { "copy" => "Copy".to_string(), "analysis" => "Analysis".to_string(), _ => formats::label(s["format"].as_str().unwrap_or("")) },
-                    "preset": s["preset"], "presetName": if kind == "copy" { json!(format!("Verify: {}", o["verify"].as_str().unwrap_or("size"))) } else if kind == "analysis" { json!("Scenes, silences, loudness") } else { s["presetName"].clone() },
+                    "formatLabel": match kind { "copy" => "Copy".to_string(), "analysis" => "Analysis".to_string(), "transcribe" => "Speech to Text".to_string(), _ => formats::label(s["format"].as_str().unwrap_or("")) },
+                    "preset": s["preset"], "presetName": if kind == "copy" { json!(format!("Verify: {}", o["verify"].as_str().unwrap_or("size"))) } else if kind == "analysis" { json!("Scenes, silences, loudness") } else if kind == "transcribe" { let t = crate::transcribe::options(&o); json!(format!("{} model, {}, {}", t["model"].as_str().unwrap_or(""), t["language"].as_str().unwrap_or(""), formats::strs(&t["formats"]).join(" "))) } else { s["presetName"].clone() },
                     "path": path, "status": status, "progress": rt.get("progress").cloned().unwrap_or(json!(if status == "done" { 1.0 } else { 0.0 })),
                     "error": rt["error"], "eta": rt["eta"], "elapsed": rt["elapsed"], "fps": rt["fps"], "speed": rt["speed"], "encoder": rt["encoder"], "bytes": rt["bytes"], "notes": rt["notes"],
                     "message": rt["message"], "summary": if kind == "encode" { settings::summary(s, &it["info"]) } else { json!({}) }, "effects": effects, "skip": o["skip"], "folder": o["folder"],

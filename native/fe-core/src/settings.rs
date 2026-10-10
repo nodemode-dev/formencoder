@@ -84,7 +84,8 @@ pub fn default(fmt: &str) -> Res {
         "captions": {"mode": "none", "source": "auto", "format": "srt", "language": "eng", "size": 36, "color": "#ffffff", "background": 60, "position": "bottom"},
         "metadata": {"mode": "retain", "template": null, "rules": {"keep": [], "drop": []}, "fields": {}, "xmpSidecar": false},
         "publish": [],
-        "package": package_default()
+        "package": package_default(),
+        "contentCredentials": crate::credentials::default()
     });
     if let Some(n) = f["audioTracks"].as_u64() {
         let tracks: Vec<Value> = (0..n).map(|i| json!({"layout": "mono", "channels": [if i < 2 { json!({"track": 0, "channel": i}) } else { Value::Null }]})).collect();

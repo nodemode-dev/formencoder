@@ -953,6 +953,9 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
                 270 => chain.push("transpose=2".into()),
                 _ => {}
             }
+            if crate::raw::is_bayer(info) {
+                chain.extend(crate::raw::develop(interp));
+            }
             match interp["alpha"].as_str() {
                 Some("ignore") => chain.push("format=yuv444p".into()),
                 Some("invert") => chain.push("format=rgba,lutrgb=a=negval".into()),

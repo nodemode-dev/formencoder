@@ -371,9 +371,17 @@ export class ExportSettings {
       f('metadata.fields.album', 'Album / Project', 'text'),
       f('metadata.fields.date', 'Date', 'text'),
       f('metadata.fields.comment', 'Comment', 'text'),
+      f('contentCredentials.enabled', 'Attach Content Credentials (C2PA)', 'bool'),
+      f('contentCredentials.author', 'Credentials Author', 'text', { showIf: 'contentCredentials.enabled=true' }),
+      f('contentCredentials.includeSource', 'Record the Source as an Ingredient', 'bool', { showIf: 'contentCredentials.enabled=true' }),
+      f('contentCredentials.certificate', 'Signing Certificate (PEM chain)', 'path', { showIf: 'contentCredentials.enabled=true', options: [['pem', 'pem'], ['crt', 'crt'], ['pub', 'pub']] }),
+      f('contentCredentials.privateKey', 'Private Key (PEM)', 'path', { showIf: 'contentCredentials.enabled=true', options: [['pem', 'pem'], ['key', 'key']] }),
+      f('contentCredentials.algorithm', 'Signing Algorithm', 'select', { showIf: 'contentCredentials.enabled=true', options: [['es256', 'ES256'], ['es384', 'ES384'], ['es512', 'ES512'], ['ps256', 'PS256'], ['ps384', 'PS384'], ['ps512', 'PS512'], ['ed25519', 'Ed25519']] }),
+      f('contentCredentials.tsa', 'Time Stamp Authority URL', 'text', { showIf: 'contentCredentials.enabled=true' }),
     ];
     for (const x of fields) {
       const c = fieldControl(x, (k, v) => void this.patch({ [k]: v }));
+      if (x.showIf) c.row.dataset.showIf = x.showIf;
       this.controls.set(x.key, c);
       host.appendChild(c.row);
     }

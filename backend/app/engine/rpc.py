@@ -139,6 +139,22 @@ async def fetch_openh264() -> dict:
     return out
 
 
+async def fetch_model(name: str) -> dict:
+    from .. import model_fetch
+
+    last = {"t": 0.0}
+
+    def report(p: float, message: str) -> None:
+        now = time.monotonic()
+        if p in (0.0, 1.0) or now - last["t"] > 0.5:
+            last["t"] = now
+            host.bus.publish({"type": "toolFetch", "tool": f"model:{name}", "progress": round(p, 3), "message": message})
+
+    out = await _bridge(model_fetch.fetch, name, report)
+    host.bus.publish({"type": "toast", "text": f"Speech model {name} installed", "kind": "ok"})
+    return out
+
+
 def ffmpeg_missing() -> bool:
     try:
         from .. import native
@@ -207,6 +223,8 @@ async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
             return await fetch_ffmpeg()
         if method == "openh264.fetch":
             return await fetch_openh264()
+        if method == "model.fetch":
+            return await fetch_model(str(p.get("model") or "base"))
         if method == "publish.destinations":
             from . import publish
 

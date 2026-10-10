@@ -19,6 +19,7 @@ import { MenuBar } from '../ui/menubar';
 import { Palette } from '../ui/palette';
 import { contextMenu } from '../ui/popup';
 import { Preferences } from '../ui/prefs';
+import { ShortcutEditor } from '../ui/shortcuts';
 import { applyTheme } from '../ui/themes';
 import { toast } from '../ui/toast';
 import { VERSION } from '../version';
@@ -29,6 +30,7 @@ const WS_MAP: Record<string, string> = { Default: 'Default', Encoding: 'Encoding
 class App {
   private readonly dock = new Dock();
   private readonly prefs = new Preferences(ctx);
+  private readonly shortcutEditor = new ShortcutEditor(ctx);
   private readonly keys = new Keys(ctx);
   private palette!: Palette;
   private terminal!: TerminalPanel;
@@ -78,7 +80,7 @@ class App {
           '-',
           { label: 'About formencoder', run: () => void this.about() },
         ],
-        Edit: () => [{ label: 'Preferences...', shortcut: 'Cmd+,', run: () => void this.prefs.open() }],
+        Edit: () => [{ label: 'Keyboard Shortcuts...', run: () => void this.shortcutEditor.open() }, { label: 'Preferences...', shortcut: 'Cmd+,', run: () => void this.prefs.open() }],
       },
     }, (id) => this.keys.shortcutFor(id));
     q(shell, '.fx-menubar-host').appendChild(menubar.el);

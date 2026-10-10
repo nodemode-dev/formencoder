@@ -13,6 +13,7 @@ export interface UiEvents {
   inspect: { path: string; name?: string };
   presets: void;
   result: { command: string; params: Record<string, unknown>; result: unknown };
+  specs: void;
 }
 
 interface Picker {
@@ -61,10 +62,11 @@ export class Ctx {
     this.client.events.on('open', () => void this.loadSpecs());
     this.client.events.on('activity', (ev) => {
       if (String(ev.command || '').startsWith('preset.')) this.presetCache = null;
+      if (String(ev.command || '').startsWith('shortcuts.')) void this.loadSpecs().then(() => this.ui.emit('specs', undefined));
     });
   }
 
-  private async loadSpecs(): Promise<void> {
+  async loadSpecs(): Promise<void> {
     try {
       const rows = await this.client.call<CommandSpec[]>('command.list', { schemas: true });
       this.specs.clear();

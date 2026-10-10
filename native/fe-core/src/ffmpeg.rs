@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 use crate::paths;
 use crate::util::{num, rate_str};
 
-pub const IMAGE_EXT: &[&str] = &["png", "jpg", "jpeg", "tif", "tiff", "bmp", "tga", "dpx", "exr", "webp", "gif", "jp2", "psd"];
+pub const IMAGE_EXT: &[&str] = &["png", "jpg", "jpeg", "tif", "tiff", "bmp", "tga", "dpx", "exr", "webp", "gif", "jp2", "psd", "dng"];
 pub const AUDIO_EXT: &[&str] = &["wav", "aif", "aiff", "mp3", "aac", "m4a", "flac", "ogg", "opus", "wma", "ac3", "eac3", "caf", "bwf"];
 pub const VIDEO_EXT: &[&str] = &["mp4", "mov", "m4v", "mkv", "webm", "avi", "mxf", "mts", "m2ts", "ts", "mpg", "mpeg", "m2v", "vob", "wmv", "flv", "3gp", "dv", "ogv", "y4m", "r3d", "braw", "ari"];
 

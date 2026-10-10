@@ -302,3 +302,13 @@
 .fe-tool.is-installed .fe-tool-state { color: var(--text-secondary); }
 .fe-tool-get { min-width: 150px; }
 .fe-tool-path { min-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fe-sc { display: grid; gap: 8px; }
+.fe-sc-list { height: min(60vh, 520px); overflow: auto; }
+.fe-sc-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 80px; align-items: center; gap: 8px; min-height: 32px; font-size: var(--fs-12); color: var(--text-secondary); }
+.fe-sc-row[hidden], .fe-sc-menu[hidden] { display: none; }
+.fe-sc-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fe-sc-key { width: 150px; font-variant-numeric: tabular-nums; }
+.fe-sc-key.is-capturing { border-color: var(--accent-color); color: var(--accent-color); }
+.fe-sc-row.is-changed .fe-sc-label { color: var(--text-primary); }
+.fe-raw-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.fe-raw-json { width: 100%; min-height: 120px; resize: vertical; font-family: var(--font-mono); font-size: var(--fs-11); }

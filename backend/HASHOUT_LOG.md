@@ -43,6 +43,10 @@ Folder, FTP (with TLS and retries), S3-compatible storage signed with SigV4 (no 
 - `setup/bundle_ffmpeg.py` uses the same functions to stage the build into `src-tauri/ffmpeg` for a desktop bundle and renames the programs to their plain names.
 - The LGPL build has no software H.264, HEVC or AV1 encoder and no MP3. The engine's encoder probe reports that per machine, and an output that needs one fails with a sentence that names the fix; nothing here hides it.
 
+## Speech model fetch (`model_fetch.py`)
+
+whisper.cpp's `ggml-*.bin` models from Hugging Face, each pinned by the size and SHA-256 Hugging Face reports for the file, streamed into a `.part` file with progress and renamed only when both match. `model.fetch` over RPC publishes `toolFetch` progress at most twice a second; `./formencoder install-tools --model base` uses the same function.
+
 ## OpenH264 fetch (`openh264_fetch.py`)
 
 Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco serves, unpacked into the per-person `tools/bin` with a `.part` file and an atomic rename, plus `licences/openh264-cisco.txt` carrying the attribution Cisco asks for. `openh264.fetch` over RPC (Preferences > Delivery Tools) and `./formencoder install-tools openh264` both call it, and the RPC re-runs the encoder probe so `openh264` joins the H.264 list at once. It is never staged into a bundle: Cisco's patent licence covers the binary when it is downloaded from Cisco.

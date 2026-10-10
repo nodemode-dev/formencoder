@@ -62,6 +62,23 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 - **MP3:** FFmpeg writes `lame_in.wav`, then `plan.post` runs `lame -q 2 -b N --cbr` with ID3 tags from the resolved metadata. MP3 inside a video container still needs libmp3lame.
 - **OpenH264 is never bundled.** `backend/app/openh264_fetch.py` downloads Cisco's 2.6.0 binary for the platform, checks the archive's pinned SHA-256 and writes the attribution and licence pointer into `tools/licences`.
 
+## Speech to text (`transcribe.rs`)
+
+- An output of kind `transcribe` (from `captions.transcribe`) runs on a runner thread like analysis: FFmpeg extracts 16 kHz mono PCM into the job folder, then `whisper-cli` (whisper.cpp, built by install-tools with `GGML_NATIVE=OFF` so a bundled build runs on other CPUs) writes `.srt`, `.vtt`, `.txt` or `.json` with `-of` beside the source. Progress is parsed from `-pp` (`progress = N%`), the detected language from `auto-detected language:`.
+- The transcript is named `<stem>.srt` so `captions::sidecar_for` finds it for burn-in, embedding and sidecars with no further setting; when that name is taken it becomes `<stem>_transcript.srt` unless `overwrite`.
+- Models (`ggml-*.bin`) live in the per-person `models` folder (`FORMENCODER_MODELS` overrides), downloaded by `backend/app/model_fetch.py` against the SHA-256 and size Hugging Face publishes for each file.
+
+## Content Credentials (`credentials.rs`)
+
+- `contentCredentials` settings: after the encode, `c2patool` signs a manifest into the first file (actions `c2pa.created` or `c2pa.transcoded` with formencoder as software agent, an optional CreativeWork author, the source as parent ingredient when c2pa can read it) into a hidden file that is renamed over the output. With no certificate and key c2patool's built-in test certificate signs and the output notes say viewers will call it untrusted.
+- Verify reads the store back and passes when the active manifest's generator is formencoder and the only validation code, if any, is `signingCredential.untrusted`.
+- MXF, MKV, WebM, image sequences and packages are not signable by c2pa; those outputs say so in their notes.
+
+## Camera raw (`raw.rs`)
+
+- Bayer sources (FFmpeg's tiff decoder reads CinemaDNG and DNG as `bayer_*` with black and white levels applied, linear light) get `format=rgb48le` (the debayer) and a `lutrgb` exposure and BT.709 OETF from the item's `rawExposure` and `rawTransfer` interpretation; `dng` joined the image extensions so numbered DNG frames import as a sequence.
+- Other camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) is decoded by the maker's own program through the `rawDecoders` preference: `runner::source_for` runs the command with `{input}`, `{folder}` and `{name}` filled in, into the job's raw folder, and encodes the image sequence or movie it names. `queue.addSource` accepts a file FFmpeg cannot read when a decoder covers its extension. formencoder ships no vendor SDK or tool.
+
 ## Preview
 
 `preview::PreviewJob` takes an Engine snapshot (the source and normalised settings) and runs off the engine thread with the GIL released: one PNG through the same graph as the encode with `preview_at`, or a contact sheet of several. `view: source` is the Compare tab's left side.

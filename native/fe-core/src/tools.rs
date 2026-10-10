@@ -22,6 +22,8 @@ pub const TOOLS: &[Tool] = &[
     Tool { id: "asdcplib", label: "asdcplib", programs: &["asdcp-wrap", "asdcp-info"], version: "rel_2_13_2", licence: "BSD-3-Clause", source: "https://github.com/cinecert/asdcplib", used_for: "DCP picture and sound track files" },
     Tool { id: "openjpeg", label: "OpenJPEG", programs: &["opj_compress"], version: "v2.5.3", licence: "BSD-2-Clause", source: "https://github.com/uclouvain/openjpeg", used_for: "DCI cinema-profile JPEG 2000 for DCP" },
     Tool { id: "kvazaar", label: "Kvazaar", programs: &["kvazaar"], version: "v2.3.2", licence: "BSD-3-Clause", source: "https://github.com/ultravideo/kvazaar", used_for: "software HEVC encoding when the FFmpeg has no libx265" },
+    Tool { id: "c2patool", label: "c2patool", programs: &["c2patool"], version: "0.27.22", licence: "MIT OR Apache-2.0", source: "https://github.com/contentauth/c2pa-rs", used_for: "Content Credentials (C2PA): signing a manifest into finished outputs and reading it back in Verify" },
+    Tool { id: "whisper", label: "whisper.cpp", programs: &["whisper-cli"], version: "v1.9.5", licence: "MIT", source: "https://github.com/ggml-org/whisper.cpp", used_for: "speech to text: transcripts and captions from a source's audio, with a downloaded speech model" },
     Tool { id: "lame", label: "LAME", programs: &["lame"], version: "3.100", licence: "LGPL-2.0-or-later", source: "https://lame.sourceforge.io", used_for: "MP3 audio files when the FFmpeg has no libmp3lame" },
 ];
 
