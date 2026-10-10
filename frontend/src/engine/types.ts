@@ -168,6 +168,7 @@ export interface FormatDescription {
   loudnessStandards: Record<string, { label: string; target: number; truePeak: number }>;
   positions: string[];
   scaling: Array<[string, string]>;
+  cropProportions?: Array<[string, string]>;
   timeInterpolation: Array<[string, string]>;
   captions: Array<[string, string]>;
   defaults: Settings;

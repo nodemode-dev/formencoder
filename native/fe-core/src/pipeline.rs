@@ -62,6 +62,17 @@ fn even(n: f64) -> u32 {
     (((n / 2.0).round() * 2.0) as i64).max(2) as u32
 }
 
+pub const CROP_PROPORTIONS: &[(&str, &str)] = &[("none", "None"), ("1:1", "Square 1:1"), ("4:3", "4:3"), ("16:9", "16:9"), ("9:16", "Vertical 9:16"), ("4:5", "Portrait 4:5"), ("1.85:1", "Flat 1.85:1"), ("2.39:1", "Scope 2.39:1")];
+
+pub fn crop_ratio(p: &str) -> Option<f64> {
+    if p == "none" || !CROP_PROPORTIONS.iter().any(|(k, _)| *k == p) {
+        return None;
+    }
+    let (a, b) = p.split_once(':')?;
+    let r = a.parse::<f64>().ok()? / b.parse::<f64>().ok().filter(|x| *x > 0.0)?;
+    Some(r)
+}
+
 pub struct Geometry {
     pub w: u32,
     pub h: u32,
@@ -84,11 +95,31 @@ pub fn geometry(info: &Value, s: &Value, interp: &Value) -> Geometry {
         std::mem::swap(&mut w, &mut h);
     }
     let c = &s["crop"];
-    let (cl, ct, cr, cb) = (n(&c["left"]).max(0.0) as u32, n(&c["top"]).max(0.0) as u32, n(&c["right"]).max(0.0) as u32, n(&c["bottom"]).max(0.0) as u32);
-    let crop_w = w.saturating_sub(cl + cr).max(16);
-    let crop_h = h.saturating_sub(ct + cb).max(16);
+    let (mut cl, mut ct, mut cr, mut cb) = (n(&c["left"]).max(0.0) as u32, n(&c["top"]).max(0.0) as u32, n(&c["right"]).max(0.0) as u32, n(&c["bottom"]).max(0.0) as u32);
+    let mut crop_w = w.saturating_sub(cl + cr).max(16);
+    let mut crop_h = h.saturating_sub(ct + cb).max(16);
     let sar_text = interp["pixelAspect"].as_str().or(v["sar"].as_str()).unwrap_or("1:1");
     let sar = sar_text.split_once(':').and_then(|(a, b)| Some(a.parse::<f64>().ok()? / b.parse::<f64>().ok().filter(|x| *x > 0.0)?)).unwrap_or(1.0);
+    if let Some(target) = crop_ratio(c["proportion"].as_str().unwrap_or("none")) {
+        let ax = c["anchorX"].as_f64().unwrap_or(0.5).clamp(0.0, 1.0);
+        let ay = c["anchorY"].as_f64().unwrap_or(0.5).clamp(0.0, 1.0);
+        let display = crop_w as f64 * sar / crop_h as f64;
+        if display > target + 1e-6 {
+            let new_w = (((crop_h as f64 * target / sar) / 2.0).floor() * 2.0).max(16.0) as u32;
+            let extra = crop_w.saturating_sub(new_w);
+            let left_extra = ((extra as f64 * ax) / 2.0).round() as u32 * 2;
+            cl += left_extra.min(extra);
+            cr += extra - left_extra.min(extra);
+            crop_w = new_w;
+        } else if display < target - 1e-6 {
+            let new_h = (((crop_w as f64 * sar / target) / 2.0).floor() * 2.0).max(16.0) as u32;
+            let extra = crop_h.saturating_sub(new_h);
+            let top_extra = ((extra as f64 * ay) / 2.0).round() as u32 * 2;
+            ct += top_extra.min(extra);
+            cb += extra - top_extra.min(extra);
+            crop_h = new_h;
+        }
+    }
     let fps = interp["frameRate"].as_f64().or(v["fps"].as_f64()).filter(|x| *x > 0.0).unwrap_or(25.0);
     Geometry { w, h, crop_w, crop_h, crop: (cl, ct, cr, cb), sar, fps }
 }

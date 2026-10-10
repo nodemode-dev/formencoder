@@ -76,7 +76,7 @@ pub fn default(fmt: &str) -> Res {
         "audio": {"codec": if ac_id.is_empty() { Value::Null } else { json!(ac_id) }, "sampleRate": 48000, "channels": "stereo", "bitrate": abitrate, "bitDepth": adepth, "float": false, "routing": []},
         "multiplexer": {"container": f["containers"].get(0).cloned().unwrap_or(Value::Null), "fastStart": true},
         "range": {"mode": "entire", "in": null, "out": null},
-        "crop": {"left": 0, "top": 0, "right": 0, "bottom": 0},
+        "crop": {"left": 0, "top": 0, "right": 0, "bottom": 0, "proportion": "none", "anchorX": 0.5, "anchorY": 0.5},
         "rotation": 0, "scaling": "fit", "timeInterpolation": "sampling", "maxRenderQuality": false, "maxDepth": false,
         "startTimecode": null, "alphaOnly": false, "maxFileSize": null,
         "effects": effects_default(),
@@ -312,7 +312,13 @@ pub fn summary(s: &Value, info: &Value) -> Value {
     let a = &s["audio"];
     let src = &info["video"];
     let match_source = v["matchSource"].as_bool().unwrap_or(true);
-    let (sw, sh) = (src["width"].as_i64(), src["height"].as_i64());
+    let (sw, sh) = if src["width"].as_i64().is_some() && src["height"].as_i64().is_some() {
+        let g = crate::pipeline::geometry(info, s, &json!({}));
+        let (w, h) = crate::pipeline::output_size(s, &g);
+        if match_source { (Some(w as i64), Some(h as i64)) } else { (Some(g.crop_w as i64), Some(g.crop_h as i64)) }
+    } else {
+        (None, None)
+    };
     let (vw, vh) = if match_source { (None, None) } else { (v["width"].as_i64(), v["height"].as_i64()) };
     let even = |x: f64| ((x / 2.0).round() as i64 * 2).max(2);
     let (w, h) = match (vw, vh, sw, sh) {

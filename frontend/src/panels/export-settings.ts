@@ -2,7 +2,7 @@ import type { Ctx } from '../app/ctx';
 import type { FieldSpec, FormatDescription, OutputSettings, Settings, Summary } from '../engine/types';
 import { formats, presetEntries } from '../ui/choosers';
 import { promptName } from '../ui/dialogs';
-import { el, patchList, q, setClass, setHidden, setText, setTitle, swapMedia } from '../ui/dom';
+import { el, patchList, q, setClass, setHidden, setStyleVar, setText, setTitle, swapMedia } from '../ui/dom';
 import { fieldControl, showIf, type FieldControl } from '../ui/fields';
 import { pickFiles } from '../ui/file-dialog';
 import { basename, fmtBytes, fmtClock, getPath, POSITIONS } from '../ui/format';
@@ -58,7 +58,7 @@ export class ExportSettings {
       <div class="fe-es-body">
         <section class="fe-es-left">
           <div class="fe-seg fe-es-views"><button type="button" data-v="source">Source</button><button type="button" data-v="output" class="is-active">Output</button><button type="button" data-v="compare">Compare</button></div>
-          <div class="fe-es-stage"><figure class="fe-es-fig" data-f="source"><img alt=""><figcaption>Source</figcaption></figure><figure class="fe-es-fig" data-f="output"><img alt=""><figcaption>Output</figcaption></figure><span class="fe-es-busy ns-pending">Rendering</span><span class="fe-es-err" hidden></span></div>
+          <div class="fe-es-stage"><figure class="fe-es-fig" data-f="source"><img alt=""><figcaption>Source</figcaption><div class="fe-es-cropbox" hidden><span class="fe-cb-move" data-h="move"></span><span class="fe-cb-h" data-h="l"></span><span class="fe-cb-h" data-h="t"></span><span class="fe-cb-h" data-h="r"></span><span class="fe-cb-h" data-h="b"></span></div></figure><figure class="fe-es-fig" data-f="output"><img alt=""><figcaption>Output</figcaption></figure><span class="fe-es-busy ns-pending">Rendering</span><span class="fe-es-err" hidden></span></div>
           <div class="fe-es-time"><span class="fe-es-tc">00:00</span><input type="range" class="fe-range" min="0" max="1" step="0.01" value="0"><span class="fe-es-dur">00:00</span></div>
           <div class="fe-es-rangebar"><span class="fe-es-inout"></span></div>
           <div class="fe-es-rangebtns"><button class="cv-btn" type="button" data-a="in">Set In</button><button class="cv-btn" type="button" data-a="out">Set Out</button><button class="cv-btn" type="button" data-a="entire">Entire Source</button><span class="fe-es-rangelabel"></span></div>
@@ -66,7 +66,7 @@ export class ExportSettings {
             <label>Source Scaling<select class="fx-select" data-k="scaling"></select></label>
             <label>Rotation<select class="fx-select" data-k="rotation"><option value="0">None</option><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">90° counterclockwise</option></select></label>
           </div>
-          <div class="fe-es-crop"><span>Crop</span><label>L<input class="cv-input fe-num" type="number" min="0" data-crop="left"></label><label>T<input class="cv-input fe-num" type="number" min="0" data-crop="top"></label><label>R<input class="cv-input fe-num" type="number" min="0" data-crop="right"></label><label>B<input class="cv-input fe-num" type="number" min="0" data-crop="bottom"></label></div>
+          <div class="fe-es-crop"><span>Crop</span><label>L<input class="cv-input fe-num" type="number" min="0" data-crop="left"></label><label>T<input class="cv-input fe-num" type="number" min="0" data-crop="top"></label><label>R<input class="cv-input fe-num" type="number" min="0" data-crop="right"></label><label>B<input class="cv-input fe-num" type="number" min="0" data-crop="bottom"></label><label>Proportions<select class="fx-select fe-es-prop" data-k="crop.proportion"></select></label></div>
         </section>
         <section class="fe-es-right">
           <div class="fe-es-top">
@@ -137,6 +137,7 @@ export class ExportSettings {
     for (const i of Array.from(root.querySelectorAll<HTMLInputElement>('[data-crop]'))) {
       i.addEventListener('change', () => void this.patch({ [`crop.${i.dataset.crop}`]: Math.max(0, Math.round(Number(i.value) || 0)) }));
     }
+    this.bindCropBox();
   }
 
   async open(output: string): Promise<void> {
@@ -182,6 +183,8 @@ export class ExportSettings {
     if (!this.desc) return;
     const sel = q<HTMLSelectElement>(this.scrim, '[data-k="scaling"]');
     if (!sel.options.length) for (const [v, l] of this.desc.scaling) sel.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: l }));
+    const prop = q<HTMLSelectElement>(this.scrim, '[data-k="crop.proportion"]');
+    if (!prop.options.length) for (const [v, l] of this.desc.cropProportions ?? [['none', 'None']]) prop.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: l }));
     const ti = q<HTMLSelectElement>(this.scrim, '[data-k="timeInterpolation"]');
     if (!ti.options.length) for (const [v, l] of this.desc.timeInterpolation) ti.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: l }));
     this.buildFieldPane('video', this.desc.video, 'This format has no video.');
@@ -379,11 +382,139 @@ export class ExportSettings {
     for (const p of Array.from(this.scrim.querySelectorAll<HTMLElement>('[data-pane]'))) setHidden(p, p.dataset.pane !== t);
   }
 
+  private sourceSize(): { w: number; h: number } | null {
+    const v = (this.info?.sourceInfo as { video?: { width?: number; height?: number; rotation?: number } } | undefined)?.video;
+    if (!v?.width || !v?.height) return null;
+    const rot = ((Number(v.rotation) || 0) + (Number(this.s.rotation) || 0)) % 180 !== 0;
+    return rot ? { w: v.height, h: v.width } : { w: v.width, h: v.height };
+  }
+
+  private effectiveCrop(): { l: number; t: number; w: number; h: number } | null {
+    const src = this.sourceSize();
+    if (!src) return null;
+    const c = this.s.crop as Record<string, number | string>;
+    let l = Number(c.left) || 0;
+    let t = Number(c.top) || 0;
+    let w = Math.max(16, src.w - l - (Number(c.right) || 0));
+    let h = Math.max(16, src.h - t - (Number(c.bottom) || 0));
+    const m = /^([\d.]+):([\d.]+)$/.exec(String(c.proportion ?? 'none'));
+    if (m) {
+      const target = Number(m[1]) / Number(m[2]);
+      const ax = Number(c.anchorX ?? 0.5);
+      const ay = Number(c.anchorY ?? 0.5);
+      if (w / h > target) {
+        const nw = Math.max(16, Math.floor((h * target) / 2) * 2);
+        l += Math.min(w - nw, Math.round(((w - nw) * ax) / 2) * 2);
+        w = nw;
+      } else if (w / h < target) {
+        const nh = Math.max(16, Math.floor(w / target / 2) * 2);
+        t += Math.min(h - nh, Math.round(((h - nh) * ay) / 2) * 2);
+        h = nh;
+      }
+    }
+    return { l, t, w, h };
+  }
+
+  private imageRect(): { x: number; y: number; w: number; h: number } | null {
+    const fig = q(this.scrim, '.fe-es-fig[data-f="source"]');
+    const img = q<HTMLImageElement>(fig, 'img');
+    if (!img.naturalWidth || fig.hidden) return null;
+    const fr = fig.getBoundingClientRect();
+    const ir = img.getBoundingClientRect();
+    return { x: ir.left - fr.left, y: ir.top - fr.top, w: ir.width, h: ir.height };
+  }
+
+  private placeCropBox(): void {
+    if (this.cropDrag) return;
+    const box = q(this.scrim, '.fe-es-cropbox');
+    const src = this.sourceSize();
+    const rect = this.imageRect();
+    const crop = this.effectiveCrop();
+    const show = !!(src && rect && crop) && this.view !== 'output';
+    setHidden(box, !show);
+    if (!show || !src || !rect || !crop) return;
+    const sx = rect.w / src.w;
+    const sy = rect.h / src.h;
+    setStyleVar(box, '--cb-x', `${rect.x + crop.l * sx}px`);
+    setStyleVar(box, '--cb-y', `${rect.y + crop.t * sy}px`);
+    setStyleVar(box, '--cb-w', `${crop.w * sx}px`);
+    setStyleVar(box, '--cb-h', `${crop.h * sy}px`);
+  }
+
+  private cropDrag = false;
+
+  private bindCropBox(): void {
+    const box = q(this.scrim, '.fe-es-cropbox');
+    box.addEventListener('pointerdown', (e) => {
+      const handle = (e.target as HTMLElement).dataset.h;
+      const src = this.sourceSize();
+      const rect = this.imageRect();
+      const crop = this.effectiveCrop();
+      if (!handle || !src || !rect || !crop) return;
+      e.preventDefault();
+      box.setPointerCapture(e.pointerId);
+      this.cropDrag = true;
+      const sx = rect.w / src.w;
+      const sy = rect.h / src.h;
+      const start = { x: e.clientX, y: e.clientY };
+      const c = this.s.crop as Record<string, number | string>;
+      const base = { l: Number(c.left) || 0, t: Number(c.top) || 0, r: Number(c.right) || 0, b: Number(c.bottom) || 0 };
+      const proportional = String(c.proportion ?? 'none') !== 'none';
+      let next: Record<string, number> = {};
+      const move = (ev: PointerEvent): void => {
+        const dx = (ev.clientX - start.x) / sx;
+        const dy = (ev.clientY - start.y) / sy;
+        const even = (n: number): number => Math.max(0, Math.round(n / 2) * 2);
+        if (handle === 'move' && proportional) {
+          const freeW = src.w - base.l - base.r - crop.w;
+          const freeH = src.h - base.t - base.b - crop.h;
+          const ax = freeW > 0 ? Math.min(1, Math.max(0, (crop.l - base.l + dx) / freeW)) : 0.5;
+          const ay = freeH > 0 ? Math.min(1, Math.max(0, (crop.t - base.t + dy) / freeH)) : 0.5;
+          next = { 'crop.anchorX': Math.round(ax * 1000) / 1000, 'crop.anchorY': Math.round(ay * 1000) / 1000 };
+          setStyleVar(box, '--cb-x', `${rect.x + (base.l + ax * freeW) * sx}px`);
+          setStyleVar(box, '--cb-y', `${rect.y + (base.t + ay * freeH) * sy}px`);
+          return;
+        }
+        const n = { ...base };
+        if (handle === 'move') {
+          const mx = Math.min(Math.max(-base.l, dx), base.r);
+          const my = Math.min(Math.max(-base.t, dy), base.b);
+          n.l = base.l + mx; n.r = base.r - mx; n.t = base.t + my; n.b = base.b - my;
+        }
+        if (handle === 'l') n.l = Math.min(src.w - n.r - 16, Math.max(0, base.l + dx));
+        if (handle === 'r') n.r = Math.min(src.w - n.l - 16, Math.max(0, base.r - dx));
+        if (handle === 't') n.t = Math.min(src.h - n.b - 16, Math.max(0, base.t + dy));
+        if (handle === 'b') n.b = Math.min(src.h - n.t - 16, Math.max(0, base.b - dy));
+        n.l = even(n.l); n.t = even(n.t); n.r = even(n.r); n.b = even(n.b);
+        next = { 'crop.left': n.l, 'crop.top': n.t, 'crop.right': n.r, 'crop.bottom': n.b };
+        setStyleVar(box, '--cb-x', `${rect.x + n.l * sx}px`);
+        setStyleVar(box, '--cb-y', `${rect.y + n.t * sy}px`);
+        setStyleVar(box, '--cb-w', `${(src.w - n.l - n.r) * sx}px`);
+        setStyleVar(box, '--cb-h', `${(src.h - n.t - n.b) * sy}px`);
+      };
+      const up = (): void => {
+        box.removeEventListener('pointermove', move);
+        box.removeEventListener('pointerup', up);
+        box.removeEventListener('pointercancel', up);
+        this.cropDrag = false;
+        if (Object.keys(next).length) void this.patch(next);
+        else this.placeCropBox();
+      };
+      box.addEventListener('pointermove', move);
+      box.addEventListener('pointerup', up);
+      box.addEventListener('pointercancel', up);
+    });
+    const img = q<HTMLImageElement>(this.scrim, '.fe-es-fig[data-f="source"] img');
+    img.addEventListener('load', () => this.placeCropBox());
+    if (window.ResizeObserver) new ResizeObserver(() => this.placeCropBox()).observe(q(this.scrim, '.fe-es-stage'));
+  }
+
   private setView(v: View): void {
     this.view = v;
     for (const b of Array.from(this.scrim.querySelectorAll<HTMLElement>('[data-v]'))) setClass(b, 'is-active', b.dataset.v === v);
     setClass(q(this.scrim, '.fe-es-stage'), 'is-compare', v === 'compare');
     for (const fig of Array.from(this.scrim.querySelectorAll<HTMLElement>('.fe-es-fig'))) setHidden(fig, !(v === 'compare' || fig.dataset.f === v));
+    this.placeCropBox();
     this.schedulePreview(0);
   }
 
@@ -395,7 +526,7 @@ export class ExportSettings {
     setText(q(this.scrim, '.fe-es-out'), basename(out?.path || ''));
     setTitle(q(this.scrim, '.fe-es-out'), out?.path || '');
     for (const i of Array.from(this.scrim.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-k]'))) {
-      const v = s[i.dataset.k as string];
+      const v = this.get(i.dataset.k as string);
       if (i instanceof HTMLInputElement && i.type === 'checkbox') {
         if (i.checked !== (v === true)) i.checked = v === true;
       } else if (document.activeElement !== i) {
@@ -407,6 +538,7 @@ export class ExportSettings {
       const want = String((s.crop as Record<string, number>)[i.dataset.crop as string] ?? 0);
       if (document.activeElement !== i && i.value !== want) i.value = want;
     }
+    this.placeCropBox();
     const match = s.video?.matchSource !== false;
     for (const [key, c] of this.controls) {
       c.set(this.get(key));

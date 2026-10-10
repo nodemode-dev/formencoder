@@ -875,6 +875,7 @@ fn format_describe(e: &mut Engine, p: &Value) -> Res {
     out["loudnessStandards"] = settings::loudness_standards();
     out["positions"] = json!(settings::POSITIONS);
     out["scaling"] = json!(formats::SCALING.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
+    out["cropProportions"] = json!(pipeline::CROP_PROPORTIONS.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
     out["timeInterpolation"] = json!(formats::INTERPOLATION.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
     out["captions"] = json!(captions::FORMATS.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>());
     out["defaults"] = settings::default(&fmt)?;
