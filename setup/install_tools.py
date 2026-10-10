@@ -39,6 +39,25 @@ TOOLS = {
         "programs": {"opj_compress": "bin"},
         "cmake": ["-DBUILD_SHARED_LIBS=OFF", "-DBUILD_CODEC=ON", "-DBUILD_THIRDPARTY=ON"],
     },
+    "kvazaar": {
+        "repo": "https://github.com/ultravideo/kvazaar.git",
+        "tag": "v2.3.2",
+        "commit": "6040962bed5cc68c5ad01234c38c08b8b2822068",
+        "licence": "BSD-3-Clause",
+        "licence_file": "LICENSE",
+        "programs": {"kvazaar": "src"},
+        "targets": ["kvazaar-bin"],
+        "cmake": ["-DBUILD_SHARED_LIBS=OFF", "-DBUILD_TESTS=OFF"],
+    },
+    "lame": {
+        "tarball": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
+        "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
+        "tag": "3.100",
+        "licence": "LGPL-2.0-or-later",
+        "licence_file": "COPYING",
+        "programs": {"lame": "frontend"},
+    },
+    "openh264": {"download": True, "tag": "2.6.0", "licence": "BSD-2-Clause, Cisco binary licence"},
 }
 
 
@@ -56,7 +75,41 @@ def run(cmd: list[str], cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
+def fetch_tarball(name: str, spec: dict, work: Path) -> Path:
+    import hashlib
+    import tarfile
+    import urllib.request
+
+    archive = work / f"{name}-{spec['tag']}.tar.gz"
+    if not archive.is_file() or hashlib.sha256(archive.read_bytes()).hexdigest() != spec["sha256"]:
+        print(f"[install-tools] downloading {spec['tarball']}", flush=True)
+        urllib.request.urlretrieve(spec["tarball"], archive)
+    got = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if got != spec["sha256"]:
+        raise SystemExit(f"[install-tools] {archive.name} has SHA-256 {got}, not the pinned {spec['sha256']}; refusing to build it")
+    src = work / f"{name}-{spec['tag']}"
+    if src.exists():
+        shutil.rmtree(src)
+    with tarfile.open(archive) as tar:
+        try:
+            tar.extractall(work, filter="data")
+        except TypeError:
+            tar.extractall(work)
+    return src
+
+
+def build_autotools(spec: dict, src: Path) -> Path:
+    if os.name == "nt":
+        run(["nmake", "-f", "Makefile.MSVC", "comp=msvc", "asm=no"], cwd=src)
+        return src / "output"
+    run(["./configure", "--disable-shared", "--enable-static", "--disable-gtktest", "--disable-decoder"], cwd=src)
+    run(["make", f"-j{os.cpu_count() or 2}"], cwd=src)
+    return src
+
+
 def fetch(name: str, spec: dict, work: Path) -> Path:
+    if "tarball" in spec:
+        return fetch_tarball(name, spec, work)
     src = work / name
     if not (src / ".git").is_dir():
         if src.exists():
@@ -69,11 +122,13 @@ def fetch(name: str, spec: dict, work: Path) -> Path:
 
 
 def build(name: str, spec: dict, src: Path) -> Path:
+    if "cmake" not in spec:
+        return build_autotools(spec, src)
     out = src / "build-formencoder"
     out.mkdir(exist_ok=True)
     run(["cmake", "-S", str(src), "-B", str(out), "-DCMAKE_BUILD_TYPE=Release", *spec["cmake"]])
     targets: list[str] = []
-    for program in spec["programs"]:
+    for program in spec.get("targets") or spec["programs"]:
         targets += ["--target", program]
     run(["cmake", "--build", str(out), "--config", "Release", "--parallel", str(os.cpu_count() or 2), *targets])
     return out
@@ -81,7 +136,8 @@ def build(name: str, spec: dict, src: Path) -> Path:
 
 def locate(out: Path, folder: str, program: str) -> Path:
     exe = program + (".exe" if os.name == "nt" else "")
-    for candidate in (out / folder / exe, out / folder / "Release" / exe, out / "bin" / exe, out / "bin" / "Release" / exe):
+    src = out.parent if out.name == "build-formencoder" else out
+    for candidate in (out / folder / exe, out / folder / "Release" / exe, out / "bin" / exe, out / "bin" / "Release" / exe, src / folder / exe, src / folder / "Release" / exe, out / exe):
         if candidate.is_file():
             return candidate
     for found in out.rglob(exe):
@@ -91,16 +147,21 @@ def locate(out: Path, folder: str, program: str) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build the separate delivery tools formencoder drives (bmx, asdcplib, OpenJPEG) from their pinned source tags and install the programs.")
+    parser = argparse.ArgumentParser(description="Build the separate tools formencoder drives (bmx, asdcplib, OpenJPEG, Kvazaar, LAME) from their pinned sources and install the programs, or download OpenH264 from Cisco.")
     parser.add_argument("tools", nargs="*", help=f"which tools (default all): {', '.join(TOOLS)}")
     parser.add_argument("--stage", action="store_true", help="install into src-tauri/tools for the desktop bundle instead of the per-person tools folder")
     parser.add_argument("--work", default=str(ROOT / "build" / "tools-src"), help="where the sources are cloned and built")
+    parser.add_argument("--keep-going", action="store_true", help="install what builds and report the rest instead of stopping at the first failure")
     args = parser.parse_args()
     names = args.tools or list(TOOLS)
     unknown = [n for n in names if n not in TOOLS]
     if unknown:
         parser.error(f"unknown tool {', '.join(unknown)}; choose from {', '.join(TOOLS)}")
-    for need in ("git", "cmake"):
+    needs = set()
+    for n in names:
+        if "repo" in TOOLS[n]:
+            needs |= {"git", "cmake"}
+    for need in sorted(needs):
         if not shutil.which(need):
             raise SystemExit(f"[install-tools] {need} is needed to build the tools; install it and run this again")
     dest = ROOT / "src-tauri" / "tools" if args.stage else platform_data() / "tools" / "bin"
@@ -109,18 +170,38 @@ def main() -> int:
     notices.mkdir(exist_ok=True)
     work = Path(args.work)
     work.mkdir(parents=True, exist_ok=True)
+    failed: list[str] = []
     for name in names:
-        spec = TOOLS[name]
-        src = fetch(name, spec, work)
-        out = build(name, spec, src)
-        for program, folder in spec["programs"].items():
-            built = locate(out, folder, program)
-            target = dest / built.name
-            shutil.copy2(built, target)
-            print(f"[install-tools] {program} -> {target}")
-        shutil.copy2(src / spec["licence_file"], notices / f"{name}-{spec['licence']}.txt")
-    print(f"[install-tools] done on {platform.system()} {platform.machine()}; formencoder finds them in {dest}")
+        try:
+            install(name, TOOLS[name], dest, notices, work, args.stage)
+        except (SystemExit, subprocess.CalledProcessError, OSError, ValueError) as error:
+            if not args.keep_going:
+                raise
+            failed.append(name)
+            print(f"::warning::[install-tools] {name} was not installed: {error}", flush=True)
+    print(f"[install-tools] done on {platform.system()} {platform.machine()}; formencoder finds them in {dest}" + (f"; not installed: {', '.join(failed)}" if failed else ""))
     return 0
+
+
+def install(name: str, spec: dict, dest: Path, notices: Path, work: Path, stage: bool) -> None:
+    if spec.get("download"):
+        if stage:
+            print("[install-tools] OpenH264 is never bundled: Cisco's patent licence covers the binary when each person downloads it from Cisco, so the app downloads it on request (Preferences > Delivery Tools)")
+            return
+        sys.path.insert(0, str(ROOT / "backend"))
+        from app import openh264_fetch
+
+        got = openh264_fetch.fetch(lambda p, m: print(f"[install-tools] {m}", flush=True), dest)
+        print(f"[install-tools] {got['attribution']} -> {got['path']}")
+        return
+    src = fetch(name, spec, work)
+    out = build(name, spec, src)
+    for program, folder in spec["programs"].items():
+        built = locate(out, folder, program)
+        target = dest / built.name
+        shutil.copy2(built, target)
+        print(f"[install-tools] {program} -> {target}")
+    shutil.copy2(src / spec["licence_file"], notices / f"{name}-{spec['licence']}.txt")
 
 
 if __name__ == "__main__":

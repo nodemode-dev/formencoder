@@ -7,6 +7,10 @@
 | BBC bmx | v1.6 | BSD-3-Clause | bmxtranswrap, mxf2raw | AS-10, AS-11 OP1a, AS-11 D10 and P2 (OP-Atom) wrapping, and reading them back in Verify |
 | asdcplib | rel_2_13_2 | BSD-3-Clause | asdcp-wrap, asdcp-info | DCP picture and sound track files, and the DCP checks in Verify |
 | OpenJPEG | v2.5.3 | BSD-2-Clause | opj_compress | DCI cinema-profile JPEG 2000 frames for DCP |
+| Kvazaar | v2.3.2 | BSD-3-Clause | kvazaar | software HEVC when the FFmpeg has no libx265 |
+| LAME | 3.100 | LGPL-2.0-or-later | lame | MP3 audio files when the FFmpeg has no libmp3lame |
+
+OpenH264 is not staged here: Cisco's binary is downloaded by each person from Cisco (Preferences > Delivery Tools, or `./formencoder install-tools openh264`), which is what its patent licence covers.
 
 The licence texts land in `licences/`. Tauri bundles the folder as the app's `tools` resource, and the desktop workflow stages it before `tauri build`.
 

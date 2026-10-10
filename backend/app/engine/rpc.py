@@ -127,6 +127,18 @@ async def fetch_ffmpeg() -> dict:
     return out
 
 
+async def fetch_openh264() -> dict:
+    from .. import openh264_fetch
+
+    def report(p: float, message: str) -> None:
+        host.bus.publish({"type": "toolFetch", "tool": "openh264", "progress": round(p, 3), "message": message})
+
+    out = await _bridge(openh264_fetch.fetch, report)
+    await execute("format.encoders", {"refresh": True}, "engine")
+    host.bus.publish({"type": "toast", "text": f"{out['attribution']} Installed in {out['folder']}", "kind": "ok"})
+    return out
+
+
 def ffmpeg_missing() -> bool:
     try:
         from .. import native
@@ -193,6 +205,8 @@ async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
             return {"sent": sent}
         if method == "ffmpeg.fetch":
             return await fetch_ffmpeg()
+        if method == "openh264.fetch":
+            return await fetch_openh264()
         if method == "publish.destinations":
             from . import publish
 

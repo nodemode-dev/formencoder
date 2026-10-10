@@ -55,8 +55,11 @@ jobs:
         run: |
           call formencoder.bat install || exit /b 1
           call formencoder.bat install-desktop || exit /b 1
-      - name: Delivery tools from pinned tags (bmx, asdcplib, OpenJPEG; BSD)
-        run: python setup/install_tools.py --stage
+      - name: MSVC environment for nmake (LAME)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Delivery tools from pinned sources (bmx, asdcplib, OpenJPEG, Kvazaar, LAME)
+        run: python setup/install_tools.py --stage --keep-going
       - name: Build the desktop bundle with the pinned LGPL FFmpeg (macOS, Linux)
         if: runner.os != 'Windows'
         env:
