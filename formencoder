@@ -32,6 +32,7 @@ usage: ./formencoder [command] [options]
 
   mcp                   formencoder over MCP's stdio transport (starts the engine when needed)
   agents install|sync|status  set Claude Code, Codex and Cursor up (install), refresh the skill references (sync)
+  counts [--write|--check]  lines of code by area (the README's Code size table)
   clean [--all]         remove build output (--all also venv and node_modules)
   help                  this text
 EOF
@@ -69,6 +70,7 @@ case "$cmd" in
     py=python3
     [ -x backend/venv/bin/python ] && py=backend/venv/bin/python
     exec "$py" setup/agents.py "$@" ;;
+  counts) exec python3 setup/line_counts.py "$@" ;;
   clean) exec setup/clean "$@" ;;
   help|-h|--help) usage ;;
   *) printf '[formencoder] unknown command: %s\n\n' "$cmd"; usage; exit 2 ;;
