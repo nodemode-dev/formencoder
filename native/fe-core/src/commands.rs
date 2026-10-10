@@ -1270,6 +1270,18 @@ fn shortcuts_reset(_: &mut Engine, _: &Value) -> Res {
     Ok(json!({"reset": true}))
 }
 
+fn plugin_list(_: &mut Engine, _: &Value) -> Res {
+    Ok(json!({"plugins": crate::plugins::list(), "folders": crate::plugins::dirs().iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>(), "protocol": crate::plugins::PROTOCOL, "events": crate::plugins::EVENTS}))
+}
+
+fn plugin_run(_: &mut Engine, p: &Value) -> Res {
+    crate::plugins::start_command(s(p, "plugin").ok_or("pass plugin")?, s(p, "command").unwrap_or(""), p.get("params").cloned().unwrap_or(json!({})))
+}
+
+fn plugin_result(_: &mut Engine, p: &Value) -> Res {
+    crate::plugins::result(s(p, "run").ok_or("pass run")?)
+}
+
 fn tools_list(_: &mut Engine, _: &Value) -> Res {
     Ok(json!({"tools": crate::tools::listing(), "folders": crate::tools::folders().iter().map(|(o, p)| json!({"origin": o, "path": p.to_string_lossy()})).collect::<Vec<_>>(),
               "vendorRaw": crate::raw::vendor_listing(), "rawDecoders": prefs::load()["rawDecoders"]}))
@@ -1496,6 +1508,10 @@ pub fn all() -> &'static Vec<Cmd> {
             c("prefs.set", "Set Preferences", "Edit", p!("values" => ob()), &["values"], false, false, "", "", prefs_set),
             c("prefs.reset", "Reset Preferences", "Edit", p!(), &[], false, false, "", "", prefs_reset),
             c("prefs.cacheInfo", "Media Cache", "Edit", p!(), &[], false, true, "", "The media cache folder, its size and file count, the cache limit, and the memory free and reserved.", cache_info),
+            c("plugin.list", "Plug-ins", "", p!(), &[], false, true, "", "Installed plug-ins (folders with a plugin.json in the data folder's plugins folder or FORMENCODER_PLUGINS): their events, commands, options and any problems with their manifests.", plugin_list),
+            c("plugin.run", "Run Plug-in Command", "", p!("plugin" => st(), "command" => st(), "params" => ob()), &["plugin"], false, false, "",
+              "Starts one of a plug-in's commands in the background and returns its run id; plugin.result shows its progress and result.", plugin_run),
+            c("plugin.result", "Plug-in Run", "", p!("run" => st()), &["run"], false, true, "", "A plug-in command run: running, done with its result, or failed with its error.", plugin_result),
             c("shortcuts.list", "Keyboard Shortcuts", "", p!(), &[], false, true, "", "Every menu command with its shortcut now and its default, and the keys kept for the app itself.", shortcuts_list),
             c("shortcuts.set", "Set Keyboard Shortcut", "", p!("command" => st(), "shortcut" => json!({"type": ["string", "null"], "description": "modifiers and one key, such as Cmd+Shift+E; empty removes it; null restores the default"}), "force" => bo()), &["command"], false, false, "",
               "Changes one command's shortcut. A shortcut another command already uses is refused unless force, which takes it from that command.", shortcuts_set),

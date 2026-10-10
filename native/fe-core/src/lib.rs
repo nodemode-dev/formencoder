@@ -13,6 +13,7 @@ pub mod metadata;
 pub mod openh264;
 pub mod paths;
 pub mod pipeline;
+pub mod plugins;
 pub mod raw;
 pub mod prefs;
 pub mod presets;

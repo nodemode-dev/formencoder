@@ -79,6 +79,15 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 - Bayer sources (FFmpeg's tiff decoder reads CinemaDNG and DNG as `bayer_*` with black and white levels applied, linear light) get `format=rgb48le` (the debayer) and a `lutrgb` exposure and BT.709 OETF from the item's `rawExposure` and `rawTransfer` interpretation; `dng` joined the image extensions so numbered DNG frames import as a sequence.
 - Other camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) is decoded by the maker's own program through the `rawDecoders` preference: `runner::source_for` runs the command with `{input}`, `{folder}` and `{name}` filled in, into the job's raw folder, and encodes the image sequence or movie it names. `queue.addSource` accepts a file FFmpeg cannot read when a decoder covers its extension. formencoder ships no vendor SDK or tool.
 
+## Plug-ins (`plugins.rs`)
+
+- A plug-in is a folder with `plugin.json`; the program runs as a child process in that folder, gets one JSON request line on stdin and answers with JSON lines on stdout (`progress`, `result`, `error`), as written in `docs/PLUGINS.md`. Manifests are checked when listed and an unusable one says why.
+- `afterEncode` plug-ins named in an output's `plugins` run after Content Credentials, on the runner thread, and may add files and notes. `plugin.run` starts a `command` event on its own thread and keeps the run in a process-wide table that `plugin.result` reads, so the engine thread never waits on a plug-in. `publish` plug-ins run from the service's publish step.
+
+## Keyboard shortcuts
+
+`Cmd::shortcut_now` reads the `shortcuts` preference (command id to combination, `""` for none) over the table's default, and both `command.list` and the menu bar use it. `normalize_combo` writes combinations as Ctrl, Cmd, Alt, Shift then the key, the order the interface's `comboOf` produces. Cmd+K, Cmd+Shift+P, the backquote and Cmd+, stay with the app.
+
 ## Preview
 
 `preview::PreviewJob` takes an Engine snapshot (the source and normalised settings) and runs off the engine thread with the GIL released: one PNG through the same graph as the encode with `preview_at`, or a contact sheet of several. `view: source` is the Compare tab's left side.

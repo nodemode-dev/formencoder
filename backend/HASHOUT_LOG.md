@@ -37,6 +37,12 @@ A FastAPI process around the Rust engine (`fe_core`, built from `native/fe-core`
 
 Folder, FTP (with TLS and retries), S3-compatible storage signed with SigV4 (no SDK), webhook (JSON, HMAC-SHA256 signature), and a family app. `deleteLocal` removes the local files only when every destination succeeded. XMP and loudness reports are written by the Rust engine, not here.
 
+- **YouTube** refreshes an OAuth access token from the destination's client ID, secret and refresh token (`oauth2.googleapis.com/token`), opens a resumable session (`uploadType=resumable`, snippet and status in the body, `X-Upload-Content-Length`), then PUTs 8 MB chunks with `Content-Range`; a 308's `Range` header says where to go on, a 5xx or a dropped connection is retried with backoff after a `bytes */size` status query, and 200 or 201 carries the video id.
+- **Vimeo** creates the video with `upload.approach = tus` (`POST /me/videos`, `Accept: application/vnd.vimeo.*+json;version=3.4`) and PATCHes 8 MB chunks to the `upload_link` with `Tus-Resumable: 1.0.0` and `Upload-Offset`, taking the new offset from each 204; after a failure a HEAD gives the offset to resume from.
+- **Facebook** follows the Resumable Upload API: an upload session on the app (`/{app}/uploads`), the file POSTed with `Authorization: OAuth` and `file_offset` (a GET on the session gives the offset after a failure), then the handle published to the Page with the Page token (`graph-video.facebook.com/{version}/{page}/videos`, `fbuploader_video_file_chunk`). `graphVersion` defaults to v25.0, the version Meta's guide used when this was written.
+- Credentials live in the destination like the FTP and S3 passwords do, so they are in the queue file and in presets saved from that output; the interface masks fields whose names contain password, secret or token.
+- **Plug-in destinations** (`engine/plugins.py`) find the plug-in the way the engine does (the data folder's `plugins` and `FORMENCODER_PLUGINS`) and run it with the `publish` event; the protocol is in `docs/PLUGINS.md`.
+
 ## FFmpeg fetch (`ffmpeg_fetch.py`)
 
 - The pinned record is `src-tauri/binaries/ffmpeg-licence.json`; its `release` names the formcut-binaries asset per target triple and every file's SHA-256. A source checkout with no FFmpeg downloads it once on boot (`FORMENCODER_FFMPEG_AUTO=0` turns that off) into the per-person data folder; `ffmpeg.fetch` over RPC and Help, Download formencoder's FFmpeg do the same on request. A file that does not match its pin aborts the install and leaves nothing behind.

@@ -1,0 +1,15 @@
+{
+  "id": "checksums",
+  "name": "Checksum Manifest",
+  "version": "1.0.0",
+  "description": "Writes a checksum file beside each finished output, hashes files on request, and can publish a manifest of what an output wrote.",
+  "run": ["python3", "plugin.py"],
+  "events": ["afterEncode", "command", "publish"],
+  "options": {
+    "algorithm": {"type": "select", "options": ["sha256", "sha1", "md5"], "default": "sha256"},
+    "folder": {"type": "path", "default": ""}
+  },
+  "commands": [
+    {"name": "hash", "label": "Write Checksums", "params": {"paths": "absolute paths of the files to hash"}}
+  ]
+}

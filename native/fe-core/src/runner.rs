@@ -422,6 +422,11 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
             plan_notes.push(format!("Content Credentials were not written: c2pa signs single MP4, MOV, M4A, JPEG, PNG, TIFF, WebP, WAV, MP3, AVI and GIF files, not {}", Path::new(&target).extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_else(|| "this output".into())));
         }
     }
+    if s["plugins"].as_array().map(|a| !a.is_empty()).unwrap_or(false) {
+        let (added, notes) = crate::plugins::after_encode(&s, &files, &json!({"id": ctx.oid, "path": out_path, "item": item["path"]}), &|f, m| ctx.report(f, m), &|| ctx.stopped())?;
+        files.extend(added);
+        plan_notes.extend(notes);
+    }
     let mut written = Vec::new();
     for (p, text) in &plan.sidecars {
         fs::write(p, text).map_err(|e| e.to_string())?;

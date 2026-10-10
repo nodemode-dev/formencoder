@@ -305,8 +305,24 @@ export class ExportSettings {
         { label: 'Webhook', run: () => add({ type: 'webhook', url: '', secret: '' }) },
         { label: 'formcut (import into a project)', run: () => add({ type: 'family', app: 'formcut', project: '' }) },
         { label: 'formvfx (import into the open project)', run: () => add({ type: 'family', app: 'formvfx' }) },
+        '-',
+        { label: 'YouTube', run: () => add({ type: 'youtube', clientId: '', clientSecret: '', refreshToken: '', title: '{name}', description: '', tags: '', categoryId: '22', privacy: 'private', madeForKids: false }) },
+        { label: 'Vimeo', run: () => add({ type: 'vimeo', accessToken: '', title: '{name}', description: '', privacy: 'nobody' }) },
+        { label: 'Facebook Page', run: () => add({ type: 'facebook', appId: '', userToken: '', pageId: '', pageToken: '', title: '{name}', description: '', graphVersion: 'v25.0' }) },
+        { label: 'Plug-in...', run: () => void this.addPluginDestination(add) },
       ]);
     });
+  }
+
+  private async addPluginDestination(add: (d: Record<string, unknown>) => void): Promise<void> {
+    const r = await this.ctx.run<{ plugins: Array<{ id: string; name?: string; events?: string[]; valid: boolean }> }>('plugin.list', {}, true);
+    const usable = (r?.plugins ?? []).filter((p) => p.valid && (p.events ?? []).includes('publish'));
+    if (!usable.length) {
+      toast('No installed plug-in publishes; put one in the plugins folder (plugin.list shows where)', 'error');
+      return;
+    }
+    const btn = q(this.scrim, '.fe-pub-bar button').getBoundingClientRect();
+    contextMenu(btn.left, btn.bottom + 2, usable.map((p) => ({ label: p.name || p.id, run: () => add({ type: 'plugin', plugin: p.id, options: '' }) })));
   }
 
   private renderPublish(): void {
@@ -325,7 +341,7 @@ export class ExportSettings {
             void this.patch({ publish: next });
           });
           c.row.dataset.pk = k;
-          if (/password|secret|secretKey/i.test(k)) q<HTMLInputElement>(c.row, 'input').type = 'password';
+          if (/password|secret|token/i.test(k)) q<HTMLInputElement>(c.row, 'input').type = 'password';
           q(n, '.fe-pub-fields').appendChild(c.row);
         }
         q<HTMLInputElement>(n, '.fe-pub-head input').addEventListener('change', (e) => {
