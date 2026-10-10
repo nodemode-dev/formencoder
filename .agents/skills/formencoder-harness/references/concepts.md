@@ -74,7 +74,7 @@ Fields have a `showIf` condition: `video.maxBitrate` only applies when `rateCont
 | `preset.create`, `preset.import` | `{preset, name}` |
 | Setters (`queue.setRange`, `queue.setPreset`...) | the values that were set |
 | Queries | the data asked for; they never change the queue and never ask permission |
-| `encode`, `wait` | per output: `status`, `file`, `error`, `notes`, and with `encode` the `verification` |
+| `encode`, `wait` | `{settled, running, counts, outputs}`; per output `id`, `status`, `path`, `error`, `progress`, `notes`, `loudness`, `publish`, and with `encode` its `verify` result |
 
 In `batch`, a string `"$N.key"` in a later step is replaced by step N's result field, counting from 1: `"$1.output"` is the output the first `queue.addSource` made.
 
