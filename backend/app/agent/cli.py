@@ -85,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         elif a.cmd == "commands":
             rows = client.rpc("command.list", {"filter": a.filter} if a.filter else {})
             for row in rows:
-                print(f"{row['id']:<26} {row['label']:<32} {row.get('params') or ''}")
+                print(f"{row['id']:<26} {row.get('mcpName') or '':<28} {row['label']:<32} {row.get('params') or ''}")
             print(f"{len(rows)} commands", file=sys.stderr)
         elif a.cmd == "describe":
             _print(client.rpc("command.describe", {"command": a.id}))

@@ -11,6 +11,10 @@ use crate::{captions, colour, encoders, ffmpeg, formats, logs, metadata, paths, 
 
 pub type Run = fn(&mut Engine, &Value) -> Res;
 
+pub const DESTRUCTIVE: &[&str] = &["queue.remove", "queue.clearDone", "queue.open", "preset.delete", "watch.remove", "watch.removeOutput", "metadata.deleteTemplate", "log.clear", "prefs.reset", "prefs.cleanCache", "shortcuts.reset"];
+
+pub const OPEN_WORLD: &[&str] = &["family", "publish"];
+
 pub struct Cmd {
     pub id: &'static str,
     pub label: &'static str,
@@ -48,8 +52,38 @@ impl Cmd {
         }
     }
 
+    pub fn mcp_name(&self) -> String {
+        let mut out = String::with_capacity(self.id.len() + 4);
+        for ch in self.id.chars() {
+            if ch == '.' {
+                out.push('_');
+            } else if ch.is_ascii_uppercase() {
+                out.push('_');
+                out.push(ch.to_ascii_lowercase());
+            } else {
+                out.push(ch);
+            }
+        }
+        out
+    }
+
+    pub fn category(&self) -> &'static str {
+        self.id.split('.').next().unwrap_or(self.id)
+    }
+
+    pub fn annotations(&self) -> Value {
+        let set_like = self.id.rsplit('.').next().is_some_and(|v| v.starts_with("set"));
+        json!({
+            "title": self.label,
+            "readOnlyHint": self.query,
+            "destructiveHint": DESTRUCTIVE.contains(&self.id),
+            "idempotentHint": self.query || set_like,
+            "openWorldHint": OPEN_WORLD.contains(&self.category()) || self.id == "plugin.run",
+        })
+    }
+
     pub fn row(&self, schemas: bool) -> Value {
-        let mut r = json!({"id": self.id, "label": self.label, "menu": self.menu, "params": self.summary(), "undoable": self.undoable, "query": self.query, "shortcut": self.shortcut_now(), "defaultShortcut": self.shortcut, "enabled": true});
+        let mut r = json!({"id": self.id, "mcpName": self.mcp_name(), "category": self.category(), "label": self.label, "menu": self.menu, "params": self.summary(), "undoable": self.undoable, "query": self.query, "shortcut": self.shortcut_now(), "defaultShortcut": self.shortcut, "enabled": true, "annotations": self.annotations()});
         if schemas {
             r["schema"] = self.schema();
             r["doc"] = json!(self.doc);
