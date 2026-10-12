@@ -52,6 +52,32 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+RC_BASH = """[ -f /etc/profile ] && . /etc/profile
+if [ -f "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"; elif [ -f "$HOME/.bash_login" ]; then . "$HOME/.bash_login"; elif [ -f "$HOME/.profile" ]; then . "$HOME/.profile"; fi
+export PATH="$FORMENCODER_BIN:$PATH"
+"""
+
+
+def _shell_rc(base: Path) -> None:
+    if os.name == "nt":
+        return
+    _write(base / ".formencoder-bashrc", RC_BASH)
+    zdot = base / ".formencoder-zsh"
+    for name in (".zshenv", ".zprofile", ".zlogin"):
+        _write(zdot / name, f'[ -f "$HOME/{name}" ] && . "$HOME/{name}"\n')
+    _write(zdot / ".zshrc", '[ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc"\nexport PATH="$FORMENCODER_BIN:$PATH"\n')
+
+
+def shell_command(shell: str) -> tuple[list[str], dict]:
+    base = root()
+    name = os.path.basename(shell)
+    if name == "bash":
+        return [shell, "--rcfile", str(base / ".formencoder-bashrc"), "-i"], {}
+    if name == "zsh":
+        return [shell, "-l"], {"ZDOTDIR": str(base / ".formencoder-zsh")}
+    return [shell], {}
+
+
 def _shim(base: Path) -> None:
     cmd, _ = launcher()
     bindir = base / "bin"
@@ -99,6 +125,7 @@ def ensure() -> Path:
     command, args = mcp_command()
     values = {"VERSION": __version__, "WORKSPACE": str(base), "MCP": " ".join([command, *args]), "DATA": str(config.data_dir())}
     _shim(base)
+    _shell_rc(base)
     _write(base / "CLAUDE.md", _render("CLAUDE.md", values))
     _write(base / "AGENTS.md", _render("AGENTS.md", values))
     _write(base / ".mcp.json", json.dumps({"mcpServers": {"formencoder": {"type": "stdio", "command": command, "args": client_args("claude")}}}, indent=2) + "\n")

@@ -10,7 +10,7 @@ from ..engine.host import host
 TOKEN = secrets.token_urlsafe(24)
 _session: set[str] = set()
 _declined: dict[str, float] = {}
-_READ_RPC = {"command.list", "command.describe", "ui.state", "menu.bar", "frame.png", "encode.wait", "engine.info", "activity.list", "family.discover", "family.sources", "publish.destinations"}
+_READ_RPC = {"command.list", "command.describe", "ui.state", "menu.bar", "frame.png", "encode.wait", "engine.info", "activity.list", "family.discover", "family.sources", "publish.destinations", "agents.approvals"}
 
 
 def _store():

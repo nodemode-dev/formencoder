@@ -40,6 +40,8 @@ async def mcp(request: Request) -> Response:
     modern = version == "2026-07-28"
     server = {"name": "formencoder", "version": __version__}
     client = request.headers.get("x-formencoder-source") or "mcp:" + str((params.get("clientInfo") or {}).get("name") or request.headers.get("user-agent", "agent").split("/")[0])
+    if client.strip().lower() == "ui":
+        client = "mcp:agent"
     token = request.headers.get("x-formencoder-agent-token")
     profile = request.query_params.get("profile") or request.headers.get("x-formencoder-mcp-profile")
     caps = {"tools": {}, "prompts": {}, "resources": {}}

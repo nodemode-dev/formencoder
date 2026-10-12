@@ -167,6 +167,19 @@ def ffmpeg_missing() -> bool:
 async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
     p = params if isinstance(params, dict) else {}
     try:
+        if method in ("agents.approvals", "agents.decide", "agents.fullFaith"):
+            from ..agent import approvals
+
+            if method == "agents.approvals":
+                return approvals.state()
+            if source != "ui":
+                raise RpcError("Only the person, in the formencoder window, can approve agents' actions or change full faith.", -32003)
+            if method == "agents.decide":
+                try:
+                    return await approvals.decide(int(p.get("id") or 0), bool(p.get("allow")))
+                except KeyError as exc:
+                    raise RpcError(str(exc).strip("'\""), -32602) from None
+            return approvals.set_full_faith(bool(p.get("on")))
         if method == "command.execute":
             return await execute(p.get("command"), p.get("params") or {}, source)
         if method == "command.batch":

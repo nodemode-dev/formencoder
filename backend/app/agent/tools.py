@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
+import re
+import time
 from typing import Any
 
 from .. import __version__
+from ..core import config
 from ..engine import rpc
 from ..engine.host import host
 from ..engine.rpc import RpcError
+from . import approvals
 
 INSTRUCTIONS = (
     "formencoder is a media encoder (an Adobe Media Encoder alternative) running on this computer; the person sees its window and every "
@@ -19,7 +24,12 @@ INSTRUCTIONS = (
     "Never report an encode as good without `verify`. The `guide` tool has recipes; get the `workflow` prompt for the full loop. "
     "Every command is also a tool of its own, named from its id (queue.addSource is `queue_add_source`), unless this client loads the core "
     "profile, where `execute` reaches the same commands. Readable resources: formencoder://status, queue, presets, formats, encoders, commands, "
-    "log/encoding, log/error and guide/[topic], plus templates for one output, preset, format or command."
+    "log/encoding, log/error and guide/[topic], plus templates for one output, preset, format or command. "
+    "Consequential actions wait for the person's approval in formencoder's Agent Connect panel unless they turned on full faith: deleting, "
+    "clearing or resetting, publishing to an outside service, overwriting an existing file, changing where a watch folder writes, and typing "
+    "into a terminal. Such a call waits up to two minutes for the decision; if none comes it answers pendingApproval with an id, nothing has run, "
+    "and approval_status {id} gives the decision and the result later. terminal_open, terminal_send and terminal_read drive real shells the "
+    "person sees as tabs, where ./formencoder ID --name value runs any command."
 )
 
 WORKFLOW = """How to encode with formencoder through these tools.
@@ -148,6 +158,16 @@ TOOLS = [
     _tool("ui", "The formencoder window: state, or show a panel, switch workspace, open Export Settings on an output, show a message.",
           {"action": {"type": "string", "enum": ["state", "panel", "workspace", "exportSettings", "toast"]}, "panel": {"type": "string"}, "name": {"type": "string"}, "output": {"type": "string"}, "text": {"type": "string"}}, ["action"]),
     _tool("guide", "formencoder know-how for agents: workflow, queue, settings, video, audio, effects, captions, metadata, publish, watch, ingest, family, presets, ui.", {"topic": {"type": "string"}}, read=True, idempotent=True),
+    _tool("approval_status", "The decision on an action that waited for the person's approval (a pendingApproval id from an earlier call): pending, approved with its result, declined, or failed with the reason.",
+          {"id": {"type": "integer"}}, ["id"], read=True, idempotent=True),
+    _tool("terminal_list", "The terminals open in formencoder's Terminal panel and by agents: id, title, folder, whether the shell has exited.", {}, read=True, idempotent=True),
+    _tool("terminal_open", "Opens a terminal in formencoder (a real shell in the agent workspace, or folder), shown to the person as a tab; command runs in it at once (needs the person's approval). Returns its id for terminal_send and terminal_read.",
+          {"title": {"type": "string", "maxLength": 80}, "cwd": {"type": "string", "description": "absolute folder, default the agent workspace"}, "command": {"type": "string"}}),
+    _tool("terminal_send", "Types text into a terminal and presses Enter (enter false to leave the line unfinished), then returns what the terminal printed in the next wait seconds. The person sees it happen; it needs their approval unless they turned on full faith. ./formencoder ID --name value works in every formencoder terminal.",
+          {"session": {"type": "string"}, "text": {"type": "string"}, "enter": {"type": "boolean", "default": True}, "wait": {"type": "number", "minimum": 0, "maximum": 30, "default": 1.5}}, ["session", "text"], destructive=True),
+    _tool("terminal_read", "What a terminal printed, colour codes removed: the whole kept history, or only what came after since (the offset an earlier read returned). Returns the text, the new offset and whether the shell exited.",
+          {"session": {"type": "string"}, "since": {"type": "integer", "minimum": 0}, "max_chars": {"type": "integer", "minimum": 200, "maximum": 100000, "default": 8000}}, ["session"], read=True, idempotent=True),
+    _tool("terminal_close", "Closes a terminal and ends what runs in it. Closing one this agent did not open needs the person's approval.", {"session": {"type": "string"}}, ["session"], destructive=True),
 ]
 NAMES = {t["name"] for t in TOOLS}
 READ_ONLY = {t["name"] for t in TOOLS if t["annotations"]["readOnlyHint"]}
@@ -422,15 +442,100 @@ async def _call(name: str, args: dict, source: str) -> dict:
     if name == "guide":
         topic = str(args.get("topic") or "index")
         return text(GUIDES.get(topic) or f"No guide {topic!r}. {GUIDES['index']}")
+    if name == "approval_status":
+        return text(approvals.status(int(args["id"])))
+    if name.startswith("terminal_"):
+        return await _terminal(name, args, source)
     if name in _COMMANDS:
         return text(await ex(_COMMANDS[name]["id"], args, source))
     return fail(f"No tool named {name}")
 
 
+_ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]|\r(?!\n)")
+
+
+def _plain(raw: str, limit: int) -> str:
+    out = _ANSI.sub("", raw)
+    return out if len(out) <= limit else "[earlier output cut]\n" + out[-limit:]
+
+
+async def _terminal(name: str, args: dict, source: str) -> dict:
+    from ..routers.terminal import hub
+
+    if name == "terminal_list":
+        return text({"sessions": hub.listing()})
+    if name == "terminal_open":
+        term = hub.open(args.get("title"), args.get("cwd"), 120, 32, f"http://127.0.0.1:{config.PORT}", run=args.get("command") or None)
+        term.opener = source
+        return text({**term.row(), "next": "terminal_send {session, text} to type, terminal_read {session} to read"})
+    term = hub.get(str(args["session"]))
+    if name == "terminal_send":
+        before = term.offset
+        term.write(str(args["text"]) + ("\r" if args.get("enter", True) else ""))
+        await asyncio.sleep(float(args.get("wait", 1.5) or 0))
+        out, offset = term.read(before)
+        return text({"session": term.id, "output": _plain(out, 8000), "offset": offset, "exited": term.exited})
+    if name == "terminal_read":
+        since = args.get("since")
+        out, offset = term.read(int(since) if since is not None else None)
+        return text({"session": term.id, "text": _plain(out, int(args.get("max_chars") or 8000)), "offset": offset, "exited": term.exited})
+    if name == "terminal_close":
+        hub.close(term.id)
+        return text({"closed": term.id})
+    return fail(f"No tool named {name}")
+
+
+def _commands_of(name: str, args: dict) -> list[tuple[str, dict]]:
+    if name in _COMMANDS:
+        return [(_COMMANDS[name]["id"], args)]
+    if name == "execute":
+        return [(str(args.get("command") or ""), args.get("params") or {})]
+    if name == "batch":
+        return [(str(s.get("command") or ""), s.get("params") or {}) for s in args.get("steps") or [] if isinstance(s, dict)]
+    if name in ("queue", "presets", "watch_folder"):
+        space = {"queue": "queue", "presets": "preset", "watch_folder": "watch"}[name]
+        return [(f"{space}.{args.get('action')}", args)]
+    if name == "export_settings" and args.get("settings") is not None:
+        return [("queue.setSettings", {"settings": args["settings"]})]
+    if name == "encode":
+        return [("queue.addSource", args)]
+    return []
+
+
+async def _reasons(name: str, args: dict, source: str) -> list[str]:
+    why: list[str] = []
+    for command, params in _commands_of(name, args):
+        why += await approvals.reasons(command, params if isinstance(params, dict) else {})
+    if name == "terminal_send" or (name == "terminal_open" and args.get("command")):
+        why.append("it types a command into a shell on this computer")
+    if name == "terminal_close":
+        from ..routers.terminal import hub
+
+        term = hub.terms.get(str(args.get("session")))
+        if term is not None and getattr(term, "opener", "ui") != source:
+            why.append("it closes a terminal this agent did not open")
+    return sorted(set(why))
+
+
 async def call(name: str, args: dict, source: str) -> dict:
+    started = time.monotonic()
+    approval = None
     try:
-        return await _call(name, args, source)
+        why = await _reasons(name, args, source)
+        if why:
+            approval = "full faith" if approvals.full_faith() else "asked"
+        out = await approvals.guard(source, name, why, args, lambda: _call(name, args, source))
+    except approvals.Pending as p:
+        approval = "pending"
+        out = text({"pendingApproval": p.request["id"], "why": p.request["why"],
+                    "next": "The person approves or declines this in formencoder's Agent Connect panel; call approval_status {id} for the decision and the result. Nothing has run yet."})
+    except approvals.Declined as exc:
+        approval = "declined"
+        out = fail(str(exc))
     except RpcError as exc:
-        return fail(str(exc))
-    except (KeyError, TypeError, ValueError) as exc:
-        return fail(f"{name}: {exc}")
+        out = fail(str(exc))
+    except (KeyError, TypeError, ValueError, RuntimeError) as exc:
+        out = fail(f"{name}: {exc}")
+    err = out["content"][0].get("text") if out.get("isError") else None
+    approvals.note(source, name, args, not out.get("isError"), (time.monotonic() - started) * 1000, approval=approval, error=err)
+    return out

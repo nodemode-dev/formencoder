@@ -2,11 +2,11 @@
 
 Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand.
 
-The `formencoder` MCP server has 21 curated tools, listed here, plus one tool per engine command named from its id (`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, `commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, `command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents are in the last section.
+The `formencoder` MCP server has 27 curated tools, listed here, plus one tool per engine command named from its id (`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, `commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, `command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents are in the last section.
 
 ## Contents
 
-`status` `list_commands` `describe_command` `execute` `batch` `probe` `encode` `queue` `export_settings` `preview_frame` `contact_sheet` `wait` `verify` `presets` `formats` `watch_folder` `family` `log` `history` `ui` `guide`
+`status` `list_commands` `describe_command` `execute` `batch` `probe` `encode` `queue` `export_settings` `preview_frame` `contact_sheet` `wait` `verify` `presets` `formats` `watch_folder` `family` `log` `history` `ui` `guide` `approval_status` `terminal_list` `terminal_open` `terminal_send` `terminal_read` `terminal_close`
 
 ## status
 
@@ -244,6 +244,55 @@ formencoder know-how for agents: workflow, queue, settings, video, audio, effect
 - `topic`: string
 
 Note: read-only.
+
+## approval_status
+
+The decision on an action that waited for the person's approval (a pendingApproval id from an earlier call): pending, approved with its result, declined, or failed with the reason.
+
+- `id`: integer; required
+
+Note: read-only.
+
+## terminal_list
+
+The terminals open in formencoder's Terminal panel and by agents: id, title, folder, whether the shell has exited.
+
+- no parameters
+
+Note: read-only.
+
+## terminal_open
+
+Opens a terminal in formencoder (a real shell in the agent workspace, or folder), shown to the person as a tab; command runs in it at once (needs the person's approval). Returns its id for terminal_send and terminal_read.
+
+- `title`: string
+- `cwd`: string; absolute folder, default the agent workspace
+- `command`: string
+
+## terminal_send
+
+Types text into a terminal and presses Enter (enter false to leave the line unfinished), then returns what the terminal printed in the next wait seconds. The person sees it happen; it needs their approval unless they turned on full faith. ./formencoder ID --name value works in every formencoder terminal.
+
+- `session`: string; required
+- `text`: string; required
+- `enter`: boolean; default true
+- `wait`: number; default 1.5
+
+## terminal_read
+
+What a terminal printed, colour codes removed: the whole kept history, or only what came after since (the offset an earlier read returned). Returns the text, the new offset and whether the shell exited.
+
+- `session`: string; required
+- `since`: integer
+- `max_chars`: integer; default 8000
+
+Note: read-only.
+
+## terminal_close
+
+Closes a terminal and ends what runs in it. Closing one this agent did not open needs the person's approval.
+
+- `session`: string; required
 
 ## Guide topics
 
