@@ -3,7 +3,7 @@
     "formencoder": {
       "type": "stdio",
       "command": "${CLAUDE_PROJECT_DIR:-.}/formencoder",
-      "args": ["mcp"]
+      "args": ["mcp", "--profile", "full"]
     }
   }
 }

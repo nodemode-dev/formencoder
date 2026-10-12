@@ -16,7 +16,10 @@ INSTRUCTIONS = (
     "metadata, publish) that `export_settings` reads and patches. Look before you encode a long job: `preview_frame` renders one frame of an "
     "output through its exact settings, `contact_sheet` several. Every action is a command: `list_commands`, `describe_command`, `execute`, "
     "`batch` (one undo step; `$N.key` is step N's result, counting from 1). Media from formcut, formvfx, formwav or formvis comes in with `family`. "
-    "Never report an encode as good without `verify`. The `guide` tool has recipes; get the `workflow` prompt for the full loop."
+    "Never report an encode as good without `verify`. The `guide` tool has recipes; get the `workflow` prompt for the full loop. "
+    "Every command is also a tool of its own, named from its id (queue.addSource is `queue_add_source`), unless this client loads the core "
+    "profile, where `execute` reaches the same commands. Readable resources: formencoder://status, queue, presets, formats, encoders, commands, "
+    "log/encoding, log/error and guide/[topic], plus templates for one output, preset, format or command."
 )
 
 WORKFLOW = """How to encode with formencoder through these tools.
@@ -49,7 +52,35 @@ GUIDES = {
     "ui": "ui {action: state} is what the person sees. ui {action: panel, panel: queue|encoding|watch|media|presets|family|log|info|terminal|agents}; ui {action: workspace, name: Default|Encoding|Ingest|Agent}; ui {action: exportSettings, output} opens the Export Settings window on an output; ui {action: toast, text} shows a message.",
 }
 
-PROMPTS = [{"name": "workflow", "title": "How to encode with formencoder", "description": "The loop for sources, outputs, export settings, previews, encoding, verifying and the form family.", "arguments": []}]
+RECIPES = {
+    "youtube_version": ("A YouTube version of a file", [("path", "absolute path of the source file", True)],
+                        "Make a YouTube upload of {path}. Call status, then probe {path}. Find YouTube presets with presets {action: list, query: youtube} and pick the one whose frame size and rate are not above the source's. Encode with encode {paths: [{path}], preset}. Report the output path with the frame size, frame rate and duration that verify measured, and say which checks failed if any did."),
+    "broadcast_master": ("A broadcast master with normalised loudness", [("path", "absolute path of the source file", True), ("standard", "ebu-r128 (default) or atsc-a85", False)],
+                         "Make a broadcast master of {path} normalised to {standard}. Call status and probe {path} with loudness true. Choose a broadcast MXF preset (presets {action: list, category: Broadcast}). Queue it with queue_add_source (or execute queue.addSource), then export_settings {output, settings: {\"effects.loudness.enabled\": true, \"effects.loudness.standard\": \"{standard}\"}}. Start the queue, wait, then verify {output, loudness: true} and quote the measured integrated loudness and true peak, not the target."),
+    "proxies": ("Proxies for a folder of media", [("folder", "absolute path of a folder of media", True), ("preset", "a proxy preset, default system/proxy-h264-720", False)],
+                "Make proxies for every video in {folder} with {preset}. List the files with media_browse {path: {folder}, filter: video}. Queue them with proxy_create {paths, preset: {preset}, start: true}, wait for the outputs, verify one of them, and report where the Proxies folder is and how many files were written."),
+    "review_copy": ("A review copy with burnt-in timecode and a label", [("path", "absolute path of the source file", True), ("text", "label text, default FOR REVIEW ONLY", False)],
+                    "Make a review copy of {path} with burnt-in timecode and the label {text}. Queue it with a small H.264 preset, then export_settings {output, settings: {\"effects.timecodeOverlay.enabled\": true, \"effects.textOverlay.enabled\": true, \"effects.textOverlay.text\": \"{text}\"}}. Look at preview_frame {output, time: 1} before encoding and fix anything that covers the picture badly. Encode, wait, verify, and report the file."),
+}
+_RECIPE_DEFAULTS = {"standard": "ebu-r128", "preset": "system/proxy-h264-720", "text": "FOR REVIEW ONLY"}
+
+PROMPTS = [{"name": "workflow", "title": "How to encode with formencoder", "description": "The loop for sources, outputs, export settings, previews, encoding, verifying and the form family.", "arguments": []}] + [
+    {"name": k, "title": v[0], "description": v[0] + ", step by step with the formencoder tools.", "arguments": [{"name": a, "description": d, "required": r} for a, d, r in v[1]]} for k, v in RECIPES.items()]
+
+
+def prompt(name: str, arguments: dict | None) -> dict | None:
+    if name == "workflow":
+        return {"description": PROMPTS[0]["description"], "messages": [{"role": "user", "content": {"type": "text", "text": WORKFLOW}}]}
+    if name not in RECIPES:
+        return None
+    title, params, body = RECIPES[name]
+    values = {**_RECIPE_DEFAULTS, **{k: str(v) for k, v in (arguments or {}).items() if v not in (None, "")}}
+    missing = [a for a, _, r in params if r and a not in values]
+    if missing:
+        raise ValueError(f"the {name} prompt needs {', '.join(missing)}")
+    for a, _, _ in params:
+        body = body.replace("{" + a + "}", values.get(a, ""))
+    return {"description": title, "messages": [{"role": "user", "content": {"type": "text", "text": body}}]}
 
 _REFS = {"description": "Output id, item id, '#n' (the nth item), 'selected' or 'all'; or a list of them.", "anyOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
 _OUTPUT = {"type": "string", "description": "Output id (o-...) or '#n' for the nth item's first output."}
@@ -121,6 +152,112 @@ TOOLS = [
 NAMES = {t["name"] for t in TOOLS}
 READ_ONLY = {t["name"] for t in TOOLS if t["annotations"]["readOnlyHint"]}
 _PARAMS: dict[str, set[str]] = {}
+
+_COMMANDS: dict[str, dict] = {}
+_COMMAND_TOOLS: list[dict] = []
+
+
+def _command_tool(r: dict) -> dict:
+    where = f"{r['menu']} > {r['label']}" if r.get("menu") else r["label"]
+    doc = (r.get("doc") or "").strip()
+    kind = "Read-only." if r.get("query") else ("One undo step in the person's History." if r.get("undoable") else "Not undoable.")
+    ann = {k: v for k, v in (r.get("annotations") or {}).items() if k != "title"}
+    return {"name": r["mcpName"], "title": r["label"], "description": f"{where} (command {r['id']}). {doc + ' ' if doc else ''}{kind}",
+            "inputSchema": r.get("schema") or {"type": "object", "properties": {}}, "annotations": {"title": r["label"], **ann},
+            "_meta": {"formencoder/command": r["id"], "formencoder/category": r.get("category")}}
+
+
+async def command_tools() -> list[dict]:
+    if not _COMMAND_TOOLS:
+        rows = json.loads(await host.call(lambda e: e.command_list(None, True)))
+        for r in rows:
+            name = r.get("mcpName")
+            if name and name not in NAMES and name not in _COMMANDS:
+                _COMMANDS[name] = r
+                _COMMAND_TOOLS.append(_command_tool(r))
+    return _COMMAND_TOOLS
+
+
+def categories(profile: str | None) -> set[str] | None:
+    p = (profile or "full").strip().lower()
+    if p in ("", "full", "all"):
+        return None
+    return {x.strip() for x in p.split(",") if x.strip() and x.strip() != "core"}
+
+
+async def listing(profile: str | None) -> list[dict]:
+    cmds = await command_tools()
+    cats = categories(profile)
+    return TOOLS + (cmds if cats is None else [t for t in cmds if t["_meta"]["formencoder/category"] in cats])
+
+
+async def known(name: str) -> bool:
+    if name in NAMES:
+        return True
+    await command_tools()
+    return name in _COMMANDS
+
+
+def read_only(name: str) -> bool:
+    return name in READ_ONLY or bool(_COMMANDS.get(name, {}).get("query"))
+
+
+RESOURCES = [
+    {"uri": "formencoder://status", "name": "status", "title": "Status", "description": "Queue counts, what is encoding, FFmpeg and hardware encoders, watch folders and the next step.", "mimeType": "application/json"},
+    {"uri": "formencoder://queue", "name": "queue", "title": "Queue", "description": "Every item and output with its status, preset, file and progress.", "mimeType": "application/json"},
+    {"uri": "formencoder://presets", "name": "presets", "title": "Presets", "description": "Every system, ingest and user preset: id, name, category, format, frame size and rate.", "mimeType": "application/json"},
+    {"uri": "formencoder://formats", "name": "formats", "title": "Formats", "description": "The 40 formats with their codecs and the encoders this machine has.", "mimeType": "application/json"},
+    {"uri": "formencoder://encoders", "name": "encoders", "title": "Encoders", "description": "FFmpeg, its origin and licence, and the hardware and software encoders that work here.", "mimeType": "application/json"},
+    {"uri": "formencoder://commands", "name": "commands", "title": "Commands", "description": "Every command: id, MCP tool name, label, menu, parameters and annotations.", "mimeType": "application/json"},
+    {"uri": "formencoder://log/encoding", "name": "log-encoding", "title": "Encoding log", "description": "The last finished outputs with file, format, preset, encoder, time and size.", "mimeType": "application/json"},
+    {"uri": "formencoder://log/error", "name": "log-error", "title": "Error log", "description": "The last failures with FFmpeg's own last lines.", "mimeType": "application/json"},
+] + [{"uri": f"formencoder://guide/{k}", "name": f"guide-{k}", "title": f"Guide: {k}", "description": f"formencoder know-how for agents on {k}.", "mimeType": "text/markdown"} for k in GUIDES]
+
+RESOURCE_TEMPLATES = [
+    {"uriTemplate": "formencoder://output/{id}", "name": "output", "title": "Output settings", "description": "One output's complete export settings, summary, file and source.", "mimeType": "application/json"},
+    {"uriTemplate": "formencoder://preset/{id}", "name": "preset", "title": "Preset", "description": "One preset with its settings (ids look like system/youtube-1080p).", "mimeType": "application/json"},
+    {"uriTemplate": "formencoder://format/{id}", "name": "format", "title": "Format fields", "description": "Every export setting of one format with options, the encoders here and the defaults.", "mimeType": "application/json"},
+    {"uriTemplate": "formencoder://command/{id}", "name": "command", "title": "Command", "description": "One command in full with its JSON Schema and annotations.", "mimeType": "application/json"},
+]
+
+
+async def read_resource(uri: str, source: str) -> dict:
+    prefix = "formencoder://"
+    if not uri.startswith(prefix):
+        raise ValueError(f"no resource {uri}")
+    path = uri[len(prefix):]
+    kind, _, rest = path.partition("/")
+    if kind == "guide":
+        body = GUIDES.get(rest or "index")
+        if body is None:
+            raise ValueError(f"no guide {rest!r}; topics: {', '.join(GUIDES)}")
+        return {"contents": [{"uri": uri, "mimeType": "text/markdown", "text": body}]}
+    if kind == "status":
+        value: Any = await _status(source)
+    elif kind == "queue":
+        value = await ex("queue.list", {}, source)
+    elif kind == "presets":
+        value = await ex("preset.list", {}, source)
+        value = {"groups": value.get("groups"), "presets": [{k: p.get(k) for k in ("id", "name", "category", "format", "frameSize", "frameRate", "targetRate", "comment")} for p in value.get("presets", [])]}
+    elif kind == "formats":
+        value = await ex("format.list", {}, source)
+    elif kind == "encoders":
+        value = await ex("format.encoders", {}, source)
+    elif kind == "commands":
+        value = [{k: r.get(k) for k in ("id", "mcpName", "label", "menu", "params", "annotations")} for r in await rpc.dispatch("command.list", {}, source)]
+    elif kind == "log" and rest in ("encoding", "error"):
+        value = await ex("log.read", {"kind": rest, "limit": 80}, source)
+    elif kind == "output" and rest:
+        value = await ex("queue.getSettings", {"output": rest}, source)
+    elif kind == "preset" and rest:
+        value = await ex("preset.get", {"preset": rest}, source)
+    elif kind == "format" and rest:
+        value = await ex("format.describe", {"format": rest}, source)
+    elif kind == "command" and rest:
+        value = await rpc.dispatch("command.describe", {"command": rest}, source)
+    else:
+        raise ValueError(f"no resource {uri}")
+    return {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(value, indent=1, ensure_ascii=False)}]}
 
 
 def text(value: Any) -> dict:
@@ -285,6 +422,8 @@ async def _call(name: str, args: dict, source: str) -> dict:
     if name == "guide":
         topic = str(args.get("topic") or "index")
         return text(GUIDES.get(topic) or f"No guide {topic!r}. {GUIDES['index']}")
+    if name in _COMMANDS:
+        return text(await ex(_COMMANDS[name]["id"], args, source))
     return fail(f"No tool named {name}")
 
 

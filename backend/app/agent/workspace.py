@@ -10,6 +10,12 @@ from pathlib import Path
 from .. import __version__
 from ..core import config
 
+CLIENT_PROFILES = {"claude": "full", "codex": "full", "cursor": "core"}
+
+
+def client_args(client: str) -> list[str]:
+    return ["mcp", "--profile", CLIENT_PROFILES[client]]
+
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 SKILLS = ("formencoder-harness",)
 MANAGED = ("CLAUDE.md", "AGENTS.md", ".mcp.json", ".claude/settings.json", ".codex/config.toml", ".cursor/mcp.json")
@@ -95,10 +101,10 @@ def ensure() -> Path:
     _shim(base)
     _write(base / "CLAUDE.md", _render("CLAUDE.md", values))
     _write(base / "AGENTS.md", _render("AGENTS.md", values))
-    _write(base / ".mcp.json", json.dumps({"mcpServers": {"formencoder": {"type": "stdio", "command": command, "args": args}}}, indent=2) + "\n")
+    _write(base / ".mcp.json", json.dumps({"mcpServers": {"formencoder": {"type": "stdio", "command": command, "args": client_args("claude")}}}, indent=2) + "\n")
     toml_cmd = command.replace("\\", "\\\\")
-    _write(base / ".codex" / "config.toml", f'[mcp_servers.formencoder]\ncommand = "{toml_cmd}"\nargs = ["mcp"]\nstartup_timeout_sec = 90\ntool_timeout_sec = 3600\n')
-    _write(base / ".cursor" / "mcp.json", json.dumps({"mcpServers": {"formencoder": {"command": command, "args": args}}}, indent=2) + "\n")
+    _write(base / ".codex" / "config.toml", f'[mcp_servers.formencoder]\ncommand = "{toml_cmd}"\nargs = {json.dumps(client_args("codex"))}\nstartup_timeout_sec = 90\ntool_timeout_sec = 3600\n')
+    _write(base / ".cursor" / "mcp.json", json.dumps({"mcpServers": {"formencoder": {"command": command, "args": client_args("cursor")}}}, indent=2) + "\n")
     claude_settings = {"enableAllProjectMcpServers": True, "enabledMcpjsonServers": ["formencoder"], "permissions": {"allow": ["mcp__formencoder", "Bash(formencoder:*)"]}}
     _write(base / ".claude" / "settings.json", json.dumps(claude_settings, indent=2) + "\n")
     if not stamp.is_file() or stamp.read_text(encoding="utf-8").strip() != __version__:

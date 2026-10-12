@@ -48,19 +48,21 @@ def _copy_skill(to: Path, dry: bool, said: list) -> None:
 def install_claude(home: Path, dry: bool, said: list) -> None:
     said.append("Claude Code:")
     cmd = launch()
+    args = workspace.client_args("claude")
+    line = " ".join([cmd, *args])
     claude = shutil.which("claude")
     if claude:
         have = subprocess.run([claude, "mcp", "get", NAME], capture_output=True, text=True)
-        if have.returncode == 0 and cmd in have.stdout:
+        if have.returncode == 0 and cmd in have.stdout and "--profile" in have.stdout:
             said.append(f"  MCP server {NAME} already set (user scope)")
         else:
-            said.append(f"  claude mcp add --scope user {NAME} -- {cmd} mcp")
+            said.append(f"  claude mcp add --scope user {NAME} -- {line}")
             if not dry:
                 if have.returncode == 0:
                     subprocess.run([claude, "mcp", "remove", NAME, "--scope", "user"], capture_output=True)
-                subprocess.run([claude, "mcp", "add", "--scope", "user", NAME, "--", cmd, "mcp"], check=True, capture_output=True)
+                subprocess.run([claude, "mcp", "add", "--scope", "user", NAME, "--", cmd, *args], check=True, capture_output=True)
     else:
-        said.append(f"  the claude command is not installed here; once it is, run: claude mcp add --scope user {NAME} -- {cmd} mcp")
+        said.append(f"  the claude command is not installed here; once it is, run: claude mcp add --scope user {NAME} -- {line}")
     _copy_skill(home / ".claude" / "skills" / SKILL, dry, said)
 
 
@@ -68,7 +70,7 @@ def install_codex(home: Path, dry: bool, said: list) -> None:
     said.append("Codex:")
     cmd = launch().replace("\\", "\\\\")
     cfg = Path(os.environ.get("CODEX_HOME", home / ".codex")) / "config.toml"
-    block = f'[mcp_servers.{NAME}]\ncommand = "{cmd}"\nargs = ["mcp"]\nstartup_timeout_sec = 90\ntool_timeout_sec = 3600\n'
+    block = f'[mcp_servers.{NAME}]\ncommand = "{cmd}"\nargs = {json.dumps(workspace.client_args("codex"))}\nstartup_timeout_sec = 90\ntool_timeout_sec = 3600\n'
     text = cfg.read_text(encoding="utf-8") if cfg.exists() else ""
     found = re.search(rf"(?ms)^\[mcp_servers\.{NAME}\]\n.*?(?=^\[|\Z)", text)
     if found and found.group(0).strip() == block.strip():
@@ -88,7 +90,7 @@ def install_cursor(home: Path, dry: bool, said: list) -> None:
     cfg = home / ".cursor" / "mcp.json"
     raw = cfg.read_text(encoding="utf-8") if cfg.exists() else ""
     data = json.loads(raw) if raw.strip() else {}
-    entry = {"command": launch(), "args": ["mcp"]}
+    entry = {"command": launch(), "args": workspace.client_args("cursor")}
     if data.get("mcpServers", {}).get(NAME) == entry:
         said.append(f"  MCP server {NAME} already in {cfg}")
     else:

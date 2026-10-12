@@ -2,7 +2,7 @@
   "mcpServers": {
     "formencoder": {
       "command": "${workspaceFolder}/formencoder",
-      "args": ["mcp"]
+      "args": ["mcp", "--profile", "core"]
     }
   }
 }
