@@ -12,7 +12,7 @@ Read `frontend/HASHOUT_LOG.md` first.
 - `engine/` has no DOM: `client.ts` (the live socket, `rpc`, known events), `store.ts` (the UI state from `ui.state` plus events), `events.ts`, `types.ts`.
 - `app/ctx.ts` is what panels get: `invoke(command, params)` with selection refs, pickers, schema forms, toasts and the `result` event for queries. `app/app.ts` builds the shell, menus, keys, the consent dialog and the workspaces.
 - `panels/` mount once and patch: queue, encoding, watch, media, presets, info, family, log, export-settings, terminal, agents.
-- `ui/` holds shared pieces: `dom` (`el`, `patchList`, `setText`, `setClass`), `dock`, `menubar`, `palette`, `dialogs`, `popup`, `toast`, `forms` and `fields` (controls generated from format field specs with `showIf`), `icons` (inline SVG), `themes`, `prefs`, `storage`.
+- `ui/` holds shared pieces: `dom` (`el`, `patchList`, `setText`, `setClass`), `dock`, `menubar`, `palette`, `dialogs`, `popup`, `toast`, `forms` (the dialog built from a command's schema, ending with the live command line and MCP call), `command-line` (quoting, the MCP call, copy) and `fields` (controls generated from format field specs with `showIf`). `ctx.invoke(id, params, ask)` opens that dialog when a required parameter is missing, or always when `ask` is true (the palette's Shift+Enter and Alt+click), so every command with parameters is reachable with all of them, `icons` (inline SVG), `themes`, `prefs`, `storage`.
 - `styles/tokens.css` holds every colour, spacing step, radius and `--z-*` layer. Accent `#f2545b`.
 
 ## Rules

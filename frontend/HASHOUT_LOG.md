@@ -42,3 +42,10 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - Single-line text that arrives after mount keeps a fixed height while empty: the Media Browser path line (`.fe-m-path`, 23 px) once shifted the list 14 px when the first folder loaded.
 - Double-click on the Queue list's own background (or the empty card) runs Add Source; Send to formcut and Send to formvfx in a finished output's menu call `family.send` through the client, not a command, because sending is an outside effect with nothing to undo.
 - Verified under 4x CPU and network throttling: one reveal on a constant background, no node added or removed in the Queue list while outputs reset and encode, no layout shift.
+
+## Command dialogs and command lines (0.2.3)
+
+- The family standard (formdes) is that every command with parameters has a dialog built from its signature. `schemaForm` already built one but opened only when a required parameter was missing, so all-optional commands ran with defaults and could not be set from the window. `ctx.invoke(id, params, ask)` now opens it whenever `ask` is true; the palette passes it on Shift+Enter and Alt+click. With `ask`, a missing selection is left for the dialog to ask instead of a refusing toast, and file pickers are skipped because the dialog has browse buttons.
+- The dialog ends with the command line and MCP call for the values as typed, the palette with the highlighted command's line and tool name. Both teach the person the agent and shell forms of what they are doing; the copy buttons hand them to a terminal or an agent.
+- A long `white-space: nowrap` text in a grid with an automatic column widens the column to the text's min-content: the dialog body is such a grid, and the filled command line pushed its column to 672 px, reflowing the doc note above it. Single-line readouts inside a grid or flex track get `flex: 1 1 0; width: 0; min-width: 0` so they contribute nothing to min-content.
+- The palette list has a fixed height, not a max-height, so the strip and the foot under it never move as the result count changes.
