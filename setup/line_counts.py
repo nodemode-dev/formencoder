@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AREAS = [
-    ("Encoding engine (Rust, fe-core)", ["native/fe-core/src"], (".rs",)),
+    ("Encoding engine (Rust, fencoder crates)", ["native"], (".rs",)),
     ("Engine service (Python)", ["backend/app", "backend/formencoder_engine.py"], (".py",)),
     ("Interface (TypeScript)", ["frontend/src"], (".ts",)),
     ("Interface styles (CSS)", ["frontend/src/styles"], (".css",)),

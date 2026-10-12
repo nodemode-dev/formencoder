@@ -37,7 +37,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: |
-            native/fe-core
+            native
             src-tauri
       - name: Linux webview packages
         if: runner.os == 'Linux'

@@ -9,7 +9,7 @@ usage: ./formencoder [command] [options]
 
   (none) | boot         boot the engine (8270) and the interface (5270) together
   install [--dev]       install the engine service, build the encoding engine and install the interface
-  install-native [--dev]          rebuild the encoding engine (native/fe-core) into the engine's venv
+  install-native [--dev]          rebuild the encoding engine (native/, crate fencoder-py) into the engine's venv
   install-desktop       install PyInstaller and check the Rust and Tauri toolchain
   install-tools [TOOL...] [--stage]  build bmx, asdcplib and OpenJPEG from pinned tags (AS-10, AS-11, P2, DCP)
   backend               boot the engine only

@@ -35,12 +35,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: native/fe-core
+          workspaces: native
       - name: The encoding engine compiles without warnings on this host
-        working-directory: native/fe-core
+        working-directory: native
         env:
           RUSTFLAGS: -D warnings
-        run: cargo check --locked
+        run: cargo check --workspace --locked
 
   engine:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: native/fe-core
+          workspaces: native
       - name: FFmpeg for the test encodes (the runner's own; never shipped)
         run: |
           sudo apt-get update

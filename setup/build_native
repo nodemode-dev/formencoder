@@ -10,6 +10,6 @@ for arg in "$@"; do
   esac
 done
 python -c "import maturin" 2>/dev/null || pip install "maturin>=1.15,<2"
-cd "$FORMENCODER_ROOT/native/fe-core"
+cd "$FORMENCODER_ROOT/native/fencoder-py"
 maturin develop "${profile[@]}"
 python -c "import json, fe_core; c = json.loads(fe_core.Engine().execute('app.capabilities', '{}', 'setup')); print('[formencoder] engine', fe_core.__version__, 'ready:', c['commands'], 'commands,', c['formats'], 'formats,', c['presets'], 'presets')"

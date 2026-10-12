@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0.."
-for %%P in (frontend\dist backend\build backend\dist-engine src-tauri\target src-tauri\gen native\fe-core\target) do if exist %%P rmdir /s /q %%P
+for %%P in (frontend\dist backend\build backend\dist-engine src-tauri\target src-tauri\gen native\target) do if exist %%P rmdir /s /q %%P
 for /d /r backend %%D in (__pycache__) do if exist "%%D" rmdir /s /q "%%D"
 del /q src-tauri\binaries\formencoder-engine-* 2>nul
 if /i "%~1"=="--all" (
