@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use serde_json::{Value, json};
 
+use crate::execute::Execute;
 use crate::preview::PreviewJob;
 use crate::{commands, engine, ffmpeg, formats, presets};
 

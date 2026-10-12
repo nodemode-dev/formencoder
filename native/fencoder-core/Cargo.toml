@@ -1,0 +1,21 @@
+[package]
+name = "fencoder-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "formencoder engine foundations: paths, preferences, logs, text drawing with the bundled fonts, metadata, VR, colour and plug-in plumbing"
+
+[dependencies]
+serde_json.workspace = true
+ab_glyph.workspace = true
+png.workspace = true
+md-5.workspace = true
+chrono.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true

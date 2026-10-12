@@ -156,7 +156,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "fe-core"
+name = "fencoder-commands"
+version = "0.2.0"
+dependencies = [
+ "fencoder-core",
+ "fencoder-engine",
+ "fencoder-io",
+ "fencoder-plan",
+ "fencoder-run",
+ "regex",
+ "serde_json",
+]
+
+[[package]]
+name = "fencoder-core"
 version = "0.2.0"
 dependencies = [
  "ab_glyph",
@@ -164,11 +177,69 @@ dependencies = [
  "libc",
  "md-5",
  "png",
- "pyo3",
+ "serde_json",
+ "windows-sys",
+]
+
+[[package]]
+name = "fencoder-engine"
+version = "0.2.0"
+dependencies = [
+ "fencoder-core",
+ "fencoder-io",
+ "fencoder-plan",
+ "fencoder-run",
+ "serde_json",
+]
+
+[[package]]
+name = "fencoder-io"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "fencoder-core",
+ "libc",
  "regex",
- "serde",
  "serde_json",
  "sha1",
+ "windows-sys",
+]
+
+[[package]]
+name = "fencoder-plan"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "fencoder-core",
+ "fencoder-io",
+ "regex",
+ "serde_json",
+]
+
+[[package]]
+name = "fencoder-py"
+version = "0.2.0"
+dependencies = [
+ "fencoder-commands",
+ "fencoder-core",
+ "fencoder-engine",
+ "fencoder-io",
+ "fencoder-plan",
+ "fencoder-run",
+ "pyo3",
+ "serde_json",
+]
+
+[[package]]
+name = "fencoder-run"
+version = "0.2.0"
+dependencies = [
+ "fencoder-core",
+ "fencoder-io",
+ "fencoder-plan",
+ "libc",
+ "md-5",
+ "serde_json",
  "windows-sys",
 ]
 
@@ -500,7 +571,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
 dependencies = [
  "serde_core",
- "serde_derive",
 ]
 
 [[package]]

@@ -1,0 +1,17 @@
+[package]
+name = "fencoder-commands"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "formencoder command registry: every command's id, MCP name, label, menu, schema, annotations and default key, its handler, execute and batch, and output previews"
+
+[dependencies]
+fencoder-core.workspace = true
+fencoder-io.workspace = true
+fencoder-plan.workspace = true
+fencoder-run.workspace = true
+fencoder-engine.workspace = true
+serde_json.workspace = true
+regex.workspace = true

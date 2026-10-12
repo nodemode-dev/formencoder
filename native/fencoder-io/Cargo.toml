@@ -1,0 +1,21 @@
+[package]
+name = "fencoder-io"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "formencoder engine input and output: the FFmpeg locator and probe, encoder detection, formats, the separate delivery tools and OpenH264, captions, credentials, raw, transcription and packaging"
+
+[dependencies]
+fencoder-core.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+sha1.workspace = true
+chrono.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true

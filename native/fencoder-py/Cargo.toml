@@ -1,0 +1,26 @@
+[package]
+name = "fencoder-py"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "formencoder's own encoding engine: the queue, presets, export settings, the FFmpeg graph builder, the parallel runner and watch folders, exposed to the formencoder engine service as the fe_core Python extension"
+publish.workspace = true
+
+[lib]
+name = "fe_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["python"]
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { workspace = true, optional = true }
+fencoder-core.workspace = true
+fencoder-io.workspace = true
+fencoder-plan.workspace = true
+fencoder-run.workspace = true
+fencoder-engine.workspace = true
+fencoder-commands.workspace = true
+serde_json.workspace = true

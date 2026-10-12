@@ -3,7 +3,7 @@ frontend/dist/
 backend/venv/
 backend/build/
 backend/dist-engine/
-native/fe-core/target/
+native/target/
 *.so
 *.pyd
 __pycache__/
