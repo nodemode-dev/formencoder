@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.5 · 2026-10-12
+
+A fix release: the encoding engine builds and loads on macOS 27.
+
+- `./formencoder install-native` (and `formencoder_oc_install`) failed on macOS 27 with rustc 1.97.1: dyld refused the stripped engine library ("mis-aligned LINKEDIT string pool"), so doctor reported the encoding engine missing. Release builds of the engine are now unstripped, and build scripts and procedural macros stay unstripped in the engine and the desktop shell, as in formcut.
+
 ## v0.2.4 · 2026-10-12
 
 The v0.3.0 sprint's third step, first half: the agent substrate behind Agent Connect.
