@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.2 · 2026-10-12
+
+The v0.3.0 sprint's second step: one command registry reaching agents and the command line.
+
+- Every engine command is an MCP tool of its own (`queue_add_source`, `preset_create`...), 117 tools in the full profile that Claude Code and Codex load; Cursor loads the 21 curated tools (the core profile) and reaches every command through `execute`. Profiles also take categories (`core,queue,preset`).
+- MCP resources (`formencoder://status`, `queue`, `presets`, `formats`, `encoders`, `commands`, the logs and the guides, with templates for one output, preset, format or command) and recipe prompts (YouTube version, broadcast master, proxies, review copy).
+- `./formencoder [id] --name value` runs any command, with `--help` generated from its schema; paths resolve from the folder the command was typed in.
+- The engine's command handlers live in one file per namespace (`native/fencoder-commands/src/commands/`).
+
 ## v0.2.1 · 2026-10-12
 
 The first step of the v0.3.0 sprint: the engine in the form family's shape. No change to what formencoder encodes.
