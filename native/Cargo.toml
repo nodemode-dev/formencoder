@@ -43,4 +43,13 @@ opt-level = 1
 opt-level = 3
 lto = "thin"
 codegen-units = 16
-strip = true
+# fe_core is a library Python loads with dlopen, and on macOS 27 with rustc 1.97.1
+# a stripped one is refused ("mis-aligned LINKEDIT string pool"), as formcut found
+# for its own native library. It stays unstripped; the size is nothing beside FFmpeg.
+strip = false
+
+# Even with no strip setting, cargo strips build scripts and procedural macros in
+# release builds (-C strip=debuginfo), and on the same toolchain a stripped
+# procedural macro cannot be loaded (pyo3_macros, indoc), so they stay unstripped.
+[profile.release.build-override]
+strip = false
