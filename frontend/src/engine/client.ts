@@ -23,6 +23,9 @@ export interface ClientEvents {
   notify: ServerEvent;
   ffmpegFetch: ServerEvent;
   toolFetch: ServerEvent;
+  approvals: ServerEvent;
+  agentActivity: ServerEvent;
+  terminals: ServerEvent;
 }
 
 interface Pending {
@@ -130,5 +133,5 @@ export class Client {
 }
 
 const KNOWN: Record<string, true> = {
-  changed: true, toast: true, activity: true, consent: true, uiAction: true, progress: true, finished: true, queue: true, notify: true, ffmpegFetch: true, toolFetch: true,
+  changed: true, toast: true, activity: true, consent: true, uiAction: true, progress: true, finished: true, queue: true, notify: true, ffmpegFetch: true, toolFetch: true, approvals: true, agentActivity: true, terminals: true,
 };

@@ -129,6 +129,16 @@ export interface CommandSpec {
   annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean; idempotentHint?: boolean; openWorldHint?: boolean };
 }
 
+export interface Approval {
+  id: number;
+  client: string;
+  action: string;
+  params: unknown;
+  why: string[];
+  created: number;
+  status: string;
+}
+
 export interface PresetRow {
   id: string;
   name: string;

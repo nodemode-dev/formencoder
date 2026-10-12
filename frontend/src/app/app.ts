@@ -1,4 +1,5 @@
 import { api, type ServerEvent } from '../engine/client';
+import type { Approval } from '../engine/types';
 import { AgentsPanel } from '../panels/agents';
 import { EncodingPanel } from '../panels/encoding';
 import { ExportSettings } from '../panels/export-settings';
@@ -40,6 +41,8 @@ class App {
   private wsSelect!: HTMLSelectElement;
   private revealed = false;
   private consent: Dialog | null = null;
+  private approval: { id: number; dialog: Dialog } | null = null;
+  private readonly answered = new Set<number>();
 
   start(): void {
     applyTheme();
@@ -213,6 +216,8 @@ class App {
   private bindEngine(): void {
     ctx.client.events.on('toast', (ev) => toast(String(ev.text ?? ev.message ?? ''), ev.kind === 'error' ? 'error' : ev.kind === 'ok' ? 'ok' : 'info'));
     ctx.client.events.on('consent', (ev) => this.askConsent(ev));
+    ctx.client.events.on('approvals', (ev) => this.approvals((ev.pending as Approval[] | undefined) ?? []));
+    ctx.client.events.on('open', () => void ctx.client.call<{ pending: Approval[] }>('agents.approvals').then((s) => this.approvals(s.pending)).catch(() => undefined));
     ctx.client.events.on('notify', (ev) => this.notify(ev));
     ctx.client.events.on('finished', (ev) => {
       if (ev.status === 'failed') toast(`Failed: ${String(ev.error ?? 'see the Error log')}`, 'error');
@@ -320,6 +325,38 @@ class App {
     </div>`));
     d.button('Close', 'primary', () => d.close());
     d.onClose = () => d.scrim.remove();
+    d.open();
+  }
+
+  private approvals(pending: Approval[]): void {
+    const open = new Set(pending.map((r) => r.id));
+    if (this.approval && !open.has(this.approval.id)) {
+      this.approval.dialog.close();
+      this.approval.dialog.scrim.remove();
+      this.approval = null;
+    }
+    if (this.approval || this.consent?.isOpen) return;
+    const next = pending.find((r) => !this.answered.has(r.id));
+    if (!next) return;
+    const d = new Dialog('Allow this agent action?', 500);
+    d.scrim.dataset.automationId = 'approval';
+    const who = escapeHtml(String(next.client).replace(/^mcp:/, ''));
+    const params = escapeHtml(typeof next.params === 'string' ? next.params : JSON.stringify(next.params));
+    d.body.appendChild(el(`<p class="fx-note"><strong>${who}</strong> asks to run <strong>${escapeHtml(next.action)}</strong>. It needs your approval because ${escapeHtml(next.why.join('; '))}.</p>`));
+    d.body.appendChild(el(`<pre class="fe-approval-params">${params}</pre>`));
+    d.body.appendChild(el('<p class="cv-note">Full faith in the Agents panel lets agents do this without asking.</p>'));
+    const answer = (allow: boolean): void => {
+      if (this.approval?.id !== next.id) return;
+      this.answered.add(next.id);
+      this.approval = null;
+      d.close();
+      d.scrim.remove();
+      void ctx.client.call('agents.decide', { id: next.id, allow }).catch((e: Error) => toast(e.message, 'error'));
+    };
+    d.onClose = () => answer(false);
+    d.button('Decline', 'ghost', () => answer(false));
+    d.button('Allow', 'primary', () => answer(true));
+    this.approval = { id: next.id, dialog: d };
     d.open();
   }
 

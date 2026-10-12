@@ -1,7 +1,7 @@
 import type { Ctx } from '../app/ctx';
 import { api } from '../engine/client';
 import type { Panel } from '../ui/dock';
-import { el, patchList, q, setClass, setText } from '../ui/dom';
+import { el, patchList, q, setChecked, setClass, setText } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { toast } from '../ui/toast';
 
@@ -44,6 +44,7 @@ export class AgentsPanel implements Panel {
       <section class="fx-agents-sec">
         <div class="fx-agents-h">${icon('lock', 14)}<span>Permissions</span><span class="fx-flex"></span><button class="fx-link" type="button" data-act="forget">Forget all</button></div>
         <div class="fx-agents-allowed"></div>
+        <label class="fe-faith"><input type="checkbox" class="fx-check" data-automation-id="agents.fullFaith"><span><strong>Full faith</strong> · agents may delete, clear or reset, publish to outside services, overwrite files, change where watch folders write and type into terminals without asking you first. Off, each of those waits for your approval.</span></label>
       </section>
       <section class="fx-agents-sec fx-agents-grow">
         <div class="fx-agents-h">${icon('history', 14)}<span>Agent activity</span></div>
@@ -70,7 +71,23 @@ export class AgentsPanel implements Panel {
       if (this.feed.length > 300) this.feed.shift();
       if (!this.el.hidden) this.renderFeed();
     });
+    this.faith = q<HTMLInputElement>(this.el, '.fe-faith input');
+    this.faith.addEventListener('change', () => {
+      void ctx.client.call<{ fullFaith: boolean }>('agents.fullFaith', { on: this.faith.checked }).then((s) => setChecked(this.faith, s.fullFaith)).catch((e: Error) => toast(e.message, 'error'));
+    });
+    ctx.client.events.on('approvals', (ev) => setChecked(this.faith, ev.fullFaith === true));
+    ctx.client.events.on('agentActivity', (ev) => {
+      const a = ev.entry as { time: number; client: string; tool: string; ok: boolean; approval?: string | null; error?: string | null } | undefined;
+      if (!a || a.client === 'ui') return;
+      this.feed.push({ time: a.time, source: a.client, command: a.approval ? `${a.tool} (${a.approval})` : a.tool, ok: a.ok, error: a.error });
+      if (this.feed.length > 300) this.feed.shift();
+      if (!this.el.hidden) this.renderFeed();
+    });
+    this.ctx = ctx;
   }
+
+  private readonly faith: HTMLInputElement;
+  private readonly ctx: Ctx;
 
   shown(): void {
     void this.load();
@@ -86,6 +103,8 @@ export class AgentsPanel implements Panel {
       setText(q(this.el, '.fx-agents-allowed'), allowed.length ? allowed.join(', ') : `Policy: ${s.consent.policy}. Agents from the Terminal panel are always trusted; others ask once.`);
       if (!this.feed.length) this.feed = s.activity.filter((a) => a.source !== 'ui');
       this.renderFeed();
+      const ap = await this.ctx.client.call<{ fullFaith: boolean }>('agents.approvals');
+      setChecked(this.faith, ap.fullFaith);
     } catch {
       return;
     }
