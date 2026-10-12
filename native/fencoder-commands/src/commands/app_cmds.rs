@@ -27,7 +27,7 @@ pub(super) fn ui_toast(e: &mut Engine, p: &Value) -> Res {
 
 pub(super) fn app_capabilities(e: &mut Engine, _: &Value) -> Res {
     let st = e.encoder_status.lock().unwrap().clone().unwrap_or(json!({}));
-    Ok(json!({"name": "formencoder", "version": crate::VERSION, "engine": "fe-core (Rust)", "commands": all().len(), "formats": formats::ids().len(), "presets": presets::system().len() + presets::ingest().len(),
+    Ok(json!({"name": "formencoder", "version": crate::VERSION, "engine": "fencoder crates (Rust)", "commands": all().len(), "formats": formats::ids().len(), "presets": presets::system().len() + presets::ingest().len(),
               "ffmpeg": st["ffmpeg"], "hardware": st["hardware"], "dataDir": paths::data_dir().to_string_lossy(), "effects": settings::effects_default().as_object().map(|m| m.keys().cloned().collect::<Vec<_>>()),
               "queueExtension": ".fequeue", "presetExtension": format!(".{}", presets::EXT), "time": now()}))
 }
