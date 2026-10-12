@@ -14,7 +14,8 @@ Each file below sits in `native/[crate]/src/`: `fencoder-core` (util, paths, pre
 | File | Holds |
 | --- | --- |
 | `engine.rs` | `Engine`: the document (`doc = {items, watch}`), undo, ids, `tick`, events, the UI state shaping |
-| `commands.rs` | the command table (`c(id, label, menu, params, required, undoable, query, shortcut, doc, handler)`) and every handler |
+| `commands.rs` | the registry: `Cmd` with its MCP name, category and annotations, `DESTRUCTIVE`, the schema helpers and the table (`c(id, label, menu, params, required, undoable, query, shortcut, doc, handler)`) |
+| `commands/*_cmds.rs` | the handlers, one file per namespace: queue, encode, preset, ingest, watch, format, media, prefs, family, app; each starts with `use super::*;` and marks handlers `pub(super)` |
 | `settings.rs` | defaults per format, `normalize`, `apply_patch`, the summary line |
 | `formats.rs` | the 40 formats, codecs, containers and field specs with `showIf`, including package fields |
 | `presets.rs` | system and ingest presets, user preset files (`.fepreset`), `.epr` import |
@@ -33,10 +34,10 @@ Each file below sits in `native/[crate]/src/`: `fencoder-core` (util, paths, pre
 
 ## Adding a command
 
-1. Write the handler `fn name(e: &mut Engine, p: &Value) -> Res` in `commands.rs`.
+1. Write the handler `pub(super) fn name(e: &mut Engine, p: &Value) -> Res` in the namespace's file under `native/fencoder-commands/src/commands/` (a new namespace gets a new `[name]_cmds.rs` with `mod` and `use` lines in `commands.rs`).
 2. Add one row to the table with a stable id (`namespace.verb`), a label as the menu shows it, the menu, a parameter schema built with the `p!` macro, the required keys, `undoable` for anything that changes the document, `query` for reads, a shortcut if it has one and a one-line doc.
 3. `check` validates parameters from the schema, so the handler can trust types and enums.
-4. The interface reaches it through `invoke` and the menus through the table; agents see it through `list_commands`. Run `./formencoder agents sync`.
+4. The interface reaches it through `invoke` and the menus through the table; agents get it as its own MCP tool (named by `mcp_name`) in the full profile and through `execute` in every profile; the command line runs it as `./formencoder [id] --name value`. A command that deletes, clears, resets or replaces user data goes into `DESTRUCTIVE`. Run `./formencoder agents sync`.
 
 ## Adding a format or settings field
 

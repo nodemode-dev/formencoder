@@ -34,7 +34,7 @@ formencoder finds formcut, formvfx, formwav and formvis running on the same comp
 - **From anywhere**: `./formencoder agents install` (or the Agents panel) sets the three clients up for your account.
 - **Command line**: `./formencoder encode FILE --preset system/youtube-1080p`, `queue`, `exec ID 'JSON'`, `batch 'JSON'`, `commands FILTER`, `describe ID`, `presets QUERY`, `probe FILE`, `frame OUT.png --output '#1' --time 2`, `wait`.
 
-21 MCP tools, among them `encode` (queue, encode, wait and verify in one call), `export_settings`, `preview_frame` and `contact_sheet` (frames through an output's exact settings), `verify` (the file probed against its settings) and `family`.
+21 curated MCP tools, among them `encode` (queue, encode, wait and verify in one call), `export_settings`, `preview_frame` and `contact_sheet` (frames through an output's exact settings), `verify` (the file probed against its settings) and `family`, plus one tool for each of the 96 engine commands (`queue_add_source`, `preset_create`...) in the full profile that Claude Code and Codex load; Cursor loads the 21 (its core profile) and reaches the rest through `execute`. Resources (`formencoder://queue`, `presets`, `formats`, `encoders`, the logs and the guides) and recipe prompts (YouTube version, broadcast master, proxies, review copy) come with them. On the command line every command runs as `./formencoder [id] --name value`.
 
 ## Desktop
 
@@ -73,14 +73,14 @@ Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundl
 
 | Area | Files | Lines |
 | --- | ---: | ---: |
-| Encoding engine (Rust, fencoder crates) | 36 | 10,285 |
-| Engine service (Python) | 36 | 3,068 |
+| Encoding engine (Rust, fencoder crates) | 46 | 10,317 |
+| Engine service (Python) | 36 | 3,317 |
 | Interface (TypeScript) | 38 | 5,834 |
 | Interface styles (CSS) | 5 | 673 |
 | Desktop shell (Rust, Tauri) | 1 | 144 |
-| Setup and CLI | 37 | 1,165 |
-| Agent skills (Markdown, hand-written) | 21 | 789 |
-| Total | 174 | 21,958 |
+| Setup and CLI | 37 | 1,173 |
+| Agent skills (Markdown, hand-written) | 21 | 791 |
+| Total | 184 | 22,249 |
 
 Non-blank lines in tracked files; generated skill references excluded. `./formencoder counts` prints this table.
 

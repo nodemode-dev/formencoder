@@ -70,3 +70,11 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 ## Opened files (`main.py` lifespan)
 
 `FORMENCODER_OPEN` (set by the desktop shell from its arguments, separated by the platform's path separator) is routed by extension: `.fequeue` to `queue.open` with append, `.fepreset` to `preset.import`, anything else to one `queue.addSource`.
+
+## Command tools, profiles, resources and prompts (0.2.2)
+
+`tools.command_tools()` builds one MCP tool per registry row the first time a client lists or calls tools (the registry does not change while the engine runs), skipping any MCP name that collides with a curated tool so the curated one always wins; none collide at 0.2.2. The profile decides what `tools/list` shows, never what may be called: a core client that names `queue_add_source` still runs it, so a client with a tool ceiling loses nothing but discoverability, and `execute` covers that. Consent reads the command's `query` flag, so command tools ask exactly when `execute` would. Profiles travel as `--profile` to the stdio relay (which forwards `x-formencoder-mcp-profile`) or `?profile=` on HTTP, and `workspace.CLIENT_PROFILES` is the single place that says Claude Code and Codex get full and Cursor core. Resources read through the same commands as the tools (`queue.list`, `preset.list`, `format.list`, `format.encoders`, `log.read`, `queue.getSettings`, `preset.get`, `format.describe`, `command.describe`); preset ids contain a slash, so a template's id is everything after its prefix.
+
+## Command line verbs (0.2.2)
+
+`cli.py` treats a first argument with a dot and no path separator as a command id, fetches its schema with `command.describe` and turns flags into parameters by the schema's types. The dispatchers export `FORMENCODER_CWD` before they change into the repository, and only the path-named keys (`path`, `paths`, `folder`, `destination`, `transcodeFolder`) are resolved against it; the older `encode` verb still resolves paths from the repository folder.

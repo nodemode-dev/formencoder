@@ -9,7 +9,8 @@ description: Changing how agents drive formencoder. Use for the MCP tools and gu
 
 | Path | Holds |
 | --- | --- |
-| `backend/app/agent/tools.py` | `INSTRUCTIONS`, `WORKFLOW`, `GUIDES`, `TOOLS` (21 tools) and their handlers |
+| `backend/app/agent/tools.py` | `INSTRUCTIONS`, `WORKFLOW`, `GUIDES`, `TOOLS` (21 curated tools) and their handlers; one tool per registry command built by `command_tools()` and served by profile (`full`, `core`, `core,[category]...`, chosen with `--profile` or `x-formencoder-mcp-profile`); `RESOURCES`, `RESOURCE_TEMPLATES` and `read_resource`; `RECIPES` and `prompt()` |
+| `backend/app/agent/workspace.py` `CLIENT_PROFILES` | which profile each client gets (Claude Code and Codex full, Cursor core) in every config formencoder writes |
 | `backend/app/routers/mcp.py` | Streamable HTTP MCP at `/mcp` |
 | `backend/app/agent/stdio.py`, `setup/mcp_stdio.py` | the stdio relay `./formencoder mcp`, which finds or starts the engine |
 | `backend/app/agent/client.py` | engine discovery, autostart, headers, `rpc` |
