@@ -2,7 +2,7 @@
 
 Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand.
 
-The `formencoder` MCP server has 21 tools. `./formencoder mcp` serves them over stdio (it starts the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. The shell equivalents are in the last section.
+The `formencoder` MCP server has 21 curated tools, listed here, plus one tool per engine command named from its id (`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, `commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, `command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents are in the last section.
 
 ## Contents
 
@@ -316,6 +316,7 @@ ui {action: state} is what the person sees. ui {action: panel, panel: queue|enco
 
 ## The same surface from a shell
 
+- `formencoder ID --name value ...` · any command with its parameters as flags (like its own MCP tool); `formencoder ID --help` lists them, `--json` prints one line
 - `formencoder encode FILE... --preset ID --folder DIR` · queue, encode, wait and print the results (like `encode`)
 - `formencoder queue` · the queue with every output's status (like `queue {action: list}`)
 - `formencoder commands FILTER` · list commands (like `list_commands`)

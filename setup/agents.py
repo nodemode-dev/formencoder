@@ -84,18 +84,19 @@ def commands_md(eng: Engine) -> str:
         groups.setdefault(c["id"].split(".")[0], []).append(c)
     names = [n for n in ORDER if n in groups] + sorted(n for n in groups if n not in ORDER)
     out = ["# formencoder commands", "", HEAD, "",
-           f"{len(cmds)} commands in {len(groups)} namespaces. Every menu item and button in formencoder is one of these. Run one with "
-           "`execute {command, params}` over MCP, several as one undo step with `batch`, or `formencoder exec ID 'JSON'` from a shell. "
+           f"{len(cmds)} commands in {len(groups)} namespaces. Every menu item and button in formencoder is one of these. Run one over MCP "
+           "with its own tool (the `MCP` name on each line, in the full profile) or `execute {command, params}` (every profile), several "
+           "as one undo step with `batch`, or from a shell as `./formencoder ID --name value` (`--help` after the id lists the flags). "
            "`describe_command ID` returns the JSON Schema. In the summaries `?` marks an optional parameter and `a|b` lists the accepted "
            "values. `refs` takes output ids, item ids, `#n` (the nth queue item), `selected` or `all`. Unknown parameters are refused with "
            "the schema in the message.", "", "## Contents", "", " ".join(f"`{n}` ({len(groups[n])})" for n in names), ""]
     for n in names:
         out += [f"## {n}", ""]
         for c in groups[n]:
-            flags = [x for x, on in (("undoable", c.get("undoable")), ("query", c.get("query"))) if on]
+            flags = [x for x, on in (("undoable", c.get("undoable")), ("query", c.get("query")), ("destructive", (c.get("annotations") or {}).get("destructiveHint"))) if on]
             keys = f" · {c['shortcut']}" if c.get("shortcut") else ""
             menu = f" · {c['menu']}" if c.get("menu") else ""
-            out.append(f"- `{c['id']}` {c['label'].rstrip('.')}{menu}{keys}{' · ' + ', '.join(flags) if flags else ''}")
+            out.append(f"- `{c['id']}` {c['label'].rstrip('.')}{menu}{keys}{' · ' + ', '.join(flags) if flags else ''} · MCP `{c.get('mcpName', '')}`")
             line = _schema_line(c)
             if line != "{}":
                 out.append(f"  `{line}`")
@@ -109,9 +110,15 @@ def tools_md() -> str:
     from app.agent.tools import GUIDES, TOOLS
 
     out = ["# formencoder MCP tools", "", HEAD, "",
-           f"The `formencoder` MCP server has {len(TOOLS)} tools. `./formencoder mcp` serves them over stdio (it starts the engine when it is "
-           "not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. The shell equivalents are in the "
-           "last section.", "", "## Contents", "", " ".join(f"`{t['name']}`" for t in TOOLS), ""]
+           f"The `formencoder` MCP server has {len(TOOLS)} curated tools, listed here, plus one tool per engine command named from its id "
+           "(`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts "
+           "the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile "
+           "chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the "
+           "curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every "
+           "tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, "
+           "`commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, "
+           "`command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents "
+           "are in the last section.", "", "## Contents", "", " ".join(f"`{t['name']}`" for t in TOOLS), ""]
     for t in TOOLS:
         a = t["annotations"]
         marks = [m for m, on in (("read-only", a["readOnlyHint"]), ("reaches other apps", a.get("openWorldHint"))) if on]
@@ -134,6 +141,7 @@ def tools_md() -> str:
             continue
         out += [f"### {k}", "", v.strip(), ""]
     out += ["## The same surface from a shell", "",
+            "- `formencoder ID --name value ...` · any command with its parameters as flags (like its own MCP tool); `formencoder ID --help` lists them, `--json` prints one line",
             "- `formencoder encode FILE... --preset ID --folder DIR` · queue, encode, wait and print the results (like `encode`)",
             "- `formencoder queue` · the queue with every output's status (like `queue {action: list}`)",
             "- `formencoder commands FILTER` · list commands (like `list_commands`)",
@@ -211,13 +219,60 @@ def generate() -> dict[str, str]:
     return {k: v.replace(" — ", " · ").replace("—", "·") for k, v in docs.items()}
 
 
+def _mcp_name(cid: str) -> str:
+    return "".join("_" if ch == "." else ("_" + ch.lower() if ch.isupper() else ch) for ch in cid)
+
+
+CLI_TYPES = {"string", "number", "integer", "boolean", "array", "object", "null"}
+CLI_RESERVED = {"json", "help", "h"}
+
+
+def surfaces() -> list[str]:
+    from app.agent.cli import PATH_KEYS, _types
+    from app.agent.tools import NAMES, _command_tool
+
+    eng = Engine()
+    rows = eng.commands()
+    problems: list[str] = []
+    seen: dict[str, str] = {}
+    for r in rows:
+        cid, name = r["id"], r.get("mcpName") or ""
+        if name != _mcp_name(cid):
+            problems.append(f"{cid}: MCP name {name!r}, expected {_mcp_name(cid)!r}")
+        if name in seen:
+            problems.append(f"{cid}: MCP name {name} also used by {seen[name]}")
+        seen[name] = cid
+        if name in NAMES:
+            problems.append(f"{cid}: MCP name {name} collides with a curated tool, so it would never be served")
+        tool = _command_tool(r)
+        if tool["inputSchema"] != r.get("schema") or tool["name"] != name or tool["_meta"]["formencoder/command"] != cid:
+            problems.append(f"{cid}: its MCP tool does not carry the registry's name, schema or id")
+        ann = r.get("annotations") or {}
+        if bool(ann.get("readOnlyHint")) != bool(r.get("query")):
+            problems.append(f"{cid}: readOnlyHint does not follow query")
+        if "." not in cid or any(ch in cid for ch in "/\\ ") or cid[0] in ".-~":
+            problems.append(f"{cid}: the dispatchers would not route this id to the command line")
+        for k, spec in ((r.get("schema") or {}).get("properties") or {}).items():
+            kinds = {t for t in _types(spec) if t}
+            if not kinds <= CLI_TYPES:
+                problems.append(f"{cid}: --{k} has a type the command line cannot parse ({', '.join(sorted(kinds - CLI_TYPES))})")
+            if k in CLI_RESERVED:
+                problems.append(f"{cid}: parameter {k} collides with the command line's own --{k}")
+            if k in PATH_KEYS and "string" not in kinds and "array" not in kinds:
+                problems.append(f"{cid}: --{k} is resolved as a path but is not a string or list")
+    return problems
+
+
 def _files(folder: Path) -> dict:
     return {str(p.relative_to(folder)): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
 
 
 def sync(check: bool) -> int:
     ensure_core()
-    drift = []
+    problems = surfaces()
+    for p in problems:
+        print(f"agents: surface: {p}")
+    drift = ["the registry, the MCP tools and the command line disagree"] if problems else []
     for name, text in generate().items():
         ref = SKILL / "references" / name
         if not ref.exists() or ref.read_text(encoding="utf-8") != text:
