@@ -2,7 +2,7 @@
 
 The media encoder of the form family, beside formcut (video), formvfx (motion graphics), formwav (audio) and formvis (images): an Adobe Media Encoder alternative for the desktop and the browser. A queue of sources with several outputs each, encoded in parallel; 93 encoding presets and 5 ingest presets across web, social, devices, mezzanine, broadcast, cinema, DVD and Blu-ray, image sequences, GIF, audio, archive and proxies; 40 formats from H.264, HEVC, AV1 and WebM to ProRes, DNxHR, CineForm, XDCAM and JPEG 2000 MXF, AS-10, AS-11, P2 and DCP packages, DPX and OpenEXR; watch folders, card ingest with checksums and proxies; LUTs, HDR to SDR conform, image, name, text and timecode overlays, Time Tuner, a video limiter and loudness normalisation; captions burnt in, as sidecars or embedded, and speech to text; metadata templates, XMP and Content Credentials; plug-ins; publishing to folders, FTP, S3, webhooks, YouTube, Vimeo, Facebook and the family apps; with an agent harness so Claude Code, Codex and Cursor can drive every tool from formencoder's embedded terminal.
 
-Version 0.2.0 · Apache-2.0 · encoding engine: formencoder's own, in Rust (`native/fe-core`), driving a pinned LGPL FFmpeg
+Version 0.2.1 · Apache-2.0 · encoding engine: formencoder's own, in Rust (the fencoder crates in `native/`), driving a pinned LGPL FFmpeg
 
 ## Quick start
 

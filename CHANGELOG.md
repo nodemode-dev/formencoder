@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.1 · 2026-10-12
+
+The first step of the v0.3.0 sprint: the engine in the form family's shape. No change to what formencoder encodes.
+
+- The encoding engine is a Cargo workspace of seven crates in `native/`: fencoder-core, fencoder-io, fencoder-plan, fencoder-run, fencoder-engine, fencoder-commands and fencoder-py (still the `fe_core` module).
+- Every command in the registry carries its MCP name, category and MCP annotations (read-only, destructive, idempotent, open-world); `./formencoder commands` and `describe` show them.
+- Install, clean, counts and both workflows build the workspace.
+
 ## v0.2.0 · 2026-10-10
 
 Closes 12.5 of the 13.5 parity points 0.1.0 left open.
