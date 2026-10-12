@@ -19,7 +19,7 @@ Drag media into the Queue, drag presets from the Preset Browser onto a source to
 
 ## The engine
 
-`native/fe-core` is formencoder's encoding engine, written for formencoder in Rust and loaded by the engine service as the `fe_core` Python extension; `./formencoder install-native` rebuilds it. It owns the queue with undo, the 96 commands with their parameter schemas, the export settings model and every format's field specs, the presets (and Media Encoder `.epr` import), the FFmpeg graph planner (geometry, scaling, crop, rotation, interpretation, time interpolation, two pass, stitching, timecode, caption timing), the parallel runner, watch folders, ingest with size, MD5 or bit-for-bit verification, media analysis, previews through an output's exact settings, and the encoding and error logs. FFmpeg runs as a separate program and is never linked. Overlays and burnt-in captions are drawn by the engine's own glyph rasteriser and HDR to SDR conform is a generated 3D LUT, so the effects work with the LGPL build; hardware encoders (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API) are found by a test encode on each machine.
+`native/` is formencoder's encoding engine, written for formencoder in Rust as seven fencoder crates (core, io, plan, run, engine, commands, py) and loaded by the engine service as the `fe_core` Python extension; `./formencoder install-native` rebuilds it. It owns the queue with undo, the 96 commands with their parameter schemas, the export settings model and every format's field specs, the presets (and Media Encoder `.epr` import), the FFmpeg graph planner (geometry, scaling, crop, rotation, interpretation, time interpolation, two pass, stitching, timecode, caption timing), the parallel runner, watch folders, ingest with size, MD5 or bit-for-bit verification, media analysis, previews through an output's exact settings, and the encoding and error logs. FFmpeg runs as a separate program and is never linked. Overlays and burnt-in captions are drawn by the engine's own glyph rasteriser and HDR to SDR conform is a generated 3D LUT, so the effects work with the LGPL build; hardware encoders (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API) are found by a test encode on each machine.
 
 The LGPL FFmpeg has no software H.264, HEVC or AV1 encoder and no MP3 encoder. H.264 and HEVC encode through VideoToolbox on every Mac and through Media Foundation, NVENC, AMF or VA-API elsewhere. Without a hardware encoder, H.264 goes through Cisco's OpenH264 (downloaded from Cisco in Preferences, Delivery Tools, never bundled), HEVC through Kvazaar and MP3 through LAME. Broadcast and cinema packages are wrapped by BBC bmx (AS-10, AS-11, P2) and asdcplib with OpenJPEG (DCP), speech to text runs whisper.cpp and Content Credentials are signed by c2patool. All of these are separate programs built from pinned sources by `./formencoder install-tools` and shipped in the desktop app; an FFmpeg you install yourself can still be chosen in Preferences.
 
@@ -63,7 +63,7 @@ Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundl
 
 ## Layout
 
-`native/fe-core` (the encoding engine, Rust, PyO3) · `backend` (FastAPI engine service, MCP, terminal, family bridge, publish, the FFmpeg fetch) · `frontend` (TypeScript and Vite interface) · `src-tauri` (desktop shell) · `setup` (scripts) · `.claude/skills/formencoder-harness` (the agent skill, mirrored to `.agents/skills`) · `.claude/skills/formencoder-skillset` (for work on formencoder's own code).
+`native` (the encoding engine, the fencoder Rust crates, PyO3) · `backend` (FastAPI engine service, MCP, terminal, family bridge, publish, the FFmpeg fetch) · `frontend` (TypeScript and Vite interface) · `src-tauri` (desktop shell) · `setup` (scripts) · `.claude/skills/formencoder-harness` (the agent skill, mirrored to `.agents/skills`) · `.claude/skills/formencoder-skillset` (for work on formencoder's own code).
 
 ## Parity
 
@@ -73,14 +73,14 @@ Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundl
 
 | Area | Files | Lines |
 | --- | ---: | ---: |
-| Encoding engine (Rust, fe-core) | 29 | 10,233 |
+| Encoding engine (Rust, fencoder crates) | 36 | 10,285 |
 | Engine service (Python) | 36 | 3,068 |
 | Interface (TypeScript) | 38 | 5,834 |
 | Interface styles (CSS) | 5 | 673 |
 | Desktop shell (Rust, Tauri) | 1 | 144 |
 | Setup and CLI | 37 | 1,165 |
-| Agent skills (Markdown, hand-written) | 21 | 788 |
-| Total | 167 | 21,905 |
+| Agent skills (Markdown, hand-written) | 21 | 789 |
+| Total | 174 | 21,958 |
 
 Non-blank lines in tracked files; generated skill references excluded. `./formencoder counts` prints this table.
 

@@ -4,7 +4,7 @@ Living context for formencoder's engine service. The code carries almost no comm
 
 ## What it is
 
-A FastAPI process around the Rust engine (`fe_core`, built from `native/fe-core`). Rust owns the queue, settings, presets, FFmpeg and every command; Python owns HTTP, the live socket, MCP, the agent workspace, the embedded terminal and the two jobs that need the network: the form family bridge and publish destinations.
+A FastAPI process around the Rust engine (`fe_core`, built from the fencoder workspace in `native/`, crate `fencoder-py`). Rust owns the queue, settings, presets, FFmpeg and every command; Python owns HTTP, the live socket, MCP, the agent workspace, the embedded terminal and the two jobs that need the network: the form family bridge and publish destinations.
 
 ## Engine thread
 

@@ -1,10 +1,33 @@
-# fe-core · HASHOUT_LOG
+# native · HASHOUT_LOG (the fencoder crates)
 
 Living context for formencoder's encoding engine. The code carries almost no comments; the reasoning lives here.
 
 ## What it is
 
-fe-core is formencoder's engine, written in Rust and loaded by the engine service as the `fe_core` Python extension (PyO3, abi3 for Python 3.10 and later). It owns the queue, the export settings model, the presets, the FFmpeg graph builder, the parallel runner, watch folders, logs and every command the interface and the agents call. Python around it does only what needs the network or the web stack: HTTP and the live socket, MCP, the family bridge (formcut, formvfx, formwav, formvis) and publish destinations.
+formencoder's engine is written in Rust as the Cargo workspace `native/` and loaded by the engine service as the `fe_core` Python extension (PyO3, abi3 for Python 3.10 and later). It owns the queue, the export settings model, the presets, the FFmpeg graph builder, the parallel runner, watch folders, logs and every command the interface and the agents call. Python around it does only what needs the network or the web stack: HTTP and the live socket, MCP, the family bridge (formcut, formvfx, formwav, formvis) and publish destinations.
+
+## Crate map (since 0.2.1)
+
+Seven crates, each depending only on the ones above it in this list:
+
+| Crate | Modules | Role |
+| --- | --- | --- |
+| `fencoder-core` | util, paths, prefs, logs, text (and `assets/fonts`), metadata, vr, plugins, colour | foundations every other crate reads |
+| `fencoder-io` | ffmpeg, tools, openh264, encoders, formats, captions, credentials, raw, transcribe, wrap | FFmpeg and the separate delivery programs, what this machine can encode, the 40 formats, packaging |
+| `fencoder-plan` | settings, pipeline, presets, sidecars | export settings, presets and the FFmpeg graph planner |
+| `fencoder-run` | runner | parallel encode jobs |
+| `fencoder-engine` | engine | the queue document, undo, autosave, watch folders, events |
+| `fencoder-commands` | commands, execute, preview | the registry and its handlers, `Execute` (execute and batch), previews |
+| `fencoder-py` | py | the PyO3 module, built by maturin as `fe_core` |
+
+Why it is shaped this way:
+
+- Each crate's `lib.rs` re-exports the modules of the crates below it, so `crate::paths` resolves the same in every crate. Files moved between crates with `git mv` and kept their imports; a new module uses the same `crate::` paths.
+- `settings` and `pipeline` call each other (settings asks the planner for geometry and fixed rasters, the planner reads settings helpers), so they share `fencoder-plan` rather than being split by a trait nobody else needs.
+- `engine` and `commands` called each other through `Engine::execute`. `execute`, `batch` and `resolve_refs` now live in `fencoder-commands/src/execute.rs` as the `Execute` trait implemented for `Engine`; the engine crate no longer knows the registry exists. Anything calling `e.execute(...)` imports `crate::execute::Execute`.
+- The registry rows carry `mcpName` (dotted id to snake case), `category` (the namespace) and MCP `annotations` (`readOnlyHint` from `query`, `destructiveHint` from `DESTRUCTIVE`, `idempotentHint` for queries and set commands, `openWorldHint` for family, publish and `plugin.run`). Add a command that deletes, overwrites or resets something to `DESTRUCTIVE` in the same change, since approvals will be driven from it.
+- The Python distribution is still named `fe-core` in `pyproject.toml`: renaming it would leave an old `fe-core` install beside a new one in an existing venv, both providing `fe_core`.
+- The workspace builds into `native/target`; profiles live only in `native/Cargo.toml`.
 
 FFmpeg is a separate program, never linked. The engine builds argument lists and runs `ffmpeg` and `ffprobe` as child processes, so FFmpeg's licence does not reach formencoder's binaries.
 

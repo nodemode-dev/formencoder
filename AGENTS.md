@@ -10,4 +10,4 @@ The MCP server is configured here in `.codex/config.toml` (Codex) and `.cursor/m
 
 ## Changing formencoder's code
 
-Read `CLAUDE.md` and `.claude/skills/formencoder-skillset/SKILL.md`, then `frontend/HASHOUT_LOG.md`, `backend/HASHOUT_LOG.md` and `native/fe-core/HASHOUT_LOG.md` (the engine). After changing MCP tools or engine commands, formats or presets, run `./formencoder agents sync`.
+Read `CLAUDE.md` and `.claude/skills/formencoder-skillset/SKILL.md`, then `frontend/HASHOUT_LOG.md`, `backend/HASHOUT_LOG.md` and `native/HASHOUT_LOG.md` (the engine's fencoder crates). After changing MCP tools or engine commands, formats or presets, run `./formencoder agents sync`.

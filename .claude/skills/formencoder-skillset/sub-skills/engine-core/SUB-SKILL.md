@@ -1,13 +1,15 @@
 ---
 name: engine-core
-description: Changing formencoder's Rust encoding engine in native/fe-core. Use when adding or changing a command, a format, a codec field, a preset, a settings key, an effect, caption handling, the FFmpeg graph planner, the runner, watch folders, previews, logs or the PyO3 surface, or when an encode produces the wrong file.
+description: Changing formencoder's Rust encoding engine, the fencoder crates in native/. Use when adding or changing a command, a format, a codec field, a preset, a settings key, an effect, caption handling, the FFmpeg graph planner, the runner, watch folders, previews, logs or the PyO3 surface, or when an encode produces the wrong file.
 ---
 
 # engine-core
 
-Read `native/fe-core/HASHOUT_LOG.md` first: it carries the reasoning the code does not.
+Read `native/HASHOUT_LOG.md` first: it carries the reasoning the code does not, and its crate map says which crate holds each file.
 
 ## Where things live
+
+Each file below sits in `native/[crate]/src/`: `fencoder-core` (util, paths, prefs, logs, text, metadata, vr, plugins, colour), `fencoder-io` (ffmpeg, tools, openh264, encoders, formats, captions, credentials, raw, transcribe, wrap), `fencoder-plan` (settings, pipeline, presets, sidecars), `fencoder-run` (runner), `fencoder-engine` (engine), `fencoder-commands` (commands, `execute.rs` with execute and batch, preview) and `fencoder-py` (py). A crate may only use the crates listed before it.
 
 | File | Holds |
 | --- | --- |
