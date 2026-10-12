@@ -1,7 +1,8 @@
 import type { Ctx } from '../app/ctx';
 import type { CommandSpec } from '../engine/types';
 import { Dialog } from './dialogs';
-import { el, escapeHtml } from './dom';
+import { cliLine, copyText, mcpCall } from './command-line';
+import { el, escapeHtml, setText, setTitle } from './dom';
 import { pickFiles } from './file-dialog';
 import { icon } from './icons';
 
@@ -79,6 +80,7 @@ export async function schemaForm(spec: CommandSpec, initial: Record<string, unkn
     const wrap = el('<div class="fe-form-path"></div>');
     const i = el<HTMLInputElement>('<input class="cv-input" type="text" spellcheck="false">');
     if (v !== undefined && v !== null) i.value = String(v);
+    if (p.description) i.placeholder = String(p.description);
     wrap.appendChild(i);
     if (PATHISH.test(k)) {
       const b = el<HTMLButtonElement>(`<button class="cv-icon-btn" type="button" title="Browse">${icon('folder', 15)}</button>`);
@@ -91,6 +93,42 @@ export async function schemaForm(spec: CommandSpec, initial: Record<string, unkn
     dialog.field(label, wrap);
     getters[k] = () => i.value.trim() || undefined;
   }
+  Array.from(dialog.body.querySelectorAll<HTMLElement>('.cv-field')).forEach((row, n) => {
+    const d = props[keys[n]]?.description;
+    if (d) setTitle(row, String(d));
+  });
+  const cli = el(`<div class="fe-form-cli" data-automation-id="form.cli">
+    <div class="fe-cli-row"><span class="fe-cli-k">CLI</span><code class="fe-cli-line"></code><button class="cv-btn cv-btn-ghost fe-cli-copy" type="button">Copy</button></div>
+    <div class="fe-cli-row"><span class="fe-cli-k">MCP</span><code class="fe-cli-line"></code><button class="cv-btn cv-btn-ghost fe-cli-copy" type="button">Copy</button></div>
+  </div>`);
+  dialog.body.appendChild(cli);
+  const [cliEl, mcpEl] = Array.from(cli.querySelectorAll<HTMLElement>('code'));
+  const [cliBtn, mcpBtn] = Array.from(cli.querySelectorAll<HTMLButtonElement>('button'));
+  const current = (): Record<string, unknown> => {
+    const out: Record<string, unknown> = { ...initial };
+    for (const [k, g] of Object.entries(getters)) {
+      try {
+        const val = g();
+        if (val !== undefined) out[k] = val;
+      } catch {
+        out[k] = initial[k];
+      }
+    }
+    return out;
+  };
+  const refresh = (): void => {
+    const now = current();
+    const a = cliLine(spec, now), b = mcpCall(spec, now);
+    setText(cliEl, a);
+    setTitle(cliEl, a);
+    setText(mcpEl, b);
+    setTitle(mcpEl, b);
+  };
+  dialog.body.addEventListener('input', refresh);
+  dialog.body.addEventListener('change', refresh);
+  cliBtn.addEventListener('click', () => void copyText(cliEl.textContent || '', 'command line'));
+  mcpBtn.addEventListener('click', () => void copyText(mcpEl.textContent || '', 'MCP call'));
+  refresh();
   return new Promise((resolve) => {
     let done = false;
     const finish = (v: Record<string, unknown> | null): void => {

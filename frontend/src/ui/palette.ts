@@ -1,5 +1,7 @@
 import type { Ctx } from '../app/ctx';
-import { el, patchList, q, setClass, setText } from './dom';
+import type { CommandSpec } from '../engine/types';
+import { cliLine, copyText, mcpCall } from './command-line';
+import { el, patchList, q, setClass, setDisabled, setText, setTitle } from './dom';
 import { keyLabel } from './popup';
 
 interface Entry {
@@ -9,12 +11,16 @@ interface Entry {
   keys: string;
   kind: 'command' | 'preset' | 'panel';
   run: () => void;
+  spec?: CommandSpec;
+  ask?: () => void;
 }
 
 export class Palette {
   private readonly root: HTMLElement;
   private readonly input: HTMLInputElement;
   private readonly list: HTMLElement;
+  private readonly cli: HTMLElement;
+  private readonly copyButtons: HTMLButtonElement[];
   private entries: Entry[] = [];
   private picked = 0;
   private shown: Entry[] = [];
@@ -24,10 +30,22 @@ export class Palette {
     this.root = el(`<div class="fx-palette-scrim" hidden><div class="cv-search-pop fx-palette" role="dialog" aria-label="Command palette">
       <input class="cv-search-input" placeholder="Search every command, preset and panel" spellcheck="false" data-automation-id="palette.input">
       <div class="cv-search-results fx-palette-list" role="listbox"></div>
-      <div class="fx-palette-foot"><span>Enter runs</span><span>Esc closes</span><span class="fx-palette-count"></span></div>
+      <div class="fx-palette-cmd" data-automation-id="palette.cli"><code class="fx-pal-cli"></code><button class="cv-btn cv-btn-ghost fx-pal-copy" type="button" data-copy="cli">Copy CLI</button><button class="cv-btn cv-btn-ghost fx-pal-copy" type="button" data-copy="mcp">Copy MCP</button></div>
+      <div class="fx-palette-foot"><span>Enter runs</span><span>Shift+Enter opens its options</span><span>Esc closes</span><span class="fx-palette-count"></span></div>
     </div></div>`);
     this.input = q<HTMLInputElement>(this.root, 'input');
     this.list = q(this.root, '.fx-palette-list');
+    this.cli = q(this.root, '.fx-pal-cli');
+    this.copyButtons = Array.from(this.root.querySelectorAll<HTMLButtonElement>('.fx-pal-copy'));
+    for (const b of this.copyButtons) {
+      b.addEventListener('pointerdown', (e) => e.preventDefault());
+      b.addEventListener('click', () => {
+        const spec = this.shown[this.picked]?.spec;
+        if (!spec) return;
+        if (b.dataset.copy === 'cli') void copyText(cliLine(spec, {}), 'command line');
+        else void copyText(mcpCall(spec, {}), 'MCP call');
+      });
+    }
     document.getElementById('overlay-root')?.appendChild(this.root);
     this.root.addEventListener('pointerdown', (e) => {
       if (e.target === this.root) this.close();
@@ -49,7 +67,8 @@ export class Palette {
         const it = this.shown[this.picked];
         if (it) {
           this.close();
-          it.run();
+          if (e.shiftKey && it.ask) it.ask();
+          else it.run();
         }
       }
     });
@@ -69,6 +88,8 @@ export class Palette {
         keys: keyLabel(this.shortcut(s.id) || s.shortcut),
         kind: 'command',
         run: () => void this.ctx.invoke(s.id),
+        spec: s,
+        ask: this.ctx.hasParams(s.id) ? () => void this.ctx.invoke(s.id, null, true) : undefined,
       })),
       ...presets.map<Entry>((p) => ({
         id: p.id,
@@ -121,7 +142,9 @@ export class Palette {
         n.addEventListener('pointerdown', (ev) => {
           ev.preventDefault();
           this.close();
-          e.run();
+          const cur = this.shown.find((x) => `${x.kind}:${x.id}` === n.dataset.key) ?? e;
+          if (ev.altKey && cur.ask) cur.ask();
+          else cur.run();
         });
         return n;
       },
@@ -137,5 +160,10 @@ export class Palette {
   private highlight(): void {
     Array.from(this.list.children).forEach((n, i) => setClass(n, 'is-picked', i === this.picked));
     (this.list.children[this.picked] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
+    const spec = this.shown[this.picked]?.spec;
+    const line = spec ? `${cliLine(spec, {})}  ·  MCP ${spec.mcpName || spec.id}${this.shown[this.picked]?.ask ? '  ·  Shift+Enter for its options' : ''}` : '';
+    setText(this.cli, line);
+    setTitle(this.cli, line);
+    for (const b of this.copyButtons) setDisabled(b, !spec);
   }
 }

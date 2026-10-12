@@ -99,39 +99,44 @@ export class Ctx {
     }
   }
 
-  async invoke(command: string, params: Record<string, unknown> | null = null): Promise<unknown> {
+  hasParams(command: string): boolean {
+    return Object.keys(this.specs.get(command)?.schema?.properties ?? {}).length > 0;
+  }
+
+  async invoke(command: string, params: Record<string, unknown> | null = null, ask = false): Promise<unknown> {
     if (!command) return undefined;
+    ask = ask && this.hasParams(command);
     const p: Record<string, unknown> = { ...(params || {}) };
     const sel = this.store.selection();
     if (SELECTED_REFS.has(command) && p.refs === undefined) {
       if (sel.outputs.length) p.refs = sel.outputs;
       else if (sel.items.length) p.refs = sel.items;
-      else if (command !== 'queue.stopCurrent') {
+      else if (command !== 'queue.stopCurrent' && !ask) {
         toast('Select an output or a source in the Queue first', 'error');
         return undefined;
       }
     }
     if (SELECTED_OUTPUT.has(command) && p.output === undefined && p.path === undefined) {
       const o = sel.outputs[0] ?? this.store.firstOutputOf(sel.items[0]);
-      if (!o) {
+      if (!o && !ask) {
         toast('Select an output in the Queue first', 'error');
         return undefined;
       }
-      p.output = o;
+      if (o) p.output = o;
     }
     if (SELECTED_ITEM.has(command) && p.item === undefined) {
       const it = sel.items[0] ?? this.store.itemOf(sel.outputs[0]);
-      if (!it) {
+      if (!it && !ask) {
         toast('Select a source in the Queue first', 'error');
         return undefined;
       }
-      p.item = it;
+      if (it) p.item = it;
     }
-    if (command === 'ui.exportSettings') {
+    if (command === 'ui.exportSettings' && p.output !== undefined) {
       this.ui.emit('exportSettings', String(p.output));
       return undefined;
     }
-    for (const picker of PICKERS[command] ?? []) {
+    for (const picker of ask ? [] : PICKERS[command] ?? []) {
       if (p[picker.key] !== undefined) continue;
       const label = picker.title || this.specs.get(command)?.label?.replace(/\.\.\.$/, '') || command;
       const got = await pickFiles({ title: label, mode: picker.mode, multiple: picker.multiple, extensions: picker.ext, defaultName: picker.name });
@@ -140,7 +145,7 @@ export class Ctx {
     }
     const spec = this.specs.get(command);
     const missing = (spec?.schema?.required ?? []).filter((k) => p[k] === undefined);
-    if (spec && missing.length) {
+    if (spec && (missing.length || ask)) {
       const r = await schemaForm(spec, p, this);
       if (!r) return undefined;
       Object.assign(p, r);

@@ -124,6 +124,9 @@ export interface CommandSpec {
   enabled: boolean;
   schema?: { properties?: Record<string, Record<string, unknown>>; required?: string[] };
   doc?: string;
+  mcpName?: string;
+  category?: string;
+  annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean; idempotentHint?: boolean; openWorldHint?: boolean };
 }
 
 export interface PresetRow {

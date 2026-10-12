@@ -184,12 +184,15 @@ body.theme-light .cv-menu, body.theme-light .cv-dialog, body.theme-light .cv-toa
 .fx-palette-scrim { position: fixed; inset: 0; z-index: var(--z-context); display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; background: var(--bg-scrim); }
 .fx-palette-scrim[hidden] { display: none; }
 .fx-palette { position: relative; top: auto; right: auto; width: min(640px, calc(100vw - 32px)); padding: 10px; }
-.fx-palette-list { max-height: 52vh; overflow: auto; }
+.fx-palette-list { height: 52vh; overflow: auto; }
 .fx-palette-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) auto; gap: 12px; height: 32px; flex: none; cursor: pointer; }
 .fx-pal-label { overflow: hidden; color: var(--text-primary); text-overflow: ellipsis; white-space: nowrap; }
 .fx-pal-path { overflow: hidden; color: var(--text-muted); font-size: var(--fs-11); text-overflow: ellipsis; white-space: nowrap; }
 .fx-palette-foot { display: flex; gap: 14px; margin-top: 8px; padding: 6px 4px 0; border-top: 1px solid var(--line-0); color: var(--text-muted); font-size: var(--fs-11); }
 .fx-palette-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.fx-palette-cmd { display: flex; align-items: center; gap: 6px; height: 28px; margin-top: 6px; padding: 0 4px; }
+.fx-pal-cli { flex: 1 1 0; width: 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-11); }
+.fx-pal-copy { flex: none; height: 22px; padding: 0 8px; font-size: var(--fs-11); }
 
 .fx-prefs { display: grid; grid-template-columns: 180px minmax(0, 1fr); height: min(560px, 72vh); }
 .fx-prefs-nav { display: flex; flex-direction: column; gap: 2px; padding-right: 10px; border-right: 1px solid var(--line-0); overflow: auto; }
