@@ -1,5 +1,6 @@
 @echo off
 setlocal
+if not defined FORMENCODER_CWD set "FORMENCODER_CWD=%CD%"
 cd /d "%~dp0"
 set "CMD=%~1"
 if "%CMD%"=="" set "CMD=boot"
@@ -25,6 +26,7 @@ if /i "%CMD%"=="agents" ( call :py setup\agents.py %2 %3 %4 & goto :eof )
 if /i "%CMD%"=="counts" ( call :py setup\line_counts.py %2 & goto :eof )
 if /i "%CMD%"=="clean" ( call setup\clean.bat %2 & goto :eof )
 if /i "%CMD%"=="help" ( call :usage & exit /b 0 )
+if not "%CMD:.=%"=="%CMD%" ( call :py setup\fe.py %* & goto :eof )
 echo [formencoder] unknown command: %CMD%
 call :usage
 exit /b 2

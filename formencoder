@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+export FORMENCODER_CWD="${FORMENCODER_CWD:-$PWD}"
 cd "$(dirname "$0")"
 usage() {
   printf 'formencoder %s · the media encoder of the form family\n' "$(sed -n "s/^export const VERSION = '\(.*\)';$/\1/p" frontend/src/version.ts 2>/dev/null)"
@@ -22,6 +23,7 @@ usage: ./formencoder [command] [options]
 
   encode FILE... [--preset ID] [--folder DIR]   queue files, encode them, wait and print the results
   queue                 the queue with every output's status
+  ID --name VALUE ...   run any command by its id with its parameters as flags, e.g. queue.addSource --paths a.mov --preset system/youtube-1080p (ID --help shows them)
   exec ID [JSON]        run one formencoder command in the running app (prints the JSON result)
   batch JSON|FILE       run several commands as one undo step
   commands [FILTER]     list the commands (id, label, params)
@@ -75,5 +77,9 @@ case "$cmd" in
   counts) exec python3 setup/line_counts.py "$@" ;;
   clean) exec setup/clean "$@" ;;
   help|-h|--help) usage ;;
+  *.*)
+    py=python3
+    [ -x backend/venv/bin/python ] && py=backend/venv/bin/python
+    exec "$py" setup/fe.py "$cmd" "$@" ;;
   *) printf '[formencoder] unknown command: %s\n\n' "$cmd"; usage; exit 2 ;;
 esac

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -34,6 +35,117 @@ def _queue_line(st: dict) -> None:
             print(f"   {o['id']}  {o.get('status', ''):<9}{pct:>5}  {o.get('formatLabel', '')} · {o.get('presetName', '')}  ->  {o.get('path', '')}")
 
 
+PATH_KEYS = {"path", "paths", "folder", "destination", "transcodeFolder"}
+
+
+def _types(spec: dict) -> list:
+    t = spec.get("type")
+    if t is None and spec.get("anyOf"):
+        return [x.get("type") for x in spec["anyOf"]]
+    return t if isinstance(t, list) else [t]
+
+
+def _abs(key: str, value: object) -> object:
+    if key not in PATH_KEYS or not isinstance(value, str) or not value or value.startswith(("~", "/", "\\")) or (len(value) > 1 and value[1] == ":"):
+        return value
+    base = Path(os.environ.get("FORMENCODER_CWD") or os.getcwd())
+    return str((base / value).resolve())
+
+
+def _coerce(value: str, spec: dict) -> object:
+    types = _types(spec)
+    if value.lstrip().startswith(("{", "[")):
+        try:
+            return json.loads(value)
+        except ValueError:
+            pass
+    if "boolean" in types and value.lower() in ("true", "false", "yes", "no", "on", "off", "1", "0"):
+        return value.lower() in ("true", "yes", "on", "1")
+    for kind, cast in (("integer", int), ("number", float)):
+        if kind in types:
+            try:
+                return cast(value)
+            except ValueError:
+                pass
+    if types == ["object"]:
+        return _load(value)
+    return value
+
+
+def _command_help(cid: str, row: dict) -> str:
+    schema = row.get("schema") or {}
+    props, required = schema.get("properties") or {}, set(schema.get("required") or [])
+    where = f" ({row['menu']} menu)" if row.get("menu") else ""
+    lines = [f"./formencoder {cid} · {row.get('label', cid)}{where}"]
+    if row.get("doc"):
+        lines.append(row["doc"])
+    for key, spec in props.items():
+        kind = "|".join(str(t) for t in _types(spec) if t) or "value"
+        if spec.get("enum"):
+            kind = "|".join(str(x) for x in spec["enum"])
+        lines.append(f"  --{key} {kind.upper() if not spec.get('enum') else kind}{' (required)' if key in required else ''}{'  ' + spec['description'] if spec.get('description') else ''}")
+    if not props:
+        lines.append("  no parameters")
+    kind = "query" if row.get("query") else ("undoable" if row.get("undoable") else "not undoable")
+    lines.append(f"MCP tool: {row.get('mcpName', '')} · {kind}. Arrays take the flag once per value or a JSON list; objects take JSON or a JSON file; --json prints the result on one line.")
+    return "\n".join(lines)
+
+
+def _command(cid: str, rest: list[str]) -> int:
+    try:
+        row = client.rpc("command.describe", {"command": cid})
+    except RuntimeError as exc:
+        print(f"[formencoder] {exc}", file=sys.stderr)
+        return 1
+    if "--help" in rest or "-h" in rest:
+        print(_command_help(cid, row))
+        return 0
+    schema = row.get("schema") or {}
+    props = schema.get("properties") or {}
+    params: dict = {}
+    compact = False
+    i = 0
+    while i < len(rest):
+        a = rest[i]
+        i += 1
+        if a == "--json":
+            compact = True
+            continue
+        if not a.startswith("--"):
+            print(f"[formencoder] {cid}: unexpected {a!r}; parameters are --name value (see ./formencoder {cid} --help)", file=sys.stderr)
+            return 2
+        key, eq, val = a[2:].partition("=")
+        if key not in props:
+            print(f"[formencoder] {cid} has no parameter {key!r}; it takes {', '.join(props) or 'none'}", file=sys.stderr)
+            return 2
+        types = _types(props[key])
+        if not eq:
+            if i < len(rest) and not rest[i].startswith("--"):
+                val = rest[i]
+                i += 1
+            elif "boolean" in types:
+                val = "true"
+            else:
+                print(f"[formencoder] {cid}: --{key} needs a value", file=sys.stderr)
+                return 2
+        v = _coerce(val, props[key])
+        if "array" in types and not isinstance(v, list):
+            params.setdefault(key, []).append(_abs(key, v))
+        else:
+            params[key] = [_abs(key, x) for x in v] if isinstance(v, list) else _abs(key, v)
+    missing = [k for k in schema.get("required") or [] if k not in params]
+    if missing:
+        print(f"[formencoder] {cid} needs --{' --'.join(missing)} (see ./formencoder {cid} --help)", file=sys.stderr)
+        return 2
+    try:
+        result = client.rpc("command.execute", {"command": cid, "params": params})
+    except RuntimeError as exc:
+        print(f"[formencoder] {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, ensure_ascii=False) if compact else json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "mcp":
@@ -41,6 +153,8 @@ def main(argv: list[str] | None = None) -> int:
 
         stdio.main()
         return 0
+    if argv and "." in argv[0] and not argv[0].startswith((".", "/", "~", "-")) and "/" not in argv[0] and "\\" not in argv[0]:
+        return _command(argv[0], argv[1:])
     ap = argparse.ArgumentParser(prog="formencoder", description="Drive the running formencoder from the command line.")
     sub = ap.add_subparsers(dest="cmd", required=True)
     e = sub.add_parser("exec", help="run one command")
