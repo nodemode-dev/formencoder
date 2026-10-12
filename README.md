@@ -34,7 +34,7 @@ formencoder finds formcut, formvfx, formwav and formvis running on the same comp
 - **From anywhere**: `./formencoder agents install` (or the Agents panel) sets the three clients up for your account.
 - **Command line**: `./formencoder encode FILE --preset system/youtube-1080p`, `queue`, `exec ID 'JSON'`, `batch 'JSON'`, `commands FILTER`, `describe ID`, `presets QUERY`, `probe FILE`, `frame OUT.png --output '#1' --time 2`, `wait`.
 
-21 curated MCP tools, among them `encode` (queue, encode, wait and verify in one call), `export_settings`, `preview_frame` and `contact_sheet` (frames through an output's exact settings), `verify` (the file probed against its settings) and `family`, plus one tool for each of the 96 engine commands (`queue_add_source`, `preset_create`...) in the full profile that Claude Code and Codex load; Cursor loads the 21 (its core profile) and reaches the rest through `execute`. Resources (`formencoder://queue`, `presets`, `formats`, `encoders`, the logs and the guides) and recipe prompts (YouTube version, broadcast master, proxies, review copy) come with them. On the command line every command runs as `./formencoder [id] --name value`. In the window, Shift+Enter on a command in the palette (Cmd+K) opens its dialog with every parameter, and the dialog and the palette show the command line and MCP call for it with copy buttons.
+27 curated MCP tools (terminal_open, terminal_send, terminal_read and approval_status among the newest), among them `encode` (queue, encode, wait and verify in one call), `export_settings`, `preview_frame` and `contact_sheet` (frames through an output's exact settings), `verify` (the file probed against its settings) and `family`, plus one tool for each of the 96 engine commands (`queue_add_source`, `preset_create`...) in the full profile that Claude Code and Codex load; Cursor loads the 27 (its core profile, 123 tools in the full one) and reaches the rest through `execute`. Resources (`formencoder://queue`, `presets`, `formats`, `encoders`, the logs and the guides) and recipe prompts (YouTube version, broadcast master, proxies, review copy) come with them. On the command line every command runs as `./formencoder [id] --name value`. In the window, Shift+Enter on a command in the palette (Cmd+K) opens its dialog with every parameter, and the dialog and the palette show the command line and MCP call for it with copy buttons.
 
 ## Desktop
 
@@ -74,13 +74,13 @@ Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundl
 | Area | Files | Lines |
 | --- | ---: | ---: |
 | Encoding engine (Rust, fencoder crates) | 46 | 10,317 |
-| Engine service (Python) | 36 | 3,317 |
-| Interface (TypeScript) | 39 | 5,952 |
-| Interface styles (CSS) | 5 | 682 |
+| Engine service (Python) | 37 | 3,774 |
+| Interface (TypeScript) | 39 | 6,018 |
+| Interface styles (CSS) | 5 | 685 |
 | Desktop shell (Rust, Tauri) | 1 | 144 |
 | Setup and CLI | 37 | 1,221 |
-| Agent skills (Markdown, hand-written) | 21 | 791 |
-| Total | 185 | 22,424 |
+| Agent skills (Markdown, hand-written) | 21 | 793 |
+| Total | 186 | 22,952 |
 
 Non-blank lines in tracked files; generated skill references excluded. `./formencoder counts` prints this table.
 

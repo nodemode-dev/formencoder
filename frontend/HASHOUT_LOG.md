@@ -49,3 +49,9 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - The dialog ends with the command line and MCP call for the values as typed, the palette with the highlighted command's line and tool name. Both teach the person the agent and shell forms of what they are doing; the copy buttons hand them to a terminal or an agent.
 - A long `white-space: nowrap` text in a grid with an automatic column widens the column to the text's min-content: the dialog body is such a grid, and the filled command line pushed its column to 672 px, reflowing the doc note above it. Single-line readouts inside a grid or flex track get `flex: 1 1 0; width: 0; min-width: 0` so they contribute nothing to min-content.
 - The palette list has a fixed height, not a max-height, so the strip and the foot under it never move as the result count changes.
+
+## Approval dialog and full faith (0.2.4)
+
+- `app.approvals(pending)` shows one approval request at a time as its own dialog and closes it if the request was decided in another window; closing it declines, so a request never stays open behind a dismissed dialog. Pending requests are read on connect, so an agent that asked while no window was open is answered the moment formencoder opens.
+- The Full faith switch lives in the Agents panel, deliberately not in the approval dialog: turning it on should be a decision taken calmly, not a shortcut out of a prompt. It writes over the live socket because that is the only route the engine accepts it from.
+- Inherited: the activity feed inserts newest-first, so a new row pushes older rows down (a 0.00002 layout shift measured in 0.2.4). The Agent Connect panel in 0.2.5 replaces this feed.

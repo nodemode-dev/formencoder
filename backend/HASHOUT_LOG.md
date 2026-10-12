@@ -78,3 +78,15 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 ## Command line verbs (0.2.2)
 
 `cli.py` treats a first argument with a dot and no path separator as a command id, fetches its schema with `command.describe` and turns flags into parameters by the schema's types. The dispatchers export `FORMENCODER_CWD` before they change into the repository, and only the path-named keys (`path`, `paths`, `folder`, `destination`, `transcodeFolder`) are resolved against it; the older `encode` verb still resolves paths from the repository folder.
+
+## Approvals, full faith and the window's channel (0.2.4)
+
+- Only the live socket speaks as the window (source `ui`). `/api/rpc` used to take `x-formencoder-source` at its word, so a local process sending `ui` skipped consent; HTTP callers are now `cli` when they claim `ui`, and MCP's become `mcp:agent`. Approving and full faith are live socket methods, refused from every other route, so an agent cannot approve itself through MCP, the command line or a terminal.
+- `approvals.reasons` reads the registry's `destructiveHint` once and adds what the registry cannot know: publish destinations of upload types (and `deleteLocal`) inside any settings, `outputs[].settings` or patch; `queue.setOutput` onto an existing file; watch output folders and chains. The tools layer adds typing into a terminal and closing a terminal another client opened. One guard serves MCP tools and agents' `/api/rpc` command calls.
+- The guard waits two minutes because agents work best with an answer in the same call; after that, or at once with no window, it answers `pendingApproval` and keeps the request, so a late Allow still runs the action and `approval_status` hands back the result. The decision is recorded as its own activity entry (`approval N for client: action`) beside the tool call's entry.
+
+## Terminal hub (0.2.4)
+
+- Sessions outlive their websocket so agents can open, type into and read terminals the person sees, and a tab can come back after a reload. A websocket without `?session=` still opens a private session that ends with it, which is what the Terminal panel of 0.2.3 does.
+- Login shells reset PATH from the system profile, dropping the workspace `bin` that holds the `formencoder` shim. Bash now starts with `--rcfile` pointing at the workspace's `.formencoder-bashrc` (system profile, the person's first login file, then the shim first in PATH) and zsh with `ZDOTDIR` at `.formencoder-zsh`, whose files source the person's own and put the shim first last. Other shells keep the environment PATH.
+- `terminal_read` and `terminal_send` remove colour and cursor codes so agents read plain text; the history keeps the last 256 K characters.

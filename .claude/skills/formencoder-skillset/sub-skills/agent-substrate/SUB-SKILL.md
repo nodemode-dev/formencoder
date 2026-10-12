@@ -15,6 +15,8 @@ description: Changing how agents drive formencoder. Use for the MCP tools and gu
 | `backend/app/agent/stdio.py`, `setup/mcp_stdio.py` | the stdio relay `./formencoder mcp`, which finds or starts the engine |
 | `backend/app/agent/client.py` | engine discovery, autostart, headers, `rpc` |
 | `backend/app/agent/consent.py` | the `FORMENCODER_AGENTS` policy, session and remembered clients, the dialog round trip |
+| `backend/app/agent/approvals.py` | which actions need the person's approval (`reasons`), the guard that waits or answers `pendingApproval`, `decide`, full faith (`approvals.json`), the agent activity record; decisions and full faith only over the live socket (`agents.decide`, `agents.fullFaith` in `engine/rpc.py`) |
+| `backend/app/routers/terminal.py` | the terminal hub: sessions with ids, history, readers and restart; REST under `/api/terminal/sessions`; the websocket attaching with `?session=`; the shell started with the workspace's bash rc file or zsh ZDOTDIR so the `formencoder` shim stays on PATH |
 | `backend/app/agent/workspace.py`, `templates/` | the agent workspace (`CLAUDE.md`, `AGENTS.md`, MCP configs, skills) the Terminal panel opens |
 | `backend/app/agent/connect.py` | `./formencoder agents install`: user-level MCP entries and skill copies for Claude Code, Codex and Cursor |
 | `backend/app/agent/cli.py`, `setup/fe.py` | the command line (`encode`, `queue`, `exec`, `batch`, `commands`, `describe`, `presets`, `probe`, `frame`, `wait`) |
