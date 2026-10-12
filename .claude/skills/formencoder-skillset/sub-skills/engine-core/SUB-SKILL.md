@@ -46,6 +46,7 @@ Add the format row and its field specs in `formats.rs`, its defaults in `setting
 ## Rules
 
 - Never block the engine thread on FFmpeg; encodes and probes for previews run off it.
+- Release builds stay unstripped (`native/Cargo.toml` and its build override): on macOS 27 with rustc 1.97.1 a stripped `fe_core.abi3.so` does not load.
 - Errors are one sentence a person or agent can act on, naming the valid values when there is a fixed set.
 - Ids and parameter names are an API: agents and saved queues depend on them. Add, do not rename.
 - Build: `./formencoder install-native --dev` (debug) or `./formencoder install-native` (release). Check the three host targets compile: `cargo check --target x86_64-pc-windows-msvc` and `--target aarch64-apple-darwin` as well as Linux.

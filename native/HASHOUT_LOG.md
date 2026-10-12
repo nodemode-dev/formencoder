@@ -29,6 +29,7 @@ Why it is shaped this way:
 - The registry rows carry `mcpName` (dotted id to snake case), `category` (the namespace) and MCP `annotations` (`readOnlyHint` from `query`, `destructiveHint` from `DESTRUCTIVE`, `idempotentHint` for queries and set commands, `openWorldHint` for family, publish and `plugin.run`). Add a command that deletes, overwrites or resets something to `DESTRUCTIVE` in the same change, since approvals will be driven from it.
 - The Python distribution is still named `fe-core` in `pyproject.toml`: renaming it would leave an old `fe-core` install beside a new one in an existing venv, both providing `fe_core`.
 - The workspace builds into `native/target`; profiles live only in `native/Cargo.toml`.
+- Since 0.2.5 release builds are unstripped (`strip = false`, and `strip = false` under `[profile.release.build-override]`). On macOS 27 with rustc 1.97.1 dyld refused the stripped `fe_core.abi3.so` ("mis-aligned LINKEDIT string pool") and `install-native` failed its import check; formcut found the same for its native library and for stripped procedural macros. Do not turn stripping back on without loading the result on a Mac.
 
 FFmpeg is a separate program, never linked. The engine builds argument lists and runs `ffmpeg` and `ffprobe` as child processes, so FFmpeg's licence does not reach formencoder's binaries.
 
