@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.4 · 2026-10-12
+
+The v0.3.0 sprint's third step, first half: the agent substrate behind Agent Connect.
+
+- Agents' consequential actions (deleting, clearing or resetting, publishing to an outside service, overwriting a file, changing where a watch folder writes, typing into a terminal) wait for the person's approval in the window, unless the person turns on Full faith in the Agents panel. A call that gets no answer in two minutes, or comes with no window open, answers pendingApproval; approval_status gives the decision and the result.
+- Every agent tool call is recorded with its approval outcome and shown in the Agents panel's activity.
+- Terminals are sessions agents can open, type into and read through the new MCP tools terminal_open, terminal_send, terminal_read, terminal_list and terminal_close, and over REST under /api/terminal/sessions.
+- `formencoder` is on the PATH in every formencoder terminal: bash and zsh start with formencoder's rc files after the person's own login files.
+- Security: an HTTP caller can no longer present itself as the window to skip agent consent.
+
 ## v0.2.3 · 2026-10-12
 
 Closes the v0.3.0 sprint's second step: one command registry reaching every surface.
