@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.3 · 2026-10-12
+
+Closes the v0.3.0 sprint's second step: one command registry reaching every surface.
+
+- Shift+Enter (or Alt+click) on a command in the palette opens its dialog with every parameter, even when none is required; with nothing selected the dialog asks for the refs instead of refusing.
+- The command dialog and the palette show the command line and the MCP call for the command, live as values are typed, with copy buttons.
+- `./formencoder agents sync --check` (run in CI) proves the registry, the MCP tools and the command line agree: MCP names, schemas, read-only hints, routing and parameter types.
+- The command references give every command's MCP tool name and mark destructive commands; `app.capabilities` names the engine as the fencoder crates.
+
 ## v0.2.2 · 2026-10-12
 
 The v0.3.0 sprint's second step: one command registry reaching agents and the command line.
