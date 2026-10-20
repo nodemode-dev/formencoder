@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.6 · 2026-10-20
+
+The one-shot desktop build, in the shape formlit set for the family.
+
+- `./build_app` at the repo root builds the desktop app from a fresh clone on macOS and Linux: it checks Python, Node and Rust (installing Rust with rustup when missing), installs the engine service, the encoding engine and the interface, builds the interface, freezes the engine into the sidecar, stages the pinned FFmpeg and bundles the app. On macOS it packs a DMG and copies the app to Applications (`--no-install` keeps it in place); on Linux it builds the `.deb` (`--install` installs it). `--open` opens the app, `--clean` rebuilds from nothing, and every step is logged to `build_app.log`.
+- `build_app.bat` runs the same steps on Windows and leaves the MSI and setup `.exe` in `src-tauri\target\release\bundle` (`--open` opens that folder).
+
 ## v0.2.5 · 2026-10-12
 
 A fix release: the encoding engine builds and loads on macOS 27.
