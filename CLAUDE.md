@@ -14,6 +14,7 @@ The media encoder of the form family (an Adobe Media Encoder alternative) beside
 - `backend/app/` · the engine service: `engine/` (the engine thread, bus, JSON-RPC, family bridge, publish), `routers/` (live socket, files and previews, terminal, MCP, agents), `agent/` (MCP tools, consent, workspace, CLI), `ffmpeg_fetch.py` (the pinned FFmpeg download).
 - `frontend/src/` · the interface: `engine/` (client, store; no DOM), `ui/` (dock, menus, palette, forms, widgets), `panels/`, `app/`.
 - `setup/` · install, boot, build, freeze and desktop scripts behind the `./formencoder` dispatcher; `setup/agents.py` regenerates the harness skill's references from the engine.
+- `./build_app` (`build_app.bat` on Windows) is the one-shot desktop build from a fresh clone: tools, install, interface, sidecar, FFmpeg, bundle, and on macOS the copy to Applications.
 - Planning documents (DEV_PLAN, BUILD_NOTES, TEST_PLAN, the root HASHOUT_LOG) ship in the planning sidecar zip, not in this tree.
 
 ## After changing the MCP tools or the engine's commands, formats or presets

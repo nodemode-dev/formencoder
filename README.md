@@ -44,6 +44,8 @@ formencoder finds formcut, formvfx, formwav and formvis running on the same comp
 ./formencoder desktop build     # DMG, deb, rpm, AppImage, MSI and setup bundles in src-tauri/target/release/bundle, with the pinned FFmpeg
 ```
 
+`./build_app` does everything from a fresh clone on macOS or Linux: it checks the tools (installing Rust with rustup when missing), installs the engine service, the encoding engine and the interface, builds the interface, freezes the engine into the sidecar, stages the pinned FFmpeg, bundles the app, and on macOS packs a DMG and copies the app to Applications (`--no-install` keeps it in place, `--open` opens it, `--clean` rebuilds from nothing; on Linux it builds the `.deb` and `--install` installs it). Every step is logged to `build_app.log`. On Windows, `build_app.bat` runs the same steps (`--open`).
+
 Tagging `vX.Y.Z` builds macOS (Apple silicon and Intel), Linux and Windows bundles in GitHub Actions, attaches the FFmpeg source, and opens a draft release.
 
 ## Commands
