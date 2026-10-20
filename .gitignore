@@ -13,6 +13,8 @@ __pycache__/
 !.env.example
 src-tauri/target/
 src-tauri/gen/
+assets/icon_src/out/
+assets/icon_src/R_*
 build/tools-src/
 src-tauri/tools/*
 !src-tauri/tools/README.md
