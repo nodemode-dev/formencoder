@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.7 · 2026-10-20
+
+A new app icon.
+
+- The icon keeps the bars-and-play mark and is redrawn like the rest of the form family: a dark gradient tile with a soft glow, the play triangle as a glossy blue-to-amber slab with a raised edge, and the bars as a fading motion trail. The macOS icon sits inset with a shadow, as macOS icons do; Windows and Linux icons fill their square. Small sizes draw a simpler, larger mark.
+- The browser tab icon and the startup splash show the new mark.
+
 ## v0.2.6 · 2026-10-20
 
 The one-shot desktop build, in the shape formlit set for the family.
