@@ -23,11 +23,11 @@ description: Building and releasing formencoder as a desktop app. Use for the Ta
 | Windows | `x86_64-pc-windows-msvc` | `.msi`, NSIS `.exe` |
 | Linux | `x86_64-unknown-linux-gnu` | `.deb`, `.rpm`, `.AppImage` |
 
-`.github/workflows/desktop.yml` builds all four on tag push; `ci.yml` builds the interface, checks the engine on each host, runs the text lint and `agents sync --check`.
+formcompiler (`nodemode-ai/formcompiler`) builds all four when a `compile_vX.Y.Z` branch is pushed here, and the repo's own `ci.yml` builds the interface, checks the engine on each host, runs the text lint and `agents sync --check`.
 
 ## Releasing
 
 1. Bump every version file listed in the skillset's Versions rule to the same `v*.*.*`.
 2. Update `BUILD_NOTES.md` in the planning sidecar with what changed.
-3. Commit `chore(release): vX.Y.Z` last in the series; tag `vX.Y.Z`.
+3. Commit `chore(release): vX.Y.Z` last in the series; push a branch `compile_vX.Y.Z` from that commit. formcompiler builds it and drafts `formencoder-vX.Y.Z` on its release page, with the FFmpeg source attached.
 4. The FFmpeg notices (`NOTICE.md`, `src-tauri/ffmpeg/README.md`) must ship with every bundle that carries FFmpeg: the LGPL requires the licence text, the source offer and the build's configure line.
