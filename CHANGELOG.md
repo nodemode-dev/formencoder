@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.8 · 2026-10-22
+
+Releases are built by formcompiler.
+
+- Releases are built by formcompiler (`nodemode-ai/formcompiler`) and published on its release page as `formencoder-vX.Y.Z`, with the FFmpeg source attached, as before.
+- The repo's own GitHub Actions now only run the checks, on main, on pull requests and on `compile_vX.Y.Z` branches.
+- A release starts when a `compile_vX.Y.Z` branch is pushed (the steps are on the wiki's Releasing page).
+- The updater looks for new versions in formcompiler's `formencoder-updates` feed.
+- No change to the app itself.
+
 ## v0.2.7 · 2026-10-20
 
 A new app icon.
