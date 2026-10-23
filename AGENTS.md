@@ -1,6 +1,6 @@
 # formencoder
 
-The media encoder of the form family (an Adobe Media Encoder alternative): vanilla TypeScript and Vite interface, Python FastAPI engine around formencoder's own Rust encoding engine, a pinned LGPL FFmpeg, Tauri 2 desktop shell.
+The media encoder of the form family: vanilla TypeScript and Vite interface, Python FastAPI engine around formencoder's own Rust encoding engine, a pinned LGPL FFmpeg, Tauri 2 desktop shell.
 
 ## Encoding (natural language)
 

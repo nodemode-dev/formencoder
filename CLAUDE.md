@@ -1,6 +1,6 @@
 # formencoder
 
-The media encoder of the form family (an Adobe Media Encoder alternative) beside formcut, formvfx, formwav and formvis: a vanilla TypeScript and Vite interface, a Python FastAPI engine service around formencoder's own Rust encoding engine (`fe_core`, wrapped with PyO3), FFmpeg (a pinned LGPL build) as the codec layer, and a Tauri 2 desktop shell.
+The media encoder of the form family beside formcut, formvfx, formwav and formvis: a vanilla TypeScript and Vite interface, a Python FastAPI engine service around formencoder's own Rust encoding engine (`fe_core`, wrapped with PyO3), FFmpeg (a pinned LGPL build) as the codec layer, and a Tauri 2 desktop shell.
 
 ## Two kinds of work
 
@@ -20,3 +20,11 @@ The media encoder of the form family (an Adobe Media Encoder alternative) beside
 ## After changing the MCP tools or the engine's commands, formats or presets
 
 Run `./formencoder agents sync` so `.claude/skills/formencoder-harness/references/` and the `.agents/skills` mirror follow; `./formencoder agents sync --check` fails while they drift.
+
+## Trademarks, copyright and licences
+
+- Other vendors' product and feature names appear only to name a file format, a preset file or compatibility (Media Encoder `.epr` import, "ProRes"). Never as a formencoder command, panel, effect, tool or agent tool name, and never as "like Premiere" or "a Media Encoder alternative" in UI text, agent instructions or READMEs. Effect labels are formencoder's own (Look / LUT, Fit Tuning, Live Link); command and setting ids such as `effects.timeTuner` stay as they are. `README.md` and `NOTICE.md` list every vendor mark named.
+- OpenH264 stays a separate download from Cisco, never bundled, with the Use OpenH264 switch (the `openh264` preference, which `openh264::library()` obeys) in Preferences > Delivery Tools, "OpenH264 Video Codec provided by Cisco Systems, Inc." beside the switch, and Cisco's licence reproduced in `NOTICE.md`.
+- FFmpeg stays the LGPL build (`--disable-gpl --disable-nonfree --disable-version3`) with its source offer.
+- Never copy vendor help text, never import or trace vendor icons, and never bundle vendor presets, LUTs, looks or sample media; the bundled looks come from `setup/make_luts.py`.
+- Every new dependency, binary, model or data file gets a row in `NOTICE.md` before it ships. GPL stays outside the distributed bundle, AGPL nowhere, LGPL run as a separate program or dynamically linked and replaceable; models with gated or non-commercial terms stay optional downloads.
