@@ -709,16 +709,30 @@ pub fn measure_file(path: &str) -> Value {
 }
 
 pub fn tuner_frames(path: &str, start: f64, dur: f64, fps: f64, change: i64, skip: f64) -> Vec<i64> {
-    let vf = format!("fps={},scale=160:-2,format=gray,tblend=all_mode=difference,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-", rate_str(fps));
-    let Ok(out) = ffmpeg::ff().args(["-hide_banner", "-nostats", "-ss", &format!("{start:.6}"), "-i", path, "-t", &format!("{dur:.6}"), "-map", "0:v:0", "-vf", &vf, "-f", "null", "-"]).stdin(Stdio::null()).output() else { return Vec::new() };
-    let text = String::from_utf8_lossy(&out.stdout);
-    let values: Vec<f64> = Regex::new(r"YAVG=([\d.]+)").unwrap().captures_iter(&text).filter_map(|c| c[1].parse().ok()).collect();
+    // Each frame becomes a 64 bit perceptual hash of a 9x8 greyscale copy: every pixel is compared with its right neighbour. The score of a
+    // pair of adjacent frames is the Hamming distance between their hashes.
+    let vf = format!("fps={},scale=9:8:flags=area,format=gray", rate_str(fps));
+    let Ok(out) = ffmpeg::ff().args(["-hide_banner", "-nostats", "-ss", &format!("{start:.6}"), "-i", path, "-t", &format!("{dur:.6}"), "-map", "0:v:0", "-vf", &vf, "-f", "rawvideo", "-pix_fmt", "gray", "-"]).stdin(Stdio::null()).stderr(Stdio::null()).output() else { return Vec::new() };
+    let hashes: Vec<u64> = out
+        .stdout
+        .chunks_exact(72)
+        .map(|f| {
+            let mut h = 0u64;
+            for y in 0..8 {
+                for x in 0..8 {
+                    h = (h << 1) | u64::from(f[y * 9 + x] > f[y * 9 + x + 1]);
+                }
+            }
+            h
+        })
+        .collect();
+    let values: Vec<u32> = hashes.windows(2).map(|w| (w[0] ^ w[1]).count_ones()).collect();
     if values.is_empty() || change <= 0 {
         return Vec::new();
     }
     let first = ((skip * fps) as usize).max(1);
     let mut ranked: Vec<usize> = (first..values.len()).collect();
-    ranked.sort_by(|a, b| values[*a].partial_cmp(&values[*b]).unwrap_or(std::cmp::Ordering::Equal));
+    ranked.sort_by(|a, b| values[*a].cmp(&values[*b]).then(a.cmp(b)));
     let spacing = (values.len() / change.max(1) as usize / 3).max(2);
     let mut chosen: Vec<usize> = Vec::new();
     for &i in &ranked {
@@ -741,8 +755,8 @@ pub fn tuner_frames(path: &str, start: f64, dur: f64, fps: f64, change: i64, ski
     chosen.into_iter().map(|x| x as i64).collect()
 }
 
-fn sum_terms(idx: &[i64], f: &str) -> String {
-    if idx.is_empty() { "0".into() } else { idx.iter().map(|k| format!("{f}(n,{k})")).collect::<Vec<_>>().join("+") }
+fn sum_terms(idx: &[i64], f: &str, var: &str) -> String {
+    if idx.is_empty() { "0".into() } else { idx.iter().map(|k| format!("{f}({var},{k})")).collect::<Vec<_>>().join("+") }
 }
 
 pub struct BuildOptions<'a> {
@@ -994,10 +1008,10 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
             if !preview && info["kind"] != "image" {
                 if tuner_mode == "drop" {
                     chain.push(format!("fps={r}"));
-                    chain.push(format!("select='not({})',setpts=N/({r}*TB)", sum_terms(tuner, "eq")));
+                    chain.push(format!("select='not({})',setpts=N/({r}*TB)", sum_terms(tuner, "eq", "n")));
                 } else if tuner_mode == "add" {
                     chain.push(format!("fps={r}"));
-                    chain.push(format!("setpts=(N+{})/({r}*TB)", sum_terms(tuner, "gte")));
+                    chain.push(format!("setpts='(N+{})/({r}*TB)'", sum_terms(tuner, "gte", "N")));
                     chain.push(format!("fps={r}"));
                 } else if (fps - g.fps).abs() > 0.001 || interp["frameRate"].is_number() {
                     match s["timeInterpolation"].as_str().unwrap_or("sampling") {
