@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.9 · 2026-10-23
+
+Licensing and trademark fixes.
+
+- Preferences > Delivery Tools has a Use OpenH264 switch, with "OpenH264 Video Codec provided by Cisco Systems, Inc." under it. Turned off, formencoder never loads Cisco's library and H.264 falls back as if it were not downloaded. NOTICE.md reproduces Cisco's licence.
+- Effect and link names are formencoder's own: Look / LUT, Fit Tuning and Live Link. Saved presets, command ids and agent calls are unchanged.
+- The Family panel no longer names other vendors' apps beside each family app.
+- NOTICE.md and the README carry a trademark notice and record the eight bundled looks as formencoder's own.
+
 ## v0.2.8 · 2026-10-22
 
 Releases are built by formcompiler.
