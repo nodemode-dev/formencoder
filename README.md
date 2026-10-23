@@ -75,14 +75,14 @@ Pushing a `compile_vX.Y.Z` branch has formcompiler (`nodemode-ai/formcompiler`) 
 
 | Area | Files | Lines |
 | --- | ---: | ---: |
-| Encoding engine (Rust, fencoder crates) | 46 | 10,331 |
+| Encoding engine (Rust, fencoder crates) | 46 | 10,345 |
 | Engine service (Python) | 37 | 3,774 |
 | Interface (TypeScript) | 39 | 6,034 |
 | Interface styles (CSS) | 5 | 687 |
 | Desktop shell (Rust, Tauri) | 1 | 144 |
 | Setup and CLI | 37 | 1,241 |
 | Agent skills (Markdown, hand-written) | 21 | 796 |
-| Total | 186 | 23,007 |
+| Total | 186 | 23,021 |
 
 Non-blank lines in tracked files; generated skill references excluded. `./formencoder counts` prints this table.
 
