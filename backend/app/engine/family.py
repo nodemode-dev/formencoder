@@ -25,15 +25,15 @@ def _platform_data(app: str) -> Path:
 
 
 APPS: dict[str, dict] = {
-    "formcut": {"label": "formcut", "kind": "Video editor", "alt": "Premiere Pro / CapCut", "port": 8040, "header": "x-formcut-local", "env": "FORMCUT_URL",
+    "formcut": {"label": "formcut", "kind": "Video editor", "port": 8040, "header": "x-formcut-local", "env": "FORMCUT_URL",
                 "records": [lambda: Path(os.environ.get("FORMCUT_DATA_DIR", "")) / "engine.json" if os.environ.get("FORMCUT_DATA_DIR") else None, lambda: _platform_data("formcut") / "engine.json"],
                 "gives": "projects rendered through formcut's own export, then encoded here"},
-    "formvfx": {"label": "formvfx", "kind": "Motion graphics", "alt": "After Effects", "port": 8230, "header": "x-formvfx-local", "env": "FORMVFX_URL",
+    "formvfx": {"label": "formvfx", "kind": "Motion graphics", "port": 8230, "header": "x-formvfx-local", "env": "FORMVFX_URL",
                 "records": [lambda: Path(os.environ.get("FORMVFX_DATA_DIR") or Path.home() / "Formvfx") / "engine.json"],
-                "gives": "compositions pulled live over Dynamic Link (frames and audio), no render in formvfx"},
-    "formwav": {"label": "formwav", "kind": "Audio", "alt": "Audition", "port": 8060, "header": "x-formwav-local", "env": "FORMWAV_URL", "records": [],
+                "gives": "compositions pulled live over Live Link (frames and audio), no render in formvfx"},
+    "formwav": {"label": "formwav", "kind": "Audio", "port": 8060, "header": "x-formwav-local", "env": "FORMWAV_URL", "records": [],
                 "gives": "saved sessions mixed down by formwav's renderer"},
-    "formvis": {"label": "formvis", "kind": "Images", "alt": "Photoshop", "port": 8190, "header": "x-formvis-local", "env": "FORMVIS_URL", "records": [],
+    "formvis": {"label": "formvis", "kind": "Images", "port": 8190, "header": "x-formvis-local", "env": "FORMVIS_URL", "records": [],
                 "gives": "library images, encoded as stills, sequences or a still held for a duration"},
 }
 
@@ -86,8 +86,8 @@ def locate(app: str) -> dict:
     for how, url in candidates:
         health = _health(url, spec["header"])
         if health:
-            return {"app": app, "running": True, "url": url, "found": how, "version": health.get("version"), "label": spec["label"], "kind": spec["kind"], "alt": spec["alt"], "gives": spec["gives"]}
-    return {"app": app, "running": False, "url": None, "label": spec["label"], "kind": spec["kind"], "alt": spec["alt"], "gives": spec["gives"], "canStart": engine_command(app) is not None}
+            return {"app": app, "running": True, "url": url, "found": how, "version": health.get("version"), "label": spec["label"], "kind": spec["kind"], "gives": spec["gives"]}
+    return {"app": app, "running": False, "url": None, "label": spec["label"], "kind": spec["kind"], "gives": spec["gives"], "canStart": engine_command(app) is not None}
 
 
 def discover() -> list[dict]:
@@ -212,7 +212,7 @@ def link_from_file(path: str) -> dict:
     p = Path(path).expanduser()
     data = json.loads(p.read_text(encoding="utf-8"))
     if not str(data.get("format", "")).startswith("formvfx.link/"):
-        raise ValueError(f"{p.name} is not a formvfx Dynamic Link descriptor (.fvxlink)")
+        raise ValueError(f"{p.name} is not a formvfx Live Link descriptor (.fvxlink)")
     comp = data.get("comp") or {}
     return {"app": "formvfx", "id": str(comp.get("id") or comp.get("name")), "name": comp.get("name") or p.stem, "project": data.get("project"), "kind": "composition",
             "width": data.get("width"), "height": data.get("height"), "frameRate": data.get("frameRate"), "duration": data.get("duration"), "descriptor": str(p)}
@@ -244,7 +244,7 @@ def materialize(spec: dict, report: Callable[[float, str], None], cancelled: Cal
             t = start + i / fps
             png = _get(f"{url}/api/link/frame.png?{q}&time={t:.6f}&max=8192", "x-formvfx-local", 120, raw=True)
             (folder / f"frame_{i:06d}.png").write_bytes(png)
-            report(0.9 * (i + 1) / frames, f"Dynamic Link frame {i + 1} of {frames}")
+            report(0.9 * (i + 1) / frames, f"Live Link frame {i + 1} of {frames}")
         audio_path = None
         try:
             wav = _get(f"{url}/api/link/audio?{q}&start={start:.6f}&seconds={max(0.05, min(600.0, end - start)):.6f}&rate=48000", "x-formvfx-local", 300, raw=True)
@@ -253,7 +253,7 @@ def materialize(spec: dict, report: Callable[[float, str], None], cancelled: Cal
                 Path(audio_path).write_bytes(wav)
         except (urllib.error.URLError, OSError):
             audio_path = None
-        report(1.0, "Dynamic Link fetched")
+        report(1.0, "Live Link fetched")
         return {"pattern": str(folder / "frame_%06d.png"), "frameRate": fps, "count": frames, "audio": audio_path, "folder": str(folder)}
     if app == "formcut":
         job = _cut_rpc(url, "project.export", {"id": spec["id"], "format": "mp4", "quality": "high", "exact": True})

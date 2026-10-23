@@ -5,7 +5,7 @@ formencoder is the family's delivery end. It finds the other apps running on the
 | App | Source | How it arrives |
 | --- | --- | --- |
 | formcut | a project | formcut renders it through its own renderer at full quality, then formencoder encodes the result |
-| formvfx | a composition | Dynamic Link: frames and audio are pulled from formvfx's renderer, nothing is rendered in formvfx first; a `.fvxlink` file queues the same way |
+| formvfx | a composition | Live Link: frames and audio are pulled from formvfx's renderer, nothing is rendered in formvfx first; a `.fvxlink` file queues the same way |
 | formwav | a session | formwav mixes it down, then formencoder encodes the mix |
 | formvis | an image | the flattened image, as a still or the frames of a sequence |
 

@@ -1,6 +1,6 @@
 ---
 name: formencoder-harness
-description: Drive formencoder, the media encoder of the form family (an Adobe Media Encoder alternative), through its formencoder MCP server or the formencoder command line. Use whenever the person wants a file encoded, transcoded, converted, compressed, exported or delivered; a YouTube, Vimeo, TikTok, Instagram, broadcast, AS-11, DCP, ProRes, DNxHR, XDCAM, MXF, H.264, HEVC, AV1, WebM, GIF, WAV, MP3 or image sequence version; a batch queue, several outputs per source, a preset made or imported, a watch folder, a card ingest with checksums, proxies, a LUT, HDR to SDR conform, loudness normalised to EBU R128 or ATSC A/85, captions burnt in or written as a sidecar, an overlay or timecode burn-in, metadata, or files published to a folder, FTP, S3 or a webhook; when media from formcut, formvfx, formwav or formvis should be encoded; or when formencoder tools such as status, encode, export_settings, preview_frame or verify are available or fail. Not for editing formencoder's own source (use formencoder-skillset).
+description: Drive formencoder, the media encoder of the form family, through its formencoder MCP server or the formencoder command line. Use whenever the person wants a file encoded, transcoded, converted, compressed, exported or delivered; a YouTube, Vimeo, TikTok, Instagram, broadcast, AS-11, DCP, ProRes, DNxHR, XDCAM, MXF, H.264, HEVC, AV1, WebM, GIF, WAV, MP3 or image sequence version; a batch queue, several outputs per source, a preset made or imported, a watch folder, a card ingest with checksums, proxies, a LUT, HDR to SDR conform, loudness normalised to EBU R128 or ATSC A/85, captions burnt in or written as a sidecar, an overlay or timecode burn-in, metadata, or files published to a folder, FTP, S3 or a webhook; when media from formcut, formvfx, formwav or formvis should be encoded; or when formencoder tools such as status, encode, export_settings, preview_frame or verify are available or fail. Not for editing formencoder's own source (use formencoder-skillset).
 ---
 
 # formencoder harness
@@ -45,10 +45,10 @@ Load the sub-skill for the part of the job in front of you. For a delivery with 
 | Connecting: the MCP server, the command line, permission prompts, the engine not running, FFmpeg missing | `sub-skills/session-and-connection/SUB-SKILL.md` |
 | Adding sources, outputs, refs, ranges, stitching, image sequences, interpreting footage, the queue's order and status, presets and the Preset Browser | `sub-skills/queue-and-presets/SUB-SKILL.md` |
 | The Export Settings of an output: format, codec, frame size, rate, bitrate, hardware or software encoding, crop, VR, colour, HDR, audio and channel routing, the multiplexer, AS-10, AS-11, P2 and DCP packages, output names | `sub-skills/export-settings/SUB-SKILL.md` |
-| LUTs, SDR conform, image, name, text and timecode overlays, Time Tuner, video limiter, loudness normalisation | `sub-skills/effects-and-loudness/SUB-SKILL.md` |
+| LUTs, SDR conform, image, name, text and timecode overlays, Fit Tuning, video limiter, loudness normalisation | `sub-skills/effects-and-loudness/SUB-SKILL.md` |
 | Captions (burn in, sidecar, embed, convert, speech to text), metadata (retain, clear, templates, rules, XMP) and Content Credentials | `sub-skills/captions-and-metadata/SUB-SKILL.md` |
 | Watch folders, card ingest with checksums, proxies, media analysis | `sub-skills/watch-folders-and-ingest/SUB-SKILL.md` |
-| Media from formcut, formvfx, formwav or formvis, Dynamic Link, receiving formcut exports, sending files back | `sub-skills/form-family-bridge/SUB-SKILL.md` |
+| Media from formcut, formvfx, formwav or formvis, Live Link, receiving formcut exports, sending files back | `sub-skills/form-family-bridge/SUB-SKILL.md` |
 | After the encode: copy to a folder, FTP, S3, a webhook, YouTube, Vimeo, Facebook, a plug-in, or import into a family app | `sub-skills/publish/SUB-SKILL.md` |
 | Checking work: previews, contact sheets, verify, logs, loudness reports | `sub-skills/verification/SUB-SKILL.md` |
 | The formencoder window: panels, workspaces, opening Export Settings for the person | `sub-skills/ui-automation/SUB-SKILL.md` |

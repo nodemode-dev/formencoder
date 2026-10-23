@@ -32,6 +32,7 @@ A FastAPI process around the Rust engine (`fe_core`, built from the fencoder wor
 - Each app is found by its environment variable, its `engine.json` record, then its default port, and asked with its own local header (`x-formcut-local`, `x-formvfx-local`, `x-formwav-local`, `x-formvis-local`).
 - formcut: `project.export` (exact, high quality), poll `job.status`, `job.result`, download the file when it is not on this disk. formvfx: Dynamic Link frames from `/api/link/frame.png` at the comp's rate plus `/api/link/audio`, written as a PNG sequence and a WAV that the engine reads as one source. formwav: the session document posted to `/api/render?format=wav&what=mix`. formvis: the library image.
 - Sending back: formcut `media.import`, formvfx `file.import`.
+- Names (0.2.9): the formvfx link is called Live Link in every message, and `discover` no longer returns an `alt` field naming the vendor app each family app stands beside, because the Family panel printed it as "like Premiere Pro". Vendor product names stay out of messages and agent instructions; the `/api/link/*` routes and the `.fvxlink` format keep their names.
 
 ## formcut exports arriving on their own (`engine/links.py`, `routers/hooks.py`)
 

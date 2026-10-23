@@ -56,6 +56,11 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - The Full faith switch lives in the Agents panel, deliberately not in the approval dialog: turning it on should be a decision taken calmly, not a shortcut out of a prompt. It writes over the live socket because that is the only route the engine accepts it from.
 - Inherited: the activity feed inserts newest-first, so a new row pushes older rows down (a 0.00002 layout shift measured in 0.2.4). The Agent Connect panel in 0.2.5 replaces this feed.
 
+## Use OpenH264 switch and effect names (0.2.9)
+
+- Preferences > Delivery Tools builds the Use OpenH264 checkbox once with its row, with Cisco's attribution directly under it (Cisco's terms put the text where the use is controlled). It writes the `openh264` preference and `paintTools` sets it from `tools.list`'s `enabled` with `setChecked`, so a repaint never rebuilds it. Not verified in the window under throttling.
+- Effect labels are formencoder's own: Look / LUT, Fit Tuning, Live Link. The keys under them (`effects.lut`, `effects.timeTuner`, `family.addLink`) are unchanged, so saved presets and agent calls still work.
+
 ## App icon in the family construction (0.2.7)
 
 - The ||> mark keeps its silhouette (two bars, then a hollow play triangle) but moves from flat red on a flat tile into the redrawn family: the dark gradient squircle with bloom, rim and drop shadow, the play triangle as a glossy slab in the blue, violet, pink, amber paint with a darker extruded edge (a copy of the shape in the side gradient, 13 units down), and the two bars as gradient pills at 55 and 85 percent so they read as a motion trail into it.

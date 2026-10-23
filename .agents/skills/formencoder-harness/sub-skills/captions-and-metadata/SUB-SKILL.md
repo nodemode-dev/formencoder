@@ -17,7 +17,7 @@ description: Captions and metadata on formencoder outputs. Use when captions or 
 | `embed` | a caption track inside the file: `mov_text` in MP4 and MOV, SRT in MKV, WebVTT in WebM; other containers get a sidecar instead |
 
 - `source: auto` takes a `.srt`, `.vtt`, `.scc` or `.ttml` with the source's name beside it, then an embedded caption stream in the source. Give a path to use another file.
-- Times follow the output's range: a part encoded from 60 s carries the cues from 60 s, shifted to start at zero. Time Tuner shifts them with the picture.
+- Times follow the output's range: a part encoded from 60 s carries the cues from 60 s, shifted to start at zero. Fit Tuning shifts them with the picture.
 - Burn-in styling: `size` (pixels on a 1080-line frame), `color`, `background` (box opacity 0 to 100), `position: bottom|top`. Look at it with `preview_frame` at a time a cue is on screen (`execute captions.read {path}` lists the cues with their times), and with `contact_sheet` across several cues.
 - `language` is a three-letter code (`eng`, `fra`, `deu`) written on embedded tracks.
 - On files: `execute captions.read {path}` returns the cues; `execute captions.convert {path, to, output?}` converts between SRT, WebVTT, SCC and TTML without encoding anything.

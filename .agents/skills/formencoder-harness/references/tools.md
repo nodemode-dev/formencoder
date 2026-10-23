@@ -115,7 +115,7 @@ Note: read-only.
 
 ## contact_sheet
 
-Several frames of an output (or a file) through its export settings in one labelled grid: checks a range, a Time Tuner, overlays and captions over time in one look.
+Several frames of an output (or a file) through its export settings in one labelled grid: checks a range, a Fit Tuning, overlays and captions over time in one look.
 
 - `output`: string; Output id (o-...) or '#n' for the nth item's first output.
 - `path`: string
@@ -193,7 +193,7 @@ Watch folders: list, add {folder, preset or outputs, kind: encode|analysis, move
 
 ## family
 
-The form family: discover (which of formcut, formvfx, formwav and formvis are running here), sources {app} (their projects, comps, sessions, images), add {app, id or name, preset, settings, folder, in, out, start} queues one (formcut renders it, formvfx streams it over Dynamic Link, formwav mixes it, formvis hands the image), addLink {path} queues a formvfx .fvxlink, send {app: formcut|formvfx, files, project} imports finished files there, linkFormcut {preset, folder, start} makes every formcut export arrive here (through formcut's signed webhooks) and encode with that preset, unlinkFormcut stops it, links shows the link. An app that is not running is started headless (its engine only) when formencoder finds it.
+The form family: discover (which of formcut, formvfx, formwav and formvis are running here), sources {app} (their projects, comps, sessions, images), add {app, id or name, preset, settings, folder, in, out, start} queues one (formcut renders it, formvfx streams it over Live Link, formwav mixes it, formvis hands the image), addLink {path} queues a formvfx .fvxlink, send {app: formcut|formvfx, files, project} imports finished files there, linkFormcut {preset, folder, start} makes every formcut export arrive here (through formcut's signed webhooks) and encode with that preset, unlinkFormcut stops it, links shows the link. An app that is not running is started headless (its engine only) when formencoder finds it.
 
 - `action`: string (discover | sources | add | addLink | send | linkFormcut | unlinkFormcut | links); required
 - `app`: string (formcut | formvfx | formwav | formvis)
@@ -308,7 +308,7 @@ How to encode with formencoder through these tools.
 4. Careful job: execute queue.addSource {paths, preset or outputs: [{preset, settings, folder}]} (several outputs per source encode in parallel), then export_settings {output, settings} to adjust, preview_frame {output, time} to look (overlays, crop, scaling, LUT, captions show), then queue {action: start} and wait {outputs}.
 5. Check: verify {output} probes the file against its settings (frame size, rate, duration, codecs, audio, loudness when normalised). Read the notes and the error of failed outputs (log {kind: error} for FFmpeg's own words), fix the settings and queue {action: resetStatus, refs} to encode again.
 6. Repeatable work: presets {action: create, name, fromOutput} saves the settings; watch_folder {action: add, folder, preset} encodes whatever lands in a folder.
-7. Family: family {action: discover} finds formcut, formvfx, formwav and formvis running here; family {action: sources, app} lists their projects, compositions, sessions and images; family {action: add, app, id, preset} queues one (formcut renders the sequence, formvfx streams the comp over Dynamic Link, formwav mixes the session); family {action: send, app, files} hands finished files back to formcut or formvfx.
+7. Family: family {action: discover} finds formcut, formvfx, formwav and formvis running here; family {action: sources, app} lists their projects, compositions, sessions and images; family {action: add, app, id, preset} queues one (formcut renders the sequence, formvfx streams the comp over Live Link, formwav mixes the session); family {action: send, app, files} hands finished files back to formcut or formvfx.
 8. Mistakes: history {action: undo}. A failed tool says why; read it, fix the params (describe_command shows the schema) and retry.
 
 ### queue
@@ -353,7 +353,7 @@ ingest.copy {paths (files or card folders), destination, verify: size|md5|bit, p
 
 ### family
 
-family {action: discover} reports which of formcut (8040), formvfx (8230), formwav (8060) and formvis (8190) are running. family {action: sources, app}. family {action: add, app, id or name, preset, in, out, start}: formcut exports the project through its own renderer then formencoder encodes it; formvfx comps are pulled frame by frame over Dynamic Link (no render in formvfx) with their audio; formwav sessions are mixed by formwav; formvis images become stills or sequences. A .fvxlink file: family {action: addLink, path}. family {action: send, app: formcut|formvfx, files} imports finished files there.
+family {action: discover} reports which of formcut (8040), formvfx (8230), formwav (8060) and formvis (8190) are running. family {action: sources, app}. family {action: add, app, id or name, preset, in, out, start}: formcut exports the project through its own renderer then formencoder encodes it; formvfx comps are pulled frame by frame over Live Link (no render in formvfx) with their audio; formwav sessions are mixed by formwav; formvis images become stills or sequences. A .fvxlink file: family {action: addLink, path}. family {action: send, app: formcut|formvfx, files} imports finished files there.
 
 ### presets
 

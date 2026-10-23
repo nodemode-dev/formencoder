@@ -871,7 +871,7 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     let tuner = &opt.measured.tuner_frames;
     let tuner_mode = if tuner.is_empty() { "" } else if factor < 1.0 { "drop" } else { "add" };
     if (factor - 1.0).abs() > 1e-6 {
-        plan.notes.push(format!("Time Tuner: {dur:.3}s to {:.3}s, {} frames {} where the picture changes least", dur * factor, tuner.len(), if factor < 1.0 { "removed" } else { "added" }));
+        plan.notes.push(format!("Fit Tuning: {dur:.3}s to {:.3}s, {} frames {} where the picture changes least", dur * factor, tuner.len(), if factor < 1.0 { "removed" } else { "added" }));
     }
     plan.tuner_factor = factor;
     let out_dur = dur * factor;

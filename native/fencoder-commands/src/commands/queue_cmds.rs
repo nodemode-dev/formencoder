@@ -24,7 +24,7 @@ pub(super) fn add_source(e: &mut Engine, p: &Value) -> Res {
     let mut added = Vec::new();
     for f in files {
         let mut it = if ffmpeg::ext_of(&f) == "fvxlink" {
-            return Err("a .fvxlink is a formvfx Dynamic Link clip; add it with family.addLink".into());
+            return Err("a .fvxlink is a formvfx Live Link clip; add it with family.addLink".into());
         } else if let (Some(fr), "image") = (p["frameRate"].as_f64(), ffmpeg::kind_of(&f)) {
             let seq = ffmpeg::sequence_of(&f).ok_or_else(|| format!("{} is not part of a numbered image sequence", Path::new(&f).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()))?;
             let pattern = seq["pattern"].as_str().unwrap_or("").to_string();

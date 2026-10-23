@@ -1,6 +1,6 @@
 ---
 name: effects-and-loudness
-description: formencoder's Effects tab on an output. Use when applying a LUT, conforming HDR to SDR, adding an image or logo overlay, a name, text or timecode burn-in, Time Tuner to hit a duration, a video limiter for legal levels, or loudness normalisation to EBU R128, ATSC A/85, OP-59, ARIB, streaming or podcast targets, with a true peak limit, a limiter and a loudness report.
+description: formencoder's Effects tab on an output. Use when applying a LUT, conforming HDR to SDR, adding an image or logo overlay, a name, text or timecode burn-in, Fit Tuning to hit a duration, a video limiter for legal levels, or loudness normalisation to EBU R128, ATSC A/85, OP-59, ARIB, streaming or podcast targets, with a true peak limit, a limiter and a loudness report.
 ---
 
 # effects-and-loudness
@@ -30,7 +30,7 @@ Positions: `topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRi
 
 `background` is the opacity of the box behind text (0 none). Overlay text is drawn by formencoder itself, so it works with any FFmpeg build.
 
-## Time Tuner
+## Fit Tuning
 
 `effects.timeTuner {enabled, targetDuration (s) or percent (-10 to 10), skipSlates (s)}` makes a programme shorter or longer by up to 10 percent without changing its speed perceptibly: it removes or repeats single frames at the points where the picture changes least, spread through the programme, and time-stretches the audio by the same factor without changing its pitch. `skipSlates` protects the opening seconds (slates, bars). Check with `contact_sheet` across the whole range and `verify` the duration after encoding.
 

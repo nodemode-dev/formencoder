@@ -84,7 +84,7 @@ Generated from the formencoder engine by `./formencoder agents sync`; do not edi
   `{output: string}`
 - `encode.command` Show FFmpeg Command · Queue · query · MCP `encode_command`
   `{output: string}`
-  The ffmpeg command line an output would run (Time Tuner analysis left out).
+  The ffmpeg command line an output would run (Fit Tuning analysis left out).
 - `encode.verify` Verify Output · Queue · query · MCP `encode_verify`
   `{path?: string, output?: string, loudness?: boolean}`
   Probes an encoded file and checks it against its settings: size, rate, duration, codecs, sample rate, loudness.

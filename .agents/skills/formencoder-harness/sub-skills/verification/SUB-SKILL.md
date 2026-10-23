@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Proving a formencoder output is right. Use before reporting any encode as done, when an output failed, when a file looks wrong, when loudness, duration, frame rate or size must be confirmed, or when checking overlays, LUTs, crops, captions or Time Tuner by eye with preview frames and contact sheets.
+description: Proving a formencoder output is right. Use before reporting any encode as done, when an output failed, when a file looks wrong, when loudness, duration, frame rate or size must be confirmed, or when checking overlays, LUTs, crops, captions or Fit Tuning by eye with preview frames and contact sheets.
 ---
 
 # verification
@@ -19,7 +19,7 @@ Three kinds of evidence, in the order they are cheap:
 | LUT, SDR conform, limiter | `contact_sheet` with `times` at the brightest and darkest moments |
 | Overlays, timecode burn-in | `preview_frame` at the start and the end (timecode must count) |
 | Burnt-in captions | `preview_frame` at a cue's time (`execute captions.read {path}` gives the times) |
-| Range, Time Tuner | `contact_sheet` across the range; after encoding, `verify` the duration |
+| Range, Fit Tuning | `contact_sheet` across the range; after encoding, `verify` the duration |
 | Loudness | `probe {path, loudness: true}` on the source, then `verify` on the output |
 | HDR10 | `probe` the output: `hdr` should read `pq` with the transfer and primaries of Rec. 2100 |
 | Image sequence | the first and last frame numbers on disk, and the count against the duration times the rate |

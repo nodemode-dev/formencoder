@@ -28,7 +28,7 @@
     "targets": "all",
     "category": "Video",
     "shortDescription": "Media encoder",
-    "longDescription": "formencoder is a media encoder: a queue of sources with several outputs each, 98 presets across web, social, broadcast, cinema, mezzanine, image sequence, audio, archive, proxy and ingest, AS-10, AS-11, P2 and DCP packages, watch folders, card ingest with verification, LUTs, HDR to SDR conform, overlays, Time Tuner, loudness normalisation, captions and speech to text, metadata, Content Credentials, plug-ins and publishing, connected to formcut, formvfx, formwav and formvis, with an agent terminal that drives every tool.",
+    "longDescription": "formencoder is a media encoder: a queue of sources with several outputs each, 98 presets across web, social, broadcast, cinema, mezzanine, image sequence, audio, archive, proxy and ingest, AS-10, AS-11, P2 and DCP packages, watch folders, card ingest with verification, LUTs, HDR to SDR conform, overlays, Fit Tuning, loudness normalisation, captions and speech to text, metadata, Content Credentials, plug-ins and publishing, connected to formcut, formvfx, formwav and formvis, with an agent terminal that drives every tool.",
     "copyright": "Copyright 2026 nodemode-ai.",
     "externalBin": ["binaries/formencoder-engine"],
     "resources": { "ffmpeg/": "ffmpeg/", "tools/": "tools/" },

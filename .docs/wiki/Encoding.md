@@ -18,11 +18,11 @@ AS-10, AS-11 OP1a, AS-11 D10 (IMX 50) and P2 card folders are encoded by FFmpeg 
 
 ## Effects
 
-LUT (eight formencoder looks bundled, any `.cube`), HDR to SDR conform with a knee, image overlay, name overlay, text overlay, timecode overlay from the media or generated, Time Tuner within plus or minus 10 percent, video limiter, and loudness normalisation to EBU R128, ATSC A/85, OP-59, ARIB TR-B32, streaming, podcast or a custom target, two pass, with a true-peak limiter and an XML report. Text is drawn by formencoder itself, so every overlay works with the LGPL FFmpeg.
+LUT (eight formencoder looks bundled, any `.cube`), HDR to SDR conform with a knee, image overlay, name overlay, text overlay, timecode overlay from the media or generated, Fit Tuning within plus or minus 10 percent, video limiter, and loudness normalisation to EBU R128, ATSC A/85, OP-59, ARIB TR-B32, streaming, podcast or a custom target, two pass, with a true-peak limiter and an XML report. Text is drawn by formencoder itself, so every overlay works with the LGPL FFmpeg.
 
 ## Captions and metadata
 
-Burn in, write a sidecar (SRT, WebVTT, SCC, TTML) or embed a caption track; captions are found beside the source or in it, and follow the range and Time Tuner. Speech to Text (`captions.transcribe`) writes a transcript beside the source with whisper.cpp and a downloaded model, which Captions then finds. Metadata is retained, cleared or set, through saved templates and rules that drop categories of source metadata, with an XMP sidecar on request. Content Credentials (C2PA) sign a manifest into MP4, MOV, image and audio outputs with your certificate, or c2patool's test certificate.
+Burn in, write a sidecar (SRT, WebVTT, SCC, TTML) or embed a caption track; captions are found beside the source or in it, and follow the range and Fit Tuning. Speech to Text (`captions.transcribe`) writes a transcript beside the source with whisper.cpp and a downloaded model, which Captions then finds. Metadata is retained, cleared or set, through saved templates and rules that drop categories of source metadata, with an XMP sidecar on request. Content Credentials (C2PA) sign a manifest into MP4, MOV, image and audio outputs with your certificate, or c2patool's test certificate.
 
 ## Watch folders, ingest, proxies
 

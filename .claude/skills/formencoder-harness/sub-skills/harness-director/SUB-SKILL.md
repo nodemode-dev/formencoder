@@ -33,7 +33,7 @@ Several outputs of one source belong to one queue item (`queue.addSource {paths,
 
 1. Queue every source with its outputs, in one `batch` when there are several sources, so the person can undo the whole plan in one step.
 2. Adjust each output that differs from its preset with `export_settings {output, settings}`.
-3. `preview_frame` every output that has a visual change from its preset: an overlay, a LUT, SDR conform, a crop, a scale to another aspect, burnt-in captions. `contact_sheet` for ranges and Time Tuner.
+3. `preview_frame` every output that has a visual change from its preset: an overlay, a LUT, SDR conform, a crop, a scale to another aspect, burnt-in captions. `contact_sheet` for ranges and Fit Tuning.
 4. `encode.estimate {output}` where a size limit matters.
 5. `queue {action: start}`; while it runs, `status` reports progress. `wait {outputs}` before reading results.
 6. `verify` every output. Fix and re-encode what fails.

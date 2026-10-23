@@ -14,7 +14,6 @@ interface App {
   url: string | null;
   label: string;
   kind: string;
-  alt: string;
   gives: string;
   version?: string;
   canStart?: boolean;
@@ -59,18 +58,18 @@ export class FamilyPanel implements Panel {
         <span class="fx-flex"></span>
         <span class="fe-pending ns-pending">Looking</span>
         <button class="cv-icon-btn" type="button" data-a="refresh" title="Look for the family apps again">${icon('refresh', 15)}</button>
-        <button class="cv-icon-btn" type="button" data-a="link" title="Queue a formvfx Dynamic Link (.fvxlink)">${icon('link', 15)}</button>
+        <button class="cv-icon-btn" type="button" data-a="link" title="Queue a formvfx Live Link (.fvxlink)">${icon('link', 15)}</button>
       </div>
       <div class="fe-f-list" data-automation-id="family.list"></div>
-      <p class="fx-note fe-f-note">Media that came from a family app is encoded from the app itself: formcut renders the project through its own export, formvfx streams the composition frame by frame over Dynamic Link, formwav mixes the session and formvis hands over the image. Finished files can go back with Publish.</p>
+      <p class="fx-note fe-f-note">Media that came from a family app is encoded from the app itself: formcut renders the project through its own export, formvfx streams the composition frame by frame over Live Link, formwav mixes the session and formvis hands over the image. Finished files can go back with Publish.</p>
     </div>`);
     this.list = q(this.el, '.fe-f-list');
     q(this.el, '[data-a="refresh"]').addEventListener('click', () => void this.load());
     q(this.el, '[data-a="link"]').addEventListener('click', async () => {
-      const got = await pickFiles({ title: 'Queue a formvfx Dynamic Link', mode: 'open', extensions: ['fvxlink'] });
+      const got = await pickFiles({ title: 'Queue a formvfx Live Link', mode: 'open', extensions: ['fvxlink'] });
       if (got?.length) {
         const r = await this.ctx.client.call('family.addLink', { path: got[0], preset: 'system/prores-hq' }).catch((e: Error) => toast(e.message, 'error'));
-        if (r) toast('Dynamic Link queued');
+        if (r) toast('Live Link queued');
       }
     });
   }
@@ -140,7 +139,7 @@ export class FamilyPanel implements Panel {
       update: (n, a) => {
         setClass(q(n, '.fe-dot'), 'is-on', a.running);
         setText(q(n, '.fe-f-name'), a.label);
-        setText(q(n, '.fe-f-kind'), `${a.kind} · like ${a.alt}`);
+        setText(q(n, '.fe-f-kind'), a.kind);
         setTitle(q(n, '.fe-f-head'), a.running ? `${a.url} · ${a.version ?? ''}` : `${a.label} is not running on this computer`);
         setText(q(n, '.fe-f-gives'), a.running ? a.gives : a.canStart ? `Not running. Its engine starts on its own when you open its sources or queue from it.` : `Not running. Open ${a.label} and refresh.`);
         const linkRow = q(n, '.fe-f-link');

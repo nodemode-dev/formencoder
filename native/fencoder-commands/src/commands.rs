@@ -198,7 +198,7 @@ pub fn all() -> &'static Vec<Cmd> {
             c("encode.status", "Encoding", "Window", p!(), &[], false, true, "Cmd+2", "The outputs being encoded now with progress, speed and time remaining.", encode_status),
             c("encode.report", "Output Report", "Queue", p!("outputs" => ids()), &[], false, true, "", "Final status, file, sidecars, loudness, publish results and errors of outputs.", outputs_report),
             c("encode.estimate", "Estimated File Size", "Queue", p!("output" => st()), &["output"], false, true, "", "", estimate),
-            c("encode.command", "Show FFmpeg Command", "Queue", p!("output" => st()), &["output"], false, true, "", "The ffmpeg command line an output would run (Time Tuner analysis left out).", command_line),
+            c("encode.command", "Show FFmpeg Command", "Queue", p!("output" => st()), &["output"], false, true, "", "The ffmpeg command line an output would run (Fit Tuning analysis left out).", command_line),
             c("encode.verify", "Verify Output", "Queue", p!("path" => st(), "output" => st(), "loudness" => bo()), &[], false, true, "", "Probes an encoded file and checks it against its settings: size, rate, duration, codecs, sample rate, loudness.", verify),
             c("preset.list", "Preset Browser", "Window", p!("query" => st(), "category" => st(), "kind" => en(&["encode", "ingest"])), &[], false, true, "Cmd+3", "", preset_list),
             c("preset.get", "Preset Settings", "Preset", p!("preset" => preset_s()), &["preset"], false, true, "", "", preset_get),
