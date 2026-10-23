@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0 · 2026-10-23
+
+Licence ledger for the desktop bundle.
+
+- The app carries formencoder's licence and NOTICE.md. NOTICE.md now lists every Python package frozen into the engine, the Python runtime, pydantic-core's Rust crates, the desktop shell's crates under other licences and the Linux AppImage's LGPL libraries.
+- Every release attaches the LAME 3.100 source beside the FFmpeg source, and a list of the delivery tools built into each platform's bundle.
+- The macOS requirement files are pinned to the same versions as the other platforms.
+
 ## v0.2.9 · 2026-10-23
 
 Licensing and trademark fixes.
