@@ -32,7 +32,7 @@ Positions: `topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRi
 
 ## Fit Tuning
 
-`effects.timeTuner {enabled, targetDuration (s) or percent (-10 to 10), skipSlates (s)}` makes a programme shorter or longer by up to 10 percent without changing its speed perceptibly: it removes or repeats single frames at the points where the picture changes least, spread through the programme, and time-stretches the audio by the same factor without changing its pitch. `skipSlates` protects the opening seconds (slates, bars). Check with `contact_sheet` across the whole range and `verify` the duration after encoding.
+`effects.timeTuner {enabled, targetDuration (s) or percent (-10 to 10), skipSlates (s)}` makes a programme shorter or longer by up to 10 percent without changing its speed perceptibly: it removes or repeats single frames at the points where the picture changes least (each frame is shrunk to a 9x8 greyscale perceptual hash and adjacent frames are scored by the Hamming distance of the hashes, ties going to the earlier frame), spread through the programme, and time-stretches the audio by the same factor without changing its pitch. `skipSlates` protects the opening seconds (slates, bars). Check with `contact_sheet` across the whole range and `verify` the duration after encoding.
 
 ## Loudness
 

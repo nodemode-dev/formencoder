@@ -28,3 +28,10 @@ Run `./formencoder agents sync` so `.claude/skills/formencoder-harness/reference
 - FFmpeg stays the LGPL build (`--disable-gpl --disable-nonfree --disable-version3`) with its source offer.
 - Never copy vendor help text, never import or trace vendor icons, and never bundle vendor presets, LUTs, looks or sample media; the bundled looks come from `setup/make_luts.py`.
 - Every new dependency, binary, model or data file gets a row in `NOTICE.md` before it ships. GPL stays outside the distributed bundle, AGPL nowhere, LGPL run as a separate program or dynamically linked and replaceable; models with gated or non-commercial terms stay optional downloads.
+
+## Fit Tuning (declined for patent risk, 2026-10-23)
+
+`fencoder-plan`'s `tuner_frames` scores each adjacent frame pair by the Hamming distance between 64 bit perceptual hashes (a 9x8 greyscale copy per frame, each pixel compared with its right neighbour; ties go to the earlier frame), ranks them, takes the lowest with the spacing rule, then drops or duplicates them. Never add back:
+
+- a frame-change measure that is an average (or a maximum of subset averages) of per-pixel luminance differences between adjacent frames: no `tblend` difference with `signalstats`, no `scdet`, no other luminance difference statistic;
+- smoothing of the scores together with a numerical optimisation of the cut positions.

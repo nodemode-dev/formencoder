@@ -11,3 +11,7 @@ The MCP server is configured here in `.codex/config.toml` (Codex) and `.cursor/m
 ## Changing formencoder's code
 
 Read `CLAUDE.md` and `.claude/skills/formencoder-skillset/SKILL.md`, then `frontend/HASHOUT_LOG.md`, `backend/HASHOUT_LOG.md` and `native/HASHOUT_LOG.md` (the engine's fencoder crates). After changing MCP tools or engine commands, formats or presets, run `./formencoder agents sync`.
+
+## Fit Tuning (declined for patent risk, 2026-10-23)
+
+Fit Tuning ranks frames by a perceptual difference hash (a 9x8 greyscale copy, 64 bits from each pixel against its right neighbour, Hamming distance between adjacent frames). Never measure frame change as an average of per-pixel luminance differences (no `tblend` difference with `signalstats`, no `scdet`), and never add smoothing of the scores plus a numerical optimisation of the cut positions.

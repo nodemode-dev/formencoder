@@ -58,7 +58,7 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 
 ## Effects (Media Encoder's Effects tab)
 
-- **Time Tuner** measures frame difference (`tblend` and `signalstats` YAVG), drops or duplicates the frames that change least, within plus or minus 10 percent, optionally skipping the first two seconds of slate.
+- **Time Tuner** measures frame change with a perceptual difference hash (each frame scaled to 9x8 greyscale by ffmpeg, 64 bits from comparing each pixel with its right neighbour, the score of an adjacent pair is the Hamming distance, ties to the earlier frame; never a luminance difference statistic, see CLAUDE.md), drops or duplicates the frames that change least, within plus or minus 10 percent, optionally skipping the first two seconds of slate.
 - **Video Limiter** is `lutyuv` clipping luma and chroma to the legal range with a soft knee.
 - **Loudness normalisation** is two-pass `loudnorm` with the measured values, then `alimiter` for the true peak; ATSC A/85, EBU R128, ITU BS.1770 and custom targets. The XML report and the after-measurement are written by `sidecars.rs`.
 - **Lumetri LUT** goes through `lut3d` with an intensity blend.
