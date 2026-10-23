@@ -49,7 +49,7 @@ The Linux AppImage also carries the build machine's WebKitGTK, GTK and GLib (LGP
 
 ## Delivery tools in a release
 
-The release build runs `python setup/install_tools.py --stage --keep-going`. With `--keep-going` a tool that fails to build is skipped and the build carries on, so a release can omit a tool (for example LAME, bmx or asdcplib) without failing. The release notes must therefore list which tools were built and staged for each platform; the rows above describe what a complete build contains, not what every release contains.
+The release build runs `python setup/install_tools.py --stage --keep-going`. With `--keep-going` a tool that fails to build is skipped and the build carries on, so a release can omit a tool (for example LAME, bmx or asdcplib) without failing. Each release therefore attaches `delivery-tools-PLATFORM.txt` for every platform it built, listing the tools staged in that bundle; the rows above describe what a complete build contains, not what every release contains.
 
 ## FFmpeg source offer
 
