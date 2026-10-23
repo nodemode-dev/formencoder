@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.1 · 2026-10-23
+
+Fit Tuning measures frame change a new way.
+
+- Fit Tuning scores how much the picture changes between adjacent frames with a perceptual difference hash: each frame is shrunk to a 9x8 greyscale copy, 64 bits are set by comparing every pixel with its right neighbour, and a pair of frames scores the Hamming distance between its hashes. Ties go to the earlier frame. The frames that change least are still dropped or repeated, with the same spacing, and the setting, label and agent calls are unchanged.
+- Lengthening with Fit Tuning (a positive change) failed in ffmpeg; it encodes again.
+
 ## v0.3.0 · 2026-10-23
 
 Licence ledger for the desktop bundle.
