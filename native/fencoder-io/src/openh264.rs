@@ -21,7 +21,22 @@ pub fn file_name() -> &'static str {
     }
 }
 
+/// The user's switch in Preferences > Delivery Tools (Cisco's terms require that the use of the
+/// downloaded binary can be turned off and on again). On by default once the binary is downloaded.
+pub fn enabled() -> bool {
+    crate::prefs::load().get("openh264").and_then(|v| v.as_bool()).unwrap_or(true)
+}
+
+/// The binary to load, or None when it is not downloaded or the switch is off.
 pub fn library() -> Option<PathBuf> {
+    if !enabled() {
+        return None;
+    }
+    installed()
+}
+
+/// Where the downloaded binary is, whether or not the switch is on.
+pub fn installed() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("FORMENCODER_OPENH264") {
         let p = PathBuf::from(crate::paths::expand(p.trim()));
         if p.is_file() {

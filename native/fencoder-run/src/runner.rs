@@ -530,7 +530,7 @@ fn run_pass_external(ctx: &Ctx, command: &[String], plan: &Plan, ext: &pipeline:
         });
         Sink::Kvazaar(child, stdin, log)
     } else {
-        let lib = crate::openh264::library().ok_or("OpenH264 is not installed; download it from Cisco in Preferences > Delivery Tools or with ./formencoder install-tools openh264")?;
+        let lib = crate::openh264::library().ok_or("OpenH264 is not installed or is turned off; download it from Cisco or turn it on in Preferences > Delivery Tools, or run ./formencoder install-tools openh264")?;
         let s = crate::openh264::Settings { width: ext.width, height: ext.height, fps: ext.fps, bitrate: ext.bitrate, max_bitrate: ext.max_bitrate, quality: ext.quality, keyint: ext.keyint, profile: ext.profile.clone(), threads: ext.threads, bt709: ext.bt709 };
         Sink::OpenH264(crate::openh264::Encoder::new(&lib, &s, Path::new(&ext.stream))?)
     };

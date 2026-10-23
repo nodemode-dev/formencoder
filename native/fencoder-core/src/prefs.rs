@@ -13,7 +13,7 @@ pub fn defaults() -> Value {
         "outputFolder": "", "outputBesideSource": true, "incrementNames": true, "removeCompletedOnExit": false,
         "chime": true, "notify": "queue", "previewWhileEncoding": true, "stopOnDecodeErrors": false, "skipMissing": true,
         "stillDuration": 5.0, "ffmpegDir": "", "threads": 0, "hardware": "auto", "defaultPreset": "system/match-source-high", "logFolder": "",
-        "hwDecode": "off", "cacheFolder": "", "cacheLimitGB": 20.0, "memoryReserveGB": 4.0, "rawDecoders": [], "shortcuts": {}
+        "hwDecode": "off", "cacheFolder": "", "cacheLimitGB": 20.0, "memoryReserveGB": 4.0, "rawDecoders": [], "shortcuts": {}, "openh264": true
     })
 }
 
@@ -47,6 +47,7 @@ pub fn descriptions() -> Value {
         "cacheFolder": "Media cache folder for previews, thumbnails, plans and work files (empty: the data folder's cache)",
         "cacheLimitGB": "Largest size the media cache may grow to before the oldest files are removed",
         "memoryReserveGB": "Memory to leave for other applications: no further parallel encode starts while less than this is free",
+        "openh264": "Use Cisco's OpenH264 for software H.264 when it is downloaded (off: formencoder never loads it)",
         "shortcuts": "Keyboard shortcuts changed from their defaults, by command id (an empty string removes a shortcut); shortcuts.set edits them",
         "rawDecoders": "Camera raw decoders: a list of {extensions, command, output, frameRate}; command runs the camera maker's own tool with {input}, {folder} and {name} filled in, and output names what it writes ({folder}/{name}_%06d.exr for a sequence, or a movie file), which formencoder then encodes"
     })

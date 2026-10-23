@@ -86,6 +86,7 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 - **OpenH264 settings:** real-time camera usage (non-real-time is refused by 2.6.0), frame skipping off so no frame is dropped, CABAC for Main and High, fixed slices for threads, BT.709 VUI. 8-bit 4:2:0 only, one pass; the plan notes say so when the settings asked for more.
 - **MP3:** FFmpeg writes `lame_in.wav`, then `plan.post` runs `lame -q 2 -b N --cbr` with ID3 tags from the resolved metadata. MP3 inside a video container still needs libmp3lame.
 - **OpenH264 is never bundled.** `backend/app/openh264_fetch.py` downloads Cisco's 2.6.0 binary for the platform, checks the archive's pinned SHA-256 and writes the attribution and licence pointer into `tools/licences`.
+- **The Use OpenH264 switch (0.2.9).** Cisco's binary licence holds only while the user can turn the binary's use off and on again where the attribution is shown. The `openh264` preference (default true) is that switch: `openh264::library()` returns None while it is off, so `encoders::external`, the planner and `runner` all stop seeing the library at once and H.264 falls back as if it were not downloaded. `openh264::installed()` is the same search without the switch; `tools::listing` uses it for `installed` and adds `enabled`, so Preferences can say Installed while the switch is off. Never load the library through `installed()`.
 
 ## Speech to text (`transcribe.rs`)
 

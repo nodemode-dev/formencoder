@@ -2,7 +2,7 @@ import type { Ctx } from '../app/ctx';
 import type { FieldSpec } from '../engine/types';
 import { formats } from './choosers';
 import { Dialog } from './dialogs';
-import { el, q, setClass, setText } from './dom';
+import { el, q, setChecked, setClass, setText } from './dom';
 import { fieldControl, type FieldControl } from './fields';
 import { readChoice, setAccent, setIntensity, setTheme, THEMES } from './themes';
 import { toast } from './toast';
@@ -15,6 +15,7 @@ interface ToolRow {
   usedFor: string;
   installed: boolean;
   download?: boolean;
+  enabled?: boolean;
   attribution?: string;
   programs: Array<{ program: string; path: string | null }>;
 }
@@ -130,7 +131,21 @@ export class Preferences {
     for (const t of r?.tools ?? []) {
       const row = el(`<div class="fe-tool" data-tool="${t.id}"><div class="fe-tool-head"><span class="fe-tool-name"></span><span class="fe-tool-state"></span></div><div class="fx-note fe-tool-use"></div><div class="fx-note fe-tool-path"></div></div>`);
       setText(q(row, '.fe-tool-name'), `${t.label} ${t.version} · ${t.licence}`);
-      setText(q(row, '.fe-tool-use'), t.attribution ? `${t.usedFor}. ${t.attribution}` : t.usedFor);
+      setText(q(row, '.fe-tool-use'), t.usedFor);
+      if (t.attribution) {
+        // Cisco's terms: the user can turn the downloaded binary's use off and on, with the attribution where it is controlled.
+        const sw = el('<label class="fe-tool-switch"><input type="checkbox" class="fx-check"><span></span></label>');
+        setText(q(sw, 'span'), `Use ${t.label}`);
+        const c = q<HTMLInputElement>(sw, 'input');
+        c.addEventListener('change', async () => {
+          const r = await this.ctx.run<{ prefs: Record<string, unknown> }>('prefs.set', { values: { [t.id]: c.checked } });
+          if (r) setChecked(c, r.prefs[t.id] !== false);
+          void this.tools();
+        });
+        const note = el('<div class="fx-note fe-tool-attr"></div>');
+        setText(note, t.attribution);
+        q(row, '.fe-tool-use').after(sw, note);
+      }
       if (t.download) {
         const b = el<HTMLButtonElement>('<button class="cv-btn fe-tool-get" type="button">Download from Cisco</button>');
         b.addEventListener('click', async () => {
@@ -218,6 +233,8 @@ export class Preferences {
       if (!row) continue;
       setText(q(row, '.fe-tool-state'), t.installed ? 'Installed' : t.download ? 'Not downloaded' : `Not installed: ./formencoder install-tools ${t.id}`);
       setClass(row, 'is-installed', t.installed);
+      const use = row.querySelector<HTMLInputElement>('.fe-tool-switch input');
+      if (use) setChecked(use, t.enabled !== false);
       const found = t.programs.map((p) => p.path).filter(Boolean).join(' · ');
       setText(q(row, '.fe-tool-path'), found || ' ');
       const get = row.querySelector<HTMLButtonElement>('.fe-tool-get');

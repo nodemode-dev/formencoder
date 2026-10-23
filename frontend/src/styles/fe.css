@@ -315,6 +315,8 @@
 .fe-tool.is-installed .fe-tool-state { color: var(--text-secondary); }
 .fe-tool-get { min-width: 150px; }
 .fe-tool-path { min-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fe-tool-switch { display: flex; align-items: center; gap: 8px; min-height: 24px; color: var(--text-primary); font-size: var(--fs-12); cursor: pointer; }
+.fe-tool-attr { color: var(--text-secondary); }
 .fe-sc { display: grid; gap: 8px; }
 .fe-sc-list { height: min(60vh, 520px); overflow: auto; }
 .fe-sc-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 80px; align-items: center; gap: 8px; min-height: 32px; font-size: var(--fs-12); color: var(--text-secondary); }

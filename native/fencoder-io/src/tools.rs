@@ -87,9 +87,9 @@ pub fn listing() -> Value {
             json!({"id": t.id, "label": t.label, "version": t.version, "licence": t.licence, "source": t.source, "usedFor": t.used_for, "installed": installed, "programs": progs})
         })
         .collect();
-    let lib = crate::openh264::library();
+    let lib = crate::openh264::installed();
     rows.push(json!({"id": "openh264", "label": "OpenH264", "version": crate::openh264::VERSION, "licence": "BSD-2-Clause (Cisco binary)", "source": "https://www.openh264.org",
-                     "usedFor": "software H.264 encoding when the FFmpeg has no libx264; downloaded from Cisco, never bundled", "installed": lib.is_some(),
+                     "usedFor": "software H.264 encoding when the FFmpeg has no libx264; downloaded from Cisco, never bundled", "installed": lib.is_some(), "enabled": crate::openh264::enabled(),
                      "programs": [{"program": crate::openh264::file_name(), "path": lib.map(|p| p.to_string_lossy().into_owned())}], "attribution": crate::openh264::ATTRIBUTION, "download": true}));
     Value::Array(rows)
 }
