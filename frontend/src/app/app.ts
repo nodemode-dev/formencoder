@@ -318,7 +318,7 @@ class App {
     const caps = await ctx.run<{ commands: number; formats: number; presets: number; engine: string; ffmpeg: { version?: string; licence?: string } }>('app.capabilities', {}, true);
     const d = new Dialog('About formencoder', 500);
     d.body.appendChild(el(`<div class="fx-about">
-      <div class="fx-about-head">${brandMark(44)}<div><div class="fx-about-name">formencoder</div><div class="fx-note">Version ${VERSION} · Apache-2.0 · nodemode-ai</div></div></div>
+      <div class="fx-about-head">${brandMark(44)}<div><div class="fx-about-name">formencoder</div><div class="fx-note">Version ${VERSION} · Apache-2.0 · by nodemode.ai</div></div></div>
       <p class="fx-note">The media encoder of the form family, beside formcut, formvfx, formwav and formvis: a queue, presets, watch folders, ingest, proxies, loudness, captions and publishing on formencoder's own engine written in Rust, driven by you or by an agent.</p>
       <p class="fx-note">${escapeHtml(caps ? `${caps.commands} commands · ${caps.formats} formats · ${caps.presets} presets · ${caps.engine} · FFmpeg ${caps.ffmpeg?.version ?? '?'} (${caps.ffmpeg?.licence ?? '?'})` : '')}</p>
       <p class="fx-note">FFmpeg runs as a separate program under the LGPL; third-party notices are in NOTICE.md.</p>

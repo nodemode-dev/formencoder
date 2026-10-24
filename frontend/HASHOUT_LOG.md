@@ -56,6 +56,10 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - The Full faith switch lives in the Agents panel, deliberately not in the approval dialog: turning it on should be a decision taken calmly, not a shortcut out of a prompt. It writes over the live socket because that is the only route the engine accepts it from.
 - Inherited: the activity feed inserts newest-first, so a new row pushes older rows down (a 0.00002 layout shift measured in 0.2.4). The Agent Connect panel in 0.2.5 replaces this feed.
 
+## About credit (0.4.2)
+
+- formencoder's Home has no credit line, so by the owner's choice the credit sits in About: the head's note reads "Version x · Apache-2.0 · by nodemode.ai" (was "· nodemode-ai"). Same element, text only, so the dialog's head keeps its size.
+
 ## Use OpenH264 switch and effect names (0.2.9)
 
 - Preferences > Delivery Tools builds the Use OpenH264 checkbox once with its row, with Cisco's attribution directly under it (Cisco's terms put the text where the use is controlled). It writes the `openh264` preference and `paintTools` sets it from `tools.list`'s `enabled` with `setChecked`, so a repaint never rebuilds it. Not verified in the window under throttling.
