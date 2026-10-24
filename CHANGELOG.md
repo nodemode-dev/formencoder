@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.2 · 2026-10-24
+
+The copyright holder in LICENSE and the README is NodeAgentc, Inc., and the About box reads "by nodemode.ai".
+
 ## v0.4.1 · 2026-10-23
 
 Fit Tuning measures frame change a new way.
