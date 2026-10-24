@@ -88,7 +88,7 @@ Non-blank lines in tracked files; generated skill references excluded. `./formen
 
 ## Licence
 
-Apache-2.0. FFmpeg is LGPL-2.1-or-later and runs as a separate program; see `NOTICE.md` for every third-party component, the FFmpeg source offer and Cisco's OpenH264 licence. OpenH264 Video Codec provided by Cisco Systems, Inc.
+Apache-2.0. Copyright 2026 NodeAgentc, Inc. FFmpeg is LGPL-2.1-or-later and runs as a separate program; see `NOTICE.md` for every third-party component, the FFmpeg source offer and Cisco's OpenH264 licence. OpenH264 Video Codec provided by Cisco Systems, Inc.
 
 ## Trademarks
 
