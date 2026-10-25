@@ -353,7 +353,7 @@ ingest.copy {paths (files or card folders), destination, verify: size|md5|bit, p
 
 ### family
 
-family {action: discover} reports which of formcut (8040), formvfx (8230), formwav (8060) and formvis (8190) are running. family {action: sources, app}. family {action: add, app, id or name, preset, in, out, start}: formcut exports the project through its own renderer then formencoder encodes it; formvfx comps are pulled frame by frame over Live Link (no render in formvfx) with their audio; formwav sessions are mixed by formwav; formvis images become stills or sequences. A .fvxlink file: family {action: addLink, path}. family {action: send, app: formcut|formvfx, files} imports finished files there.
+family {action: discover} reports which of formcut (8040), formvfx (8250), formwav (8060) and formvis (8190) are running. family {action: sources, app}. family {action: add, app, id or name, preset, in, out, start}: formcut exports the project through its own renderer then formencoder encodes it; formvfx comps are pulled frame by frame over Live Link (no render in formvfx) with their audio; formwav sessions are mixed by formwav; formvis images become stills or sequences. A .fvxlink file: family {action: addLink, path}. family {action: send, app: formcut|formvfx, files} imports finished files there.
 
 ### presets
 

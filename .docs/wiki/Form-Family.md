@@ -1,6 +1,6 @@
 # Form Family
 
-formencoder is the family's delivery end. It finds the other apps running on the same computer (their engines on 8040, 8230, 8060 and 8190, or their discovery records) and treats their work as sources.
+formencoder is the family's delivery end. It finds the other apps running on the same computer (their engines on 8040, 8250, 8060 and 8190, or their discovery records) and treats their work as sources.
 
 | App | Source | How it arrives |
 | --- | --- | --- |

@@ -10,7 +10,7 @@ formencoder is the family's delivery end. The other apps make the media; formenc
 | App | What it gives | How it arrives | Default port |
 | --- | --- | --- | --- |
 | formcut (video editor) | projects (sequences) | formcut renders the project through its own renderer at full quality, then formencoder encodes the result | 8040 |
-| formvfx (motion graphics) | compositions | Live Link: frames are pulled straight from formvfx's renderer with the comp's audio; nothing is rendered in formvfx first | 8230 |
+| formvfx (motion graphics) | compositions | Live Link: frames are pulled straight from formvfx's renderer with the comp's audio; nothing is rendered in formvfx first | 8250 |
 | formwav (audio) | sessions | formwav mixes the session down, then formencoder encodes the mix | 8060 |
 | formvis (images) | projects | the flattened image, as a still or the frames of a sequence | 8190 |
 

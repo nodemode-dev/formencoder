@@ -28,7 +28,7 @@ APPS: dict[str, dict] = {
     "formcut": {"label": "formcut", "kind": "Video editor", "port": 8040, "header": "x-formcut-local", "env": "FORMCUT_URL",
                 "records": [lambda: Path(os.environ.get("FORMCUT_DATA_DIR", "")) / "engine.json" if os.environ.get("FORMCUT_DATA_DIR") else None, lambda: _platform_data("formcut") / "engine.json"],
                 "gives": "projects rendered through formcut's own export, then encoded here"},
-    "formvfx": {"label": "formvfx", "kind": "Motion graphics", "port": 8230, "header": "x-formvfx-local", "env": "FORMVFX_URL",
+    "formvfx": {"label": "formvfx", "kind": "Motion graphics", "port": 8250, "header": "x-formvfx-local", "env": "FORMVFX_URL",
                 "records": [lambda: Path(os.environ.get("FORMVFX_DATA_DIR") or Path.home() / "Formvfx") / "engine.json"],
                 "gives": "compositions pulled live over Live Link (frames and audio), no render in formvfx"},
     "formwav": {"label": "formwav", "kind": "Audio", "port": 8060, "header": "x-formwav-local", "env": "FORMWAV_URL", "records": [],
