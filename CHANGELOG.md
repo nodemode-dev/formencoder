@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.3 · 2026-10-25
+
+The interface's dev server dependency, vite, moves to 8.3.5, which clears two command-injection advisories in its launch-editor. Nothing in the shipped app changed.
+
 ## v0.4.2 · 2026-10-24
 
 The copyright holder in LICENSE and the README is NodeAgentc, Inc., and the About box reads "by nodemode.ai".
