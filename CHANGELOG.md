@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.5 · 2026-10-25
+
+formvfx moved its engine to port 8250, so formencoder looks for it there when no record or address says otherwise. Nothing else changed.
+
 ## v0.4.4 · 2026-10-25
 
 A web page can no longer reach the engine through an image or a link: a request that carries no Origin is refused when the browser labels it Sec-Fetch-Site cross-site. The window, the dev window, the command line and the MCP clients are not affected.
