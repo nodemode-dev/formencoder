@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.4 · 2026-10-25
+
+A web page can no longer reach the engine through an image or a link: a request that carries no Origin is refused when the browser labels it Sec-Fetch-Site cross-site. The window, the dev window, the command line and the MCP clients are not affected.
+
 ## v0.4.3 · 2026-10-25
 
 The interface's dev server dependency, vite, moves to 8.3.5, which clears two command-injection advisories in its launch-editor. Nothing in the shipped app changed.
