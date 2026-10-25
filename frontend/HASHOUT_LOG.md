@@ -74,3 +74,8 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - The tile shadow is its own layer under an unfiltered tile, because a filter on the tile made Chromium band the gradient.
 - `gen.py` draws on the 64-unit grid of the old mark, scaled to the 1024 canvas by `f` (10.6, or 11.4 for the simple detail); `rtri` is a triangle with each corner rounded by a quadratic curve.
 - Regenerating, from `assets/icon_src/` with Pillow and Playwright 1.56.0 (whose Chromium renders the four masters): `python3 gen.py mac full R_mac_full.svg`, the same for `mac simple`, `full full` and `full simple`; `node render.mjs R_[mode]_[detail].svg R_[mode]_[detail].png 1024` for each; `python3 build.py` writes every size into `out/`, mirroring the repo paths. `python3 compact.py` prints the favicon, `python3 compact.py splash-` the splash's mark. In 0.2.7 this reproduced every committed icon byte for byte.
+
+## Vite pin and npm audit (0.4.3)
+
+- Family rule from `FAMILY_DEV_PLAN.md` v0.4.x Phase 2b (formai_dev sidecar): every frontend installs with zero `npm audit` findings. Vite 8.3.0 carries a `launch-editor` with two command-injection advisories in the dev server (ledger FB-004); 8.3.5 clears them. Dev dependency only, nothing in the shipped bundle changed.
+- Verified: `npm install` then `npm audit` reports 0 vulnerabilities, `npm run typecheck` passes, `vite build` succeeds, and `vite` serves 200 on localhost with no Network address printed.
