@@ -23,10 +23,11 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 panic = "abort"
-strip = true
+strip = false
 
 # Cargo strips build scripts and procedural macros with the rest, and on macOS 27
 # with rustc 1.97.1 a stripped procedural macro cannot be loaded ("can't find
-# crate"). Build-time crates stay unstripped; the shell binary is stripped as before.
+# crate"). Build-time crates stay unstripped, and so does the shell binary, since
+# macOS builds fail on a stripped one.
 [profile.release.build-override]
 strip = false
