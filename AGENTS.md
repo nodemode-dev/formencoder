@@ -12,7 +12,7 @@ The MCP server is configured here in `.codex/config.toml` (Codex) and `.cursor/m
 
 Read `CLAUDE.md` and `.claude/skills/formencoder-skillset/SKILL.md`, then `frontend/HASHOUT_LOG.md`, `backend/HASHOUT_LOG.md` and `native/HASHOUT_LOG.md` (the engine's fencoder crates). After changing MCP tools or engine commands, formats or presets, run `./formencoder agents sync`.
 
-Tests live in `tests/` folders and run in CI; write only tests `FAMILY_TEST_PLAN.md` (formai_dev sidecar) or its successor names: `backend/tests`.
+Tests live in `tests/` folders and run in CI; write only tests `FAMILY_TEST_PLAN.md` (formai_dev sidecar) or its successor names: `backend/tests` and `frontend/tests/window`.
 
 ## Fit Tuning (declined for patent risk, 2026-10-23)
 

@@ -84,3 +84,7 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 
 - `public/splash.html` centred the logo and the line under it together, so a paint that landed after the logo but before the line centred the logo alone and moved it when the line arrived (layout shift about 2.6e-4, in roughly 1 load in 6 to 10). The body now starts at a fixed top padding (`calc(50vh - 53px)`, the old centred position of the 72 px logo, 18 px gap and 16 px line) and the line has a fixed 16 px height, so the logo's position no longer depends on later siblings.
 - Verified: a server that sends the page up to `</svg>`, waits 1 s and sends the rest gave a shift of 2.6e-4 before and 0 after.
+
+## Window smoke (0.4.9, F7)
+
+- `tests/window/test_window.py` serves the built `dist` from a real engine (empty data folder and home, FFmpeg fetch, autostart and the family bridge's headless peers off) and opens `/` and `/splash.html` in Chromium at 4x CPU slowdown and a slow network: a title, no 4xx or 5xx (so nothing refused by the guard), no console or page error, layout shift 0. It needs `npm run build` first and runs in the `window` CI job. Nothing is ignored. The window holds a websocket, which the idle wait tolerates, and the 3 s settle follows.

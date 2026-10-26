@@ -16,7 +16,7 @@ The media encoder of the form family beside formcut, formvfx, formwav and formvi
 - `setup/` · install, boot, build, freeze and desktop scripts behind the `./formencoder` dispatcher; `setup/agents.py` regenerates the harness skill's references from the engine.
 - `./build_app` (`build_app.bat` on Windows) is the one-shot desktop build from a fresh clone: tools, install, interface, sidecar, FFmpeg, bundle, and on macOS the copy to Applications.
 - Planning documents (DEV_PLAN, BUILD_NOTES, TEST_PLAN, the root HASHOUT_LOG) ship in the planning sidecar zip, not in this tree.
-- Tests live in `tests/` folders and run in CI; write only tests this plan or its successor names (`FAMILY_TEST_PLAN.md` in the formai_dev sidecar): `backend/tests`.
+- Tests live in `tests/` folders and run in CI; write only tests this plan or its successor names (`FAMILY_TEST_PLAN.md` in the formai_dev sidecar): `backend/tests` and `frontend/tests/window`.
 
 ## After changing the MCP tools or the engine's commands, formats or presets
 
