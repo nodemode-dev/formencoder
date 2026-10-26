@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.7 · 2026-10-26
+
+The desktop release build keeps its symbols, since macOS builds fail on a stripped binary. Nothing else changes.
+
 ## v0.4.6 · 2026-10-26
 
 A web page on another local port can no longer talk to the engine: an Origin must be the engine's own, the window's dev or preview address, or the desktop shell. The window, the command line and the MCP clients are not affected.
