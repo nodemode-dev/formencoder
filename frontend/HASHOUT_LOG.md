@@ -79,3 +79,8 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 
 - Family rule from `FAMILY_DEV_PLAN.md` v0.4.x Phase 2b (formai_dev sidecar): every frontend installs with zero `npm audit` findings. Vite 8.3.0 carries a `launch-editor` with two command-injection advisories in the dev server (ledger FB-004); 8.3.5 clears them. Dev dependency only, nothing in the shipped bundle changed.
 - Verified: `npm install` then `npm audit` reports 0 vulnerabilities, `npm run typecheck` passes, `vite build` succeeds, and `vite` serves 200 on localhost with no Network address printed.
+
+## Splash does not shift (0.4.9, FB-137)
+
+- `public/splash.html` centred the logo and the line under it together, so a paint that landed after the logo but before the line centred the logo alone and moved it when the line arrived (layout shift about 2.6e-4, in roughly 1 load in 6 to 10). The body now starts at a fixed top padding (`calc(50vh - 53px)`, the old centred position of the 72 px logo, 18 px gap and 16 px line) and the line has a fixed 16 px height, so the logo's position no longer depends on later siblings.
+- Verified: a server that sends the page up to `</svg>`, waits 1 s and sends the rest gave a shift of 2.6e-4 before and 0 after.
