@@ -27,6 +27,7 @@ formencoder is licensed under the Apache License 2.0 (`LICENSE`). It includes or
 | CPython runtime (3.12 in the release toolchain), embedded by PyInstaller in the `--onefile` engine sidecar | runs the engine service | PSF-2.0 |
 | pywinpty (Windows only) | the terminal on Windows | MIT |
 | PyInstaller (build only) | freezing the engine sidecar | GPL-2.0 with the bootloader exception, which permits distributing the frozen program under its own licence |
+| pytest 9.1.1 (with iniconfig, packaging, pluggy, pygments) and httpx 0.28.1 | runs `backend/tests` in CI (`backend/requirements-test.txt`); never installed in the app | MIT (pytest, iniconfig, pluggy), Apache-2.0 OR BSD-2-Clause (packaging), BSD-2-Clause (pygments), BSD-3-Clause (httpx) |
 | formvis and formvfx design system (NodeMode Studio tokens, shell, dock, panel, dialog, popup, palette, toast and file dialog code) | `frontend/src/styles`, `frontend/src/ui` | Apache-2.0 |
 | Inter and JetBrains Mono (`@fontsource`) | interface fonts | SIL Open Font License 1.1 |
 | xterm.js and its fit addon | the embedded terminal | MIT |
