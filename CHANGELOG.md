@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.9 · 2026-10-26
+
+The window smoke in `frontend/tests/window`, run in a new CI job: the built window loads under CPU and network throttling with layout shift 0, no console error, no failed request and nothing refused by the guard. It found one small shift: the splash page moved its logo when the line under it arrived, and now holds the logo at a fixed position.
+
 ## v0.4.8 · 2026-10-26
 
 A test suite in `backend/tests`, run in CI: the family guard, consent, MCP, version and boot checks, and encoding checks (every shipped preset plans the same FFmpeg arguments every time, real H.264, ProRes and AV1 encodes, loudness within 0.5 LU, caption timing, card ingest checksums and the queue through pause, stop and restart). CI also runs `npm audit`. The app itself does not change.
