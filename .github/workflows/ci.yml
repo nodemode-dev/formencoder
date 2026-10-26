@@ -22,6 +22,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm audit --audit-level=low
       - run: npm run build
 
   engine-hosts:
@@ -98,6 +99,30 @@ jobs:
           assert '"done"' in text and '"passed": true' in text, text[:2000]
           print('mcp ok:', len(tools), 'tools, preview and a verified encode')
           PY
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      - name: FFmpeg for the test encodes (the runner's own; never shipped)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Engine venv, the encoding engine (dev profile) and the test dependencies
+        run: |
+          (cd backend && ./oc_install)
+          ./formencoder install-native --dev
+          backend/venv/bin/pip install -r backend/requirements-test.txt
+      - name: Family layers and app tests
+        working-directory: backend
+        run: venv/bin/python -m pytest tests -q -p no:cacheprovider
 
   scripts:
     runs-on: ubuntu-latest
