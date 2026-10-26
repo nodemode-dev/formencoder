@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.8 · 2026-10-26
+
+A test suite in `backend/tests`, run in CI: the family guard, consent, MCP, version and boot checks, and encoding checks (every shipped preset plans the same FFmpeg arguments every time, real H.264, ProRes and AV1 encodes, loudness within 0.5 LU, caption timing, card ingest checksums and the queue through pause, stop and restart). CI also runs `npm audit`. The app itself does not change.
+
 ## v0.4.7 · 2026-10-26
 
 The desktop release build keeps its symbols, since macOS builds fail on a stripped binary. Nothing else changes.
