@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.6 · 2026-10-26
+
+A web page on another local port can no longer talk to the engine: an Origin must be the engine's own, the window's dev or preview address, or the desktop shell. The window, the command line and the MCP clients are not affected.
+
 ## v0.4.5 · 2026-10-25
 
 formvfx moved its engine to port 8250, so formencoder looks for it there when no record or address says otherwise. Nothing else changed.
