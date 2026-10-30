@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-commands"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "fencoder-core",
  "fencoder-engine",
@@ -170,7 +170,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-core"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "ab_glyph",
  "chrono",
@@ -183,7 +183,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-engine"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "fencoder-core",
  "fencoder-io",
@@ -194,7 +194,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-io"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "fencoder-core",
@@ -207,7 +207,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-plan"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "fencoder-core",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-py"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "fencoder-commands",
  "fencoder-core",
@@ -232,7 +232,7 @@ dependencies = [
 
 [[package]]
 name = "fencoder-run"
-version = "0.4.9"
+version = "0.5.0"
 dependencies = [
  "fencoder-core",
  "fencoder-io",

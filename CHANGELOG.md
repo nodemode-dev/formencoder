@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.0 · 2026-10-30
+
+Desktop builds for formcompiler's signed releases. The app itself does not change.
+
+- Windows: `formencoder.bat desktop build` passes extra arguments, such as `--config FILE`, on to `tauri build`, so Windows builds can make updater files.
+- macOS: with `APPLE_SIGNING_IDENTITY` set, every program and library staged in `src-tauri/tools` and `src-tauri/ffmpeg` is signed with hardened runtime and a timestamp before the bundle is made, so the app can be notarized.
+- LAME configures on Apple silicon: its `config.guess` and `config.sub` are refreshed from automake when present, and macOS passes `--build` and `--host`.
+- `.gitattributes` checks out `.bat`, `.cmd` and `.ps1` files with CRLF.
+- The version goes from 0.4.9 to 0.5.0, not 0.4.10, because the version test keeps the patch to one digit.
+
 ## v0.4.9 · 2026-10-26
 
 The window smoke in `frontend/tests/window`, run in a new CI job: the built window loads under CPU and network throttling with layout shift 0, no console error, no failed request and nothing refused by the guard. It found one small shift: the splash page moved its logo when the line under it arrived, and now holds the logo at a fixed position.

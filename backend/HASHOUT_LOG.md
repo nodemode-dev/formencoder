@@ -118,7 +118,7 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 - Ingest: the MD5 check is proved by a thread that flips the last byte of the copy as soon as it reaches full size, while a 160 MB file is still being read back; the run must fail with the MD5 message. The plan names a changed file; a source changed after it was read is not caught by `md5` (the hash is taken while reading) but is by `bit`, which is not tested because it cannot be raced reliably.
 - Planner: for every encode preset the command line is built twice in one engine and once in a fresh engine and compared after the output id and data folder are normalised.
 
-## Desktop builds under formcompiler (0.4.10)
+## Desktop builds under formcompiler (0.5.0)
 
 - `formencoder.bat desktop build` hands `%3` to `%9` to `setup\desktop_build.bat`, which hands `%*` to `tauri.cmd build`, as `setup/desktop_build` does with `"$@"`. formcompiler's `%FORMCOMPILER_CONFIG_ARG%` (`--config FILE`, two words, a runner temp path with no spaces) then reaches `tauri build` on Windows, so the updater settings in that file make the `.sig` files and the `windows-x86_64` entry in `latest.json`. With no arguments the build is the same as before.
 - `.gitattributes` checks out `.bat`, `.cmd` and `.ps1` with CRLF; everything else stays LF.
