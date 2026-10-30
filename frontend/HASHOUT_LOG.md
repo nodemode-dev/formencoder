@@ -11,6 +11,7 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 - The look is the form family's: the Studio Dark tokens and the fifteen theme profiles (`ui/themes.ts`), the glass menus, the dock (`ui/dock.ts`), menus and popups (`ui/popup.ts`), dialogs, the palette, the file dialog, the terminal and agents panels. These came over from formvfx and keep their `cv-` and `fx-` class prefixes, the way formvfx kept formvis's `cv-`: a shared component keeps the prefix of the app it came from, so the family's stylesheets read the same everywhere. Everything formencoder adds is `fe-`.
 - `styles/tokens.css` is the token layer (accent `#f2545b`, formencoder's hue), `styles/base.css` the shared chrome, `styles/fe.css` formencoder's panels and the Export Settings window. Every `z-index` is a `--z-*` token.
 - `index.html` applies the saved theme and accent inline before the first paint (`formencoder_ui_settings` in local storage), and `#app` stays hidden until the first state arrives (`revealApp`), so there is no theme flash and no half-drawn first frame.
+- `revealApp` also waits for the bundled faces (Inter 400, 500, 600 and JetBrains Mono 400) and `document.fonts.ready`, at most 4 s. On macOS the system font comes first in `--font-ui`, but on Windows and Linux Inter is the face drawn, and a machine without Inter installed first draws a fallback and swaps when the woff2 arrives (`font-display: swap` in @fontsource). Revealed before the swap, the narrower Inter text moved the Form Family bar's pending label, and the window check (CLS 0) failed on the GitHub runner while passing on a machine with Inter installed (0.5.0).
 
 ## State
 
@@ -35,7 +36,7 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 ## DOM stability
 
 - Lists use `patchList` keyed by ids; progress updates set text and a CSS custom property (`--p`, a `scaleX` on the bar) on the row's existing nodes.
-- Pending indicators carry `.ns-pending` and keep their box; they show after 300 ms and stay at least 250 ms (`pendingClass`).
+- Pending indicators carry `.ns-pending` and keep their box; they show after 300 ms and stay at least 250 ms (`pendingClass`). Shown is `visibility: inherit`, not `visible`: a visible child inside the hidden `#app` is drawn anyway, so a pending label started before the reveal showed alone and its moves counted as layout shifts (0.5.0).
 - Images change with `swapMedia` (decode off-screen, swap once).
 - The Export Settings preview images fill their figure (`position: absolute; inset: 0; object-fit: contain`), so a preview with another aspect ratio letterboxes inside the same box instead of resizing the figure; `imageRect` works out the contained picture from the natural size for the crop box. Opening the window applies the current view's hidden figures before the first render, and opening it for a different output clears the last output's pictures (a 1998x1080 DCP frame once resized the figure 16 px when the next output's 16:9 frame arrived).
 - Labels that change length on the same control reserve their width (`.fe-run-label`).

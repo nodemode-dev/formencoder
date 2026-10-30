@@ -77,9 +77,17 @@ export function reserve(el: HTMLElement, box: { width?: number; height?: number;
   if (box.aspect) el.style.aspectRatio = box.aspect;
 }
 
+const UI_FACES = ['400 1em Inter', '500 1em Inter', '600 1em Inter', '400 1em "JetBrains Mono"'];
+const FONT_WAIT_MS = 4000;
+let revealing = false;
+
 export function revealApp(): void {
-  if (document.body.classList.contains('app-ready')) return;
-  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('app-ready')));
+  if (revealing || document.body.classList.contains('app-ready')) return;
+  revealing = true;
+  const faces = Promise.all(UI_FACES.map((face) => document.fonts.load(face).catch(() => []))).then(() => document.fonts.ready);
+  const waited = new Promise((done) => window.setTimeout(done, FONT_WAIT_MS));
+  void Promise.race([faces, waited]).then(() =>
+    requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('app-ready'))));
 }
 
 export function el<T extends HTMLElement = HTMLElement>(html: string): T {
