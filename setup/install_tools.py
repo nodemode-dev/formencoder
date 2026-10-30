@@ -114,11 +114,35 @@ def fetch_tarball(name: str, spec: dict, work: Path) -> Path:
     return src
 
 
+def refresh_config_scripts(src: Path) -> None:
+    automake = shutil.which("automake")
+    if not automake:
+        return
+    try:
+        libdir = Path(subprocess.run([automake, "--print-libdir"], check=True, capture_output=True, text=True).stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        return
+    for name in ("config.guess", "config.sub"):
+        fresh = libdir / name
+        if fresh.is_file() and (src / name).is_file():
+            shutil.copy2(fresh, src / name)
+            print(f"[install-tools] {name} refreshed from {fresh}", flush=True)
+
+
+def build_triple() -> list[str]:
+    if sys.platform != "darwin":
+        return []
+    machine = platform.machine()
+    cpu = "aarch64" if machine in ("arm64", "aarch64") else machine
+    return [f"--build={cpu}-apple-darwin", f"--host={cpu}-apple-darwin"]
+
+
 def build_autotools(spec: dict, src: Path) -> Path:
     if os.name == "nt":
         run(["nmake", "-f", "Makefile.MSVC", "comp=msvc", "asm=no"], cwd=src)
         return src / "output"
-    run(["./configure", "--disable-shared", "--enable-static", "--disable-gtktest", "--disable-decoder"], cwd=src)
+    refresh_config_scripts(src)
+    run(["./configure", "--disable-shared", "--enable-static", "--disable-gtktest", "--disable-decoder", *build_triple()], cwd=src)
     run(["make", f"-j{os.cpu_count() or 2}"], cwd=src)
     return src
 
