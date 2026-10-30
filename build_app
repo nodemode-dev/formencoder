@@ -83,6 +83,9 @@ setup/freeze_backend
 triple="$(fe_target_triple)" || fe_die "rustc not found"
 step "staging the pinned LGPL FFmpeg for $triple"
 backend/venv/bin/python setup/bundle_ffmpeg.py --target "$triple"
+if [ "$os" = macos ]; then
+  backend/venv/bin/python setup/sign_resources.py
+fi
 
 tauri_args=(build)
 case "$os" in
