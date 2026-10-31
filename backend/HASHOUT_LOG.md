@@ -132,3 +132,7 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 - `main.py` pins `.js` and `.mjs` to `text/javascript` and `.css` to `text/css` with three `mimetypes.add_type` calls, which covers `StaticFiles`, `FileResponse` and any direct `guess_type`. They sit after the last import, not above the imports: a module that re-reads the registry while importing cannot undo them, and no import follows a statement (E402). They look redundant off Windows; keep them.
 - Repro on a Windows PC: `reg add "HKCU\Software\Classes\.js" /v "Content Type" /d "text/plain" /f`, then launch the rebuilt app; restore with `/d "text/javascript"`.
 - Checked here: with the table poisoned to `text/plain` for js, mjs and css through `mimetypes.init(files=...)`, the three calls return `text/javascript`, `text/javascript` and `text/css`; `py_compile` passes. Not yet run on a Windows PC.
+
+## The FFmpeg download names the new organisation (0.5.1)
+
+- `ffmpeg_fetch.py` `RELEASE` now reads `https://github.com/nodemode-dev/formcut-binaries/releases/download`. The repository moved from nodemode-ai to nodemode-dev; the old address still answered with a 301 to the new one on 2026-10-31, but the fetch should not depend on that redirect lasting. Checked: `https://github.com/nodemode-dev/formcut-binaries/releases/download/ffmpeg-7.1.5-2/SHA256SUMS` answered 302 to the asset, and the same release's Linux archive downloaded and matched every pinned SHA-256 through the family fetch in formvis.

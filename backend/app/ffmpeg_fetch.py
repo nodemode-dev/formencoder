@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-RELEASE = "https://github.com/nodemode-ai/formcut-binaries/releases/download"
+RELEASE = "https://github.com/nodemode-dev/formcut-binaries/releases/download"
 DOCUMENTS = ("LGPL-2.1.txt", "THIRD-PARTY-NOTICES.txt", "README.md")
 
 
