@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 import os
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,10 @@ from .core.security import LocalOnly
 from .engine import rpc as engine_rpc
 from .engine.host import host
 from .routers import agents, files, hooks, live, mcp, rpc, system, terminal
+
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("text/css", ".css")
 
 ROUTERS = (system.router, rpc.router, live.router, files.router, terminal.router, mcp.router, agents.router, hooks.router)
 
