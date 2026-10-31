@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.1 · 2026-10-31
+
+- The Windows desktop app no longer opens to a blank window on PCs where an installer set the `.js` file type to `text/plain` in the registry: the engine now serves scripts and stylesheets with their real types.
+- The pinned FFmpeg download names nodemode-dev/formcut-binaries, where the release now lives.
+
 ## v0.5.0 · 2026-10-30
 
 Desktop builds for formcompiler's signed releases. The app itself does not change.
