@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2 · 2026-11-03
+
+The app's name is FormEncoder, and it has one app icon. The engine does not change.
+
+- The compiled app, its window titles and its splash page are named FormEncoder.
+- One app icon for the desktop app, the web favicon, the title bar mark and the splash page, in place of the old SVG mark.
+- `.github/CODEOWNERS` lists gbarnai beside nodemode-ai.
+
 ## v0.5.1 · 2026-10-31
 
 - The Windows desktop app no longer opens to a blank window on PCs where an installer set the `.js` file type to `text/plain` in the registry: the engine now serves scripts and stylesheets with their real types.
