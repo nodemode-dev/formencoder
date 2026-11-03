@@ -61,7 +61,7 @@ shell with `cargo check --locked` in `src-tauri`.
 - Keep each pull request to one change, with tests for what it adds or fixes.
 - Write commit subjects the way the history does, in Conventional Commits:
   `feat(core): ...`, `fix(core): ...`, `docs(...)` (see
-  [.docs/BRANCHING.md](.docs/BRANCHING.md)). Leave the version alone; the maintainer
+  [.docs/BRANCHING.md](.docs/BRANCHING.md)). Leave the version alone; a maintainer
   bumps it when releasing.
 - A change to the engine's commands, formats, presets or MCP tools is followed in the
   same commit by `./formencoder agents sync`.
@@ -73,17 +73,29 @@ shell with `cargo check --locked` in `src-tauri`.
   ships.
 - Other vendors' product names appear only to name a file format, a preset file or
   compatibility. Never copy vendor help text, icons, presets, LUTs or sample media.
-- Fit Tuning was declined in its luminance-difference form for patent risk; CLAUDE.md
-  says what must never come back.
+- Fit Tuning was declined in its luminance-difference form for patent risk and will
+  not come back: it picks frames by comparing perceptual hashes of neighbouring
+  frames, never by averaging per-pixel luminance differences between them, and it
+  never smooths the scores and then numerically optimises where the cuts fall.
+
+## Maintainers
+
+FormEncoder is maintained by:
+
+- the [nodemode-dev](https://github.com/nodemode-dev) organisation on GitHub
+- [@nodemode-ai](https://github.com/nodemode-ai)
+- [@gbarnai](https://github.com/gbarnai)
+
+Reach them through issues and pull requests.
 
 ## How changes land
 
-Only the maintainer pushes to `main`. Everyone else forks the repository and opens a pull request into `main`. A pull request merges when all seven CI jobs pass (the engine compile check runs on Linux, macOS and Windows) on an up-to-date branch and the maintainer has approved it after its last push.
+Only a maintainer pushes to `main`. Everyone else forks the repository and opens a pull request into `main`. A pull request merges when all seven CI jobs pass (the engine compile check runs on Linux, macOS and Windows) on an up-to-date branch and a maintainer has approved it after its last push.
 
 ## Releases
 
-A release is a version, and only the maintainer makes one: after the version is bumped on
-`main`, the maintainer cuts a `compile_vX.Y.Z` branch, and formcompiler
+A release is a version, and only a maintainer makes one: after the version is bumped on
+`main`, a maintainer cuts a `compile_vX.Y.Z` branch, and formcompiler
 (`nodemode-dev/formcompiler`) builds every platform with the pinned FFmpeg and publishes
 them together. No push from a contributor starts a release. See
 [.docs/BRANCHING.md](.docs/BRANCHING.md) and the Releasing page of the wiki.
