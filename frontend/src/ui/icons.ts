@@ -66,5 +66,5 @@ export function icon(name: string, size = 16): string {
 }
 
 export function brandMark(size = 20): string {
-  return `<svg class="fx-mark" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect x="7" y="21" width="6" height="22" rx="3" fill="currentColor" opacity="0.3"/><rect x="16" y="16" width="6" height="32" rx="3" fill="currentColor" opacity="0.55"/><path d="M28 13.5 L57 32 L28 50.5 Z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M35 25 L46 32 L35 39 Z" fill="var(--bg-secondary)"/></svg>`;
+  return `<img class="fx-mark" src="/favicon.png" width="${size}" height="${size}" alt="" draggable="false">`;
 }
