@@ -123,7 +123,7 @@ fn main() {
                             })
                             .unwrap_or(FALLBACK_LOGICAL);
                         let _ = WebviewWindowBuilder::new(&handle, "main", WebviewUrl::External(url))
-                            .title("formencoder")
+                            .title("FormEncoder")
                             .inner_size(width, height)
                             .min_inner_size(MIN_LOGICAL.0, MIN_LOGICAL.1)
                             .center()
