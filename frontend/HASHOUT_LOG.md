@@ -89,3 +89,10 @@ Vanilla TypeScript and Vite (port 5270, `server.host: false`, proxying `/api` an
 ## Window smoke (0.4.9, F7)
 
 - `tests/window/test_window.py` serves the built `dist` from a real engine (empty data folder and home, FFmpeg fetch, autostart and the family bridge's headless peers off) and opens `/` and `/splash.html` in Chromium at 4x CPU slowdown and a slow network: a title, no 4xx or 5xx (so nothing refused by the guard), no console or page error, layout shift 0. It needs `npm run build` first and runs in the `window` CI job. Nothing is ignored. The window holds a websocket, which the idle wait tolerates, and the 3 s settle follows.
+
+## The About box names NodeAgentc, Inc. and links the licence (0.5.2)
+
+- The launch punch list (2026-11-03): the About of a downloaded app says NodeAgentc, Inc., not nodemode-ai, and lists the licence. The head line in `app.ts` `about()` reads "Version x · Apache-2.0 · NodeAgentc, Inc." and a note under the FFmpeg line carries the copyright and links the LICENSE file on GitHub (`nodemode-dev/formencoder/blob/main/LICENSE`) with `target="_blank"`.
+- The bundle (`src-tauri/tauri.conf.json`) names the publisher, carries the SPDX id in its copyright line, and sets `license` and `licenseFile`; `src-tauri/Cargo.toml` `authors` is the company (the .deb's Maintainer; tauri-build writes `CompanyName` from `bundle.publisher`).
+- Verified: the JSON parses; `python3 setup/lint_text.py .` passes. No desktop build was run.
+- The launch sweep (2026-11-04): `plugins.updater.endpoints` in `src-tauri/tauri.conf.json` named the old `formencoder-updates` release on the private formcompiler repository, which no installed copy can read; it now names the download store's feed, `https://dl.formai.studio/formencoder/updates/latest.json`, the address formcompiler's tauri_config.py writes at build time and the one a local build must carry too. The Help menu's GitHub and Report an Issue links name `nodemode-dev/formencoder`, where the repository lives now.
