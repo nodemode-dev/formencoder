@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.5 · 2026-11-04
+
+The queue tests in `backend/tests/test_queue.py` (pause and resume, stop, an encode interrupted by a restart) pass on every run, and the delivery tools build with CMake 4. The engine does not change.
+
+- The tests' long clip lasts 10 minutes instead of 20 seconds. On Apple silicon the ProRes encode (`prores_videotoolbox`) finished the 20 second clip in about 0.6 s, before the tests could pause, stop or restart it, so those tests failed whenever the encode won the race. The 20 second clip is made once and looped into the longer file by stream copy, so the fixture costs no more time to make.
+- `./formencoder install-tools` passes `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` to every CMake configure. With CMake 4.x, bmx (libMXF), asdcplib and OpenJPEG failed to configure ("Compatibility with CMake < 3.5 has been removed"), and under `--keep-going` they were left out of the release, so AS-10, AS-11, P2 and DCP packaging went missing without a hard failure.
+
 ## v0.5.4 · 2026-11-04
 
 README in the Form family template (Mackin's #5), merged with main. The engine does not change.
