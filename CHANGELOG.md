@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.3 · 2026-11-04
+
+The README follows the Form family layout, with screenshots. The engine does not change.
+
 ## v0.5.2 · 2026-11-03
 
 The app's name is FormEncoder, and it has one app icon. The engine does not change.
