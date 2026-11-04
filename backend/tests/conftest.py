@@ -258,4 +258,8 @@ def clip2(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def long_clip(tmp_path_factory):
-    return make_clip(tmp_path_factory.mktemp("media") / "long.mp4", seconds=20, size="640x360", audio=False)
+    media = tmp_path_factory.mktemp("media")
+    part = make_clip(media / "part.mp4", seconds=20, size="640x360", audio=False)
+    looped = media / "long.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-stream_loop", "29", "-i", str(part), "-c", "copy", str(looped)], check=True, capture_output=True)
+    return looped

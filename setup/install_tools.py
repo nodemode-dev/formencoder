@@ -166,7 +166,7 @@ def build(name: str, spec: dict, src: Path) -> Path:
         return build_autotools(spec, src)
     out = src / "build-formencoder"
     out.mkdir(exist_ok=True)
-    run(["cmake", "-S", str(src), "-B", str(out), "-DCMAKE_BUILD_TYPE=Release", *spec["cmake"]])
+    run(["cmake", "-S", str(src), "-B", str(out), "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5", *spec["cmake"]])
     targets: list[str] = []
     for program in spec.get("targets") or spec["programs"]:
         targets += ["--target", program]
