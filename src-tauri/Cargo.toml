@@ -1,6 +1,6 @@
 [package]
 name = "formencoder"
-version = "0.5.2"
+version = "0.5.4"
 description = "formencoder desktop shell"
 authors = ["NodeAgentc, Inc."]
 license = "Apache-2.0"
@@ -11,7 +11,7 @@ rust-version = "1.77.2"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-updater = "2"

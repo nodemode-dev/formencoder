@@ -1,95 +1,170 @@
-# formencoder
+<p align="center"><img src="assets/app-icon/formencoder-256.png" width="128" height="128" alt="FormEncoder icon: a dark rounded square with two violet bars and a gradient play triangle"></p>
 
-The media encoder of the form family, beside formcut (video), formvfx (motion graphics), formwav (audio) and formvis (images), for the desktop and the browser. A queue of sources with several outputs each, encoded in parallel; 93 encoding presets and 5 ingest presets across web, social, devices, mezzanine, broadcast, cinema, DVD and Blu-ray, image sequences, GIF, audio, archive and proxies; 40 formats from H.264, HEVC, AV1 and WebM to ProRes, DNxHR, CineForm, XDCAM and JPEG 2000 MXF, AS-10, AS-11, P2 and DCP packages, DPX and OpenEXR; watch folders, card ingest with checksums and proxies; LUTs, HDR to SDR conform, image, name, text and timecode overlays, Fit Tuning, a video limiter and loudness normalisation; captions burnt in, as sidecars or embedded, and speech to text; metadata templates, XMP and Content Credentials; plug-ins; publishing to folders, FTP, S3, webhooks, YouTube, Vimeo, Facebook and the family apps; with an agent harness so Claude Code, Codex and Cursor can drive every tool from formencoder's embedded terminal.
+<h1 align="center">FormEncoder</h1>
 
-Version 0.5.2 · Apache-2.0 · encoding engine: formencoder's own, in Rust (the fencoder crates in `native/`), driving a pinned LGPL FFmpeg
+<p align="center">
+  <b>Media encoding; a queue of sources with several outputs each.</b><br>
+  Presets, formats, effects, captions and delivery,<br>
+  in one window, on your machine. Offline, and yours.
+</p>
 
-## Quick start
+<p align="center">
+  <img alt="version 0.5.4" src="https://img.shields.io/badge/version-0.5.4-eef0f4?style=flat-square">
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?style=flat-square&logo=rust&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-interface-3178c6?style=flat-square">
+  <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
+  <img alt="Status: pre-release" src="https://img.shields.io/badge/status-pre--release-d69e2e?style=flat-square">
+</p>
 
-Needs Node 20.19+ or 22.12+, Python 3.12+, and Rust 1.95+ (`https://rustup.rs`). `./formencoder doctor` checks them. FFmpeg is downloaded on first boot: the LGPL 7.1.5 build the family pins, every file checked against `src-tauri/binaries/ffmpeg-licence.json`.
+<p align="center">
+  <a href="https://formencoder.formai.studio/"><b>Download FormEncoder on formai.studio</b></a> ·
+  <a href="#run-it-from-source">Run it from source</a>
+</p>
 
-```bash
+<br>
+
+<p align="center">
+  <img src="docs/images/formencoder-hero.jpg" alt="FormEncoder encoding one source to three outputs: the Preset Browser, a queue with YouTube 1080p, TikTok 1080x1920 and animated GIF outputs, and the Encoding panel with progress and a live preview" width="100%">
+  <br>
+  <sub>One source, three outputs: YouTube 1080p, TikTok 1080x1920 and an animated GIF, encoding with a live preview.</sub>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#everything-in-the-box">In the box</a> ·
+  <a href="#built-for-agents">Agents</a> ·
+  <a href="#under-the-hood">Under the hood</a> ·
+  <a href="#download">Download</a> ·
+  <a href="#run-it-from-source">Run from source</a>
+</p>
+
+<table>
+  <tr>
+    <td width="25%" valign="top"><h3>Many outputs per source</h3>Drag presets onto a source to add outputs, and the queue encodes them in parallel.</td>
+    <td width="25%" valign="top"><h3>Presets for every delivery</h3>93 encoding presets from web and social to broadcast, cinema, DVD and Blu-ray, plus 5 ingest presets.</td>
+    <td width="25%" valign="top"><h3>Own Rust engine</h3>The encoding engine is written for FormEncoder and drives a pinned LGPL FFmpeg as a separate program.</td>
+    <td width="25%" valign="top"><h3>Agent-ready</h3>The UI, the command line and an MCP server run the same 96 commands, so agents can drive the queue.</td>
+  </tr>
+</table>
+
+## Features
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="docs/images/formencoder-encoding.png" alt="FormEncoder queue with three sources and five outputs, three done and one encoding at 34 percent with a preview frame" width="100%">
+      <br><sub>Three sources, five outputs, with progress and a preview.</sub>
+      <h3>A queue that runs itself</h3>
+      Each output shows status, speed and time left. Watch folders start encodes as files arrive.
+    </td>
+    <td width="33%" valign="top">
+      <img src="docs/images/formencoder-settings.png" alt="Export Settings dialog for a TikTok 1080x1920 H.264 output with a preview and video settings" width="100%">
+      <br><sub>Export Settings for a TikTok 1080x1920 output.</sub>
+      <h3>Every setting, one dialog</h3>
+      Source, Output and Compare views, then effects, video, audio, captions, publish and metadata.
+    </td>
+    <td width="33%" valign="top">
+      <img src="docs/images/formencoder-agents.png" alt="The Agents panel with set-up buttons for Claude Code, Codex and Cursor, the MCP endpoints, permissions and recent agent activity" width="100%">
+      <br><sub>The Agents panel: set-up, permissions and an activity log.</sub>
+      <h3>Agents that change the queue</h3>
+      An agent adds sources and outputs live, every change undoable. Permissions are yours to set.
+    </td>
+  </tr>
+</table>
+
+## Everything in the box
+
+<table>
+  <tr>
+    <td width="33%" valign="top"><h4>96 commands</h4>Queue with undo · Export settings · Presets · Watch folders · Ingest with checksums · Media analysis · Previews · Logs</td>
+    <td width="33%" valign="top"><h4>Effects and delivery</h4>LUTs · HDR to SDR conform · Overlays · Fit Tuning · Loudness normalisation · Captions · Speech to text · Metadata and XMP · Content Credentials · Publish to folders, FTP, S3, webhooks, YouTube, Vimeo, Facebook</td>
+    <td width="33%" valign="top"><h4>40 formats</h4>H.264 · HEVC · AV1 · WebM · ProRes · DNxHR · CineForm · XDCAM · JPEG 2000 MXF · AS-10 · AS-11 · P2 · DCP · DPX · OpenEXR · GIF · audio</td>
+  </tr>
+</table>
+
+## Built for agents
+
+The window, the command line and the MCP server call the same 96 commands.
+
+```sh
+./formencoder encode clip.mov --preset system/youtube-1080p   # queue, encode and print results
+./formencoder queue                                           # every output and its status
+./formencoder probe clip.mov                                  # media information
+./formencoder mcp                                             # MCP server on stdio for Claude Code, Codex and Cursor
+```
+
+`.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
+
+## Under the hood
+
+Version 0.5.4 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
+
+- **Engine:** seven `fencoder` Rust crates in `native/`, loaded by the Python service as the `fe_core` extension.
+- **FFmpeg:** a pinned LGPL build, run as a separate program and never linked.
+- **Encoders:** hardware first (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API), found by a test encode on each machine.
+- **Capabilities:** [`docs/PARITY.md`](docs/PARITY.md) traces 84 capability rows: 82 Full, 2 Partial.
+- **Tested:** backend tests (engine boot, MCP, consent, captions, versions) and a browser window test.
+
+## Download
+
+| Platform | Download | Release |
+|---|---|---|
+| macOS | [Download FormEncoder for macOS](https://formai.studio/get/formencoder/macos) | [FormEncoder releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formencoder-v&expanded=true) |
+| Windows | [Download FormEncoder for Windows](https://formai.studio/get/formencoder/windows) | [FormEncoder releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formencoder-v&expanded=true) |
+| Linux | [Download FormEncoder for Linux](https://formai.studio/get/formencoder/linux) | [FormEncoder releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formencoder-v&expanded=true) |
+
+All FormEncoder builds are compiled and released from [FormCompiler](https://github.com/nodemode-dev/formcompiler); this repo holds the source.
+
+## Run it from source
+
+Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
+
+**Requires:** Node 20.19+ or 22.12+, Python 3.12+ and Rust 1.95+. `./formencoder doctor` checks them. FFmpeg is downloaded on first boot.
+
+```sh
+git clone git@github.com:nodemode-dev/formencoder.git
+cd formencoder
 ./formencoder install   # engine venv, the Rust encoding engine, interface packages
-./formencoder           # the engine on 127.0.0.1:8270 and the interface on http://localhost:5270
+./formencoder           # web UI at http://localhost:5270, engine on 127.0.0.1:8270
 ```
 
-Windows: `formencoder.bat install`, then `formencoder.bat`. One process serving the built interface: `./formencoder serve` (http://127.0.0.1:8270).
+`./formencoder desktop dev` opens the desktop window instead (run `./formencoder install-desktop` first). On Windows use `formencoder.bat install`, then `formencoder.bat`.
 
-Drag media into the Queue, drag presets from the Preset Browser onto a source to add outputs, click a preset to open Export Settings (Source, Output and Compare views, every setting, effects, captions, metadata, publish, the estimated size), and press Start. Cmd or Ctrl+K searches every command.
+Ports: interface 5270, engine 8270 (`FORMENCODER_PORT`). `FORMENCODER_AGENTS=allow` skips the agent permission prompt.
 
-## The engine
+> [!IMPORTANT]
+> **Status:** pre-release. AVC-Intra and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) are Partial, see [`docs/PARITY.md`](docs/PARITY.md).
 
-`native/` is formencoder's encoding engine, written for formencoder in Rust as seven fencoder crates (core, io, plan, run, engine, commands, py) and loaded by the engine service as the `fe_core` Python extension; `./formencoder install-native` rebuilds it. It owns the queue with undo, the 96 commands with their parameter schemas, the export settings model and every format's field specs, the presets (and Media Encoder `.epr` import), the FFmpeg graph planner (geometry, scaling, crop, rotation, interpretation, time interpolation, two pass, stitching, timecode, caption timing), the parallel runner, watch folders, ingest with size, MD5 or bit-for-bit verification, media analysis, previews through an output's exact settings, and the encoding and error logs. FFmpeg runs as a separate program and is never linked. Overlays and burnt-in captions are drawn by the engine's own glyph rasteriser and HDR to SDR conform is a generated 3D LUT, so the effects work with the LGPL build; hardware encoders (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API) are found by a test encode on each machine.
+**Contributing:** branch from `main`, keep changes to source here, and leave packaging and releases to FormCompiler. See [`.docs/BRANCHING.md`](.docs/BRANCHING.md) and [`AGENTS.md`](AGENTS.md).
 
-The LGPL FFmpeg has no software H.264, HEVC or AV1 encoder and no MP3 encoder. H.264 and HEVC encode through VideoToolbox on every Mac and through Media Foundation, NVENC, AMF or VA-API elsewhere. Without a hardware encoder, H.264 goes through Cisco's OpenH264 (downloaded from Cisco in Preferences, Delivery Tools, never bundled; the Use OpenH264 switch there turns it off and on again), HEVC through Kvazaar and MP3 through LAME. Broadcast and cinema packages are wrapped by BBC bmx (AS-10, AS-11, P2) and asdcplib with OpenJPEG (DCP), speech to text runs whisper.cpp and Content Credentials are signed by c2patool. All of these are separate programs built from pinned sources by `./formencoder install-tools` and shipped in the desktop app; an FFmpeg you install yourself can still be chosen in Preferences.
+## Repository
 
-## The form family
+| Path | What it is |
+|---|---|
+| `native/` | The encoding engine: the fencoder Rust crates |
+| `backend/` | FastAPI engine service, MCP server, terminal, family bridge, publish |
+| `frontend/` | TypeScript and Vite interface |
+| `src-tauri/` | Tauri 2 desktop shell |
+| `setup/` | Scripts behind `./formencoder` |
 
-formencoder finds formcut, formvfx, formwav and formvis running on the same computer and queues their work: a formcut project rendered by formcut, a formvfx composition pulled over Live Link with no render in formvfx, a formwav session mixed by formwav, a formvis image. Finished files go back to formcut or formvfx from the Queue or as a publish step. An app that is not open has its engine started headless, and Receive Exports makes every formcut export arrive in the queue through formcut's signed webhooks.
+Docs: [`.docs/wiki`](.docs/wiki) · Agents: [`CLAUDE.md`](CLAUDE.md), [`AGENTS.md`](AGENTS.md)
 
-## Agents
+---
 
-- **In formencoder**: the Terminal panel (or the Agent workspace) opens a shell in formencoder's agent workspace. Its Claude Code, Codex and Cursor buttons start an agent that already has the `formencoder` MCP server and the `formencoder-harness` skill; it changes the queue live, every change undoable, without permission prompts.
-- **From this repository**: `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` run `./formencoder mcp`. The first change asks once in the formencoder window.
-- **From anywhere**: `./formencoder agents install` (or the Agents panel) sets the three clients up for your account.
-- **Command line**: `./formencoder encode FILE --preset system/youtube-1080p`, `queue`, `exec ID 'JSON'`, `batch 'JSON'`, `commands FILTER`, `describe ID`, `presets QUERY`, `probe FILE`, `frame OUT.png --output '#1' --time 2`, `wait`.
+## Maintainers
 
-27 curated MCP tools (terminal_open, terminal_send, terminal_read and approval_status among the newest), among them `encode` (queue, encode, wait and verify in one call), `export_settings`, `preview_frame` and `contact_sheet` (frames through an output's exact settings), `verify` (the file probed against its settings) and `family`, plus one tool for each of the 96 engine commands (`queue_add_source`, `preset_create`...) in the full profile that Claude Code and Codex load; Cursor loads the 27 (its core profile, 123 tools in the full one) and reaches the rest through `execute`. Resources (`formencoder://queue`, `presets`, `formats`, `encoders`, the logs and the guides) and recipe prompts (YouTube version, broadcast master, proxies, review copy) come with them. On the command line every command runs as `./formencoder [id] --name value`. In the window, Shift+Enter on a command in the palette (Cmd+K) opens its dialog with every parameter, and the dialog and the palette show the command line and MCP call for it with copy buttons.
+| Maintainer | Role |
+|---|---|
+| [@nodemode-ai](https://github.com/nodemode-ai) | Owner |
+| [@gbarnai](https://github.com/gbarnai) | Co-owner |
 
-## Desktop
+Code owners are set in [`.github/CODEOWNERS`](.github/CODEOWNERS).
 
-```bash
-./formencoder install-desktop   # PyInstaller and the Tauri toolchain check (Linux also needs the webkit2gtk-4.1 packages)
-./formencoder desktop dev       # the app, with the engine frozen as its sidecar
-./formencoder desktop build     # DMG, deb, rpm, AppImage, MSI and setup bundles in src-tauri/target/release/bundle, with the pinned FFmpeg
-```
+## License
 
-`./build_app` does everything from a fresh clone on macOS or Linux: it checks the tools (installing Rust with rustup when missing), installs the engine service, the encoding engine and the interface, builds the interface, freezes the engine into the sidecar, stages the pinned FFmpeg, bundles the app, and on macOS packs a DMG and copies the app to Applications (`--no-install` keeps it in place, `--open` opens it, `--clean` rebuilds from nothing; on Linux it builds the `.deb` and `--install` installs it). Every step is logged to `build_app.log`. On Windows, `build_app.bat` runs the same steps (`--open`).
+FormEncoder is licensed under Apache-2.0 ([`LICENSE`](LICENSE), SPDX `Apache-2.0`). Copyright 2026 NodeAgentc, Inc. Third-party notices: [`NOTICE.md`](NOTICE.md). FFmpeg is LGPL-2.1-or-later and runs as a separate program. OpenH264 Video Codec provided by Cisco Systems, Inc.
 
-Pushing a `compile_vX.Y.Z` branch has formcompiler (`nodemode-ai/formcompiler`) build macOS (Apple silicon and Intel), Linux and Windows bundles, attach the FFmpeg source, and open a draft release `formencoder-vX.Y.Z` on its release page.
+<sub>Screenshot content: CC0 photos from Poly Haven, used as video clips.</sub>
 
-## Commands
-
-| Command | Does |
-| --- | --- |
-| `./formencoder` / `boot` | engine and interface for development |
-| `install`, `install-native` | everything, or only the Rust encoding engine (`--dev` for a quicker debug build) |
-| `install-tools [TOOL...]` | the delivery tools from pinned sources (`--model base` for a speech model, `--stage` for the desktop bundle, `--keep-going`) |
-| `serve` | the built interface from the engine |
-| `install-desktop`, `freeze`, `desktop dev`, `desktop build` | the desktop app |
-| `doctor` | checks the toolchain, FFmpeg and ports |
-| `mcp` | the MCP server over stdio |
-| `agents install|sync|status` | client setup; regenerate the skill references from the engine |
-| `counts [--check]` | the code size table below |
-| `clean [--all]` | remove build output |
-
-## Layout
-
-`native` (the encoding engine, the fencoder Rust crates, PyO3) · `backend` (FastAPI engine service, MCP, terminal, family bridge, publish, the FFmpeg fetch) · `frontend` (TypeScript and Vite interface) · `src-tauri` (desktop shell) · `setup` (scripts) · `.claude/skills/formencoder-harness` (the agent skill, mirrored to `.agents/skills`) · `.claude/skills/formencoder-skillset` (for work on formencoder's own code).
-
-## Capabilities
-
-[`docs/PARITY.md`](docs/PARITY.md) is the capability checklist formencoder is built against: 84 traced rows, 82 Full, 2 Partial, 0 None. The two Partial rows are AVC-Intra (no LGPL or permissive encoder exists) and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW and BRAW need the makers' SDKs, which formencoder runs through a decoder hook rather than ships). The measured page with every cell's evidence is [`docs/parity/index.html`](docs/parity/index.html). The wiki (`.docs/wiki`) covers getting started, encoding, agents, the family, the architecture, the desktop app and releasing.
-
-## Code size
-
-| Area | Files | Lines |
-| --- | ---: | ---: |
-| Encoding engine (Rust, fencoder crates) | 46 | 10,345 |
-| Engine service (Python) | 37 | 3,774 |
-| Interface (TypeScript) | 39 | 6,034 |
-| Interface styles (CSS) | 5 | 687 |
-| Desktop shell (Rust, Tauri) | 1 | 144 |
-| Setup and CLI | 37 | 1,241 |
-| Agent skills (Markdown, hand-written) | 21 | 796 |
-| Total | 186 | 23,021 |
-
-Non-blank lines in tracked files; generated skill references excluded. `./formencoder counts` prints this table.
-
-## Licence
-
-Apache-2.0. Copyright 2026 NodeAgentc, Inc. FFmpeg is LGPL-2.1-or-later and runs as a separate program; see `NOTICE.md` for every third-party component, the FFmpeg source offer and Cisco's OpenH264 licence. OpenH264 Video Codec provided by Cisco Systems, Inc.
-
-## Trademarks
-
-Adobe, After Effects, Audition, Lumetri, Media Encoder and Premiere are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple, Compressor and ProRes are trademarks of Apple Inc., registered in the U.S. and other countries. Other product names are the trademarks of their owners. They are named only to identify file formats and compatibility; formencoder is not affiliated with or endorsed by any of them.
+<sub>Adobe, Media Encoder and Premiere are trademarks of Adobe. Apple and ProRes are trademarks of Apple Inc. They are named only to identify file formats and compatibility. FormEncoder is an independent project and is not affiliated with or endorsed by them.</sub>

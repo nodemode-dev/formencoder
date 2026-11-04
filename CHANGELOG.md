@@ -1,7 +1,20 @@
 # Changelog
 
+## v0.5.4 · 2026-11-04
+
+README in the Form family template (Mackin's #5), merged with main. The engine does not change.
+
+## v0.5.3 · 2026-11-04
+
+The README follows the Form family layout, with screenshots. The engine does not change.
+
 ## v0.5.2 · 2026-11-03
 
+The app's name is FormEncoder, and it has one app icon. The engine does not change.
+
+- The compiled app, its window titles and its splash page are named FormEncoder.
+- One app icon for the desktop app, the web favicon, the title bar mark and the splash page, in place of the old SVG mark.
+- `.github/CODEOWNERS` lists gbarnai beside nodemode-ai.
 - The About box and the installers name NodeAgentc, Inc. as the publisher, with the licence (Apache-2.0) and a link to the LICENSE file. The bundle sets `publisher`, `copyright`, `license` and `licenseFile`, so the macOS About panel, the Windows file properties and installer, and the Linux packages say the same.
 - The updater reads its feed from the download store, `https://dl.formai.studio/formencoder/updates/latest.json`, and the Help menu's GitHub links name `nodemode-dev/formencoder`.
 
