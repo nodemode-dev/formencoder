@@ -50,7 +50,7 @@
   "plugins": {
     "updater": {
       "pubkey": "",
-      "endpoints": ["https://github.com/nodemode-ai/formcompiler/releases/download/formencoder-updates/latest.json"]
+      "endpoints": ["https://dl.formai.studio/formencoder/updates/latest.json"]
     }
   }
 }

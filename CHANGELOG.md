@@ -3,6 +3,7 @@
 ## v0.5.2 · 2026-11-03
 
 - The About box and the installers name NodeAgentc, Inc. as the publisher, with the licence (Apache-2.0) and a link to the LICENSE file. The bundle sets `publisher`, `copyright`, `license` and `licenseFile`, so the macOS About panel, the Windows file properties and installer, and the Linux packages say the same.
+- The updater reads its feed from the download store, `https://dl.formai.studio/formencoder/updates/latest.json`, and the Help menu's GitHub links name `nodemode-dev/formencoder`.
 
 ## v0.5.1 · 2026-10-31
 

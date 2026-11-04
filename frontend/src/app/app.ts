@@ -77,8 +77,8 @@ class App {
           { label: 'Maximize Panel', shortcut: '`', run: () => this.dock.toggleMaximizeFocused() },
         ],
         Help: () => [
-          { label: 'formencoder on GitHub', run: () => window.open('https://github.com/nodemode-ai/formencoder', '_blank') },
-          { label: 'Report an Issue', run: () => window.open('https://github.com/nodemode-ai/formencoder/issues', '_blank') },
+          { label: 'formencoder on GitHub', run: () => window.open('https://github.com/nodemode-dev/formencoder', '_blank') },
+          { label: 'Report an Issue', run: () => window.open('https://github.com/nodemode-dev/formencoder/issues', '_blank') },
           { label: 'Download formencoder’s FFmpeg (LGPL)', run: () => void ctx.client.call('ffmpeg.fetch').catch((e: Error) => toast(e.message, 'error')) },
           '-',
           { label: 'About formencoder', run: () => void this.about() },
