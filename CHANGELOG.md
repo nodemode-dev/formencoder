@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.2 · 2026-11-07
+
+The desktop app opens with the same splash as formvis.
+
+- The splash is a rounded dark card with the icon, "Starting formencoder" and a family-gradient bar that completes as the window appears. On macOS the window's corners are masked so nothing square shows behind the card.
+- The main window is built with the dark background and stays unseen until the interface has painted its first content and the splash has been up for 2.6 s, so no white frame shows between the two. The shell shows the window anyway after 20 s if the interface never reports.
+
 ## v0.6.1 · 2026-11-07
 
 The browser demo opens on real media instead of a generated sample. The engine does not change.
