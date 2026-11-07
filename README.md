@@ -106,6 +106,10 @@ Version 0.5.5 · Apache-2.0 · Rust encoding engine, Python service, TypeScript 
 - **Capabilities:** [`docs/PARITY.md`](docs/PARITY.md) traces 84 capability rows: 82 Full, 2 Partial.
 - **Tested:** backend tests (engine boot, MCP, consent, captions, versions) and a browser window test.
 
+## Demo
+
+Open [`demo/index.html`](demo/index.html) in Chrome or Edge, with no install, engine or network: the interface on a browser-side engine that probes your video or audio file, measures its loudness, and encodes it to WebM, GIF, WAV, AIFF, Ogg Opus or a still, with the queue, Preset Browser and Export Settings. See [`demo/README.md`](demo/README.md).
+
 ## Download
 
 | Platform | Download | Release |
