@@ -1,0 +1,16 @@
+# Inspect and convert demo credits
+
+The demo opens on a small hike shoot: three Pexels clips of different frame rates and shapes, one clip delivered as a numbered JPEG sequence, and four outputs made from the first clip. Everything ships as JavaScript data packs in `media/` (a page opened from `file://` cannot fetch local files). Each source page was opened and its licence read; the licence column quotes what the page states ("Free" is the Pexels License, https://www.pexels.com/license/: free to use and modify, attribution not required).
+
+| File in the demo | Title | Author | Source page | Licence as stated on the page | What was changed |
+| --- | --- | --- | --- | --- | --- |
+| `autumn-stream.mp4` (`media/autumn-stream.js`) | Forest Stream Flowing through Mossy Rocks | I Am Sorin | https://www.pexels.com/video/forest-stream-flowing-through-mossy-rocks-8194489/ | "Free" | 8 s taken from 10 s into the 60 s clip, scaled from 1920x1080 (the Pexels HD file) to 1280x720, re-encoded H.264 and AAC at 29.97 fps |
+| `waterfall.mp4` (`media/waterfall.js`) | Waterfall in the Forest | Peter Fowler | https://www.pexels.com/video/waterfall-in-the-forest-6394054/ | "Free" | 6 s taken from 3 s into the 12 s clip (a 2:1 frame), scaled from 2732x1366 to 1280x640, re-encoded H.264 and AAC at 23.976 fps |
+| `river-vertical.mp4` (`media/river-vertical.js`) | Stream in Mountains | Rudi De Ceuster | https://www.pexels.com/video/stream-in-mountains-13279175/ | "Free" | The whole clip (6.15 s of 6.17 s), scaled from 1440x2560 to 404x720, re-encoded H.264 and AAC at 60 fps |
+| `clouds_%04d.jpg` (`media/clouds-sequence.js`, 36 numbered JPEG frames) | Time Lapse of Moving Clouds over a Mountain Area | Luis Quintero | https://www.pexels.com/video/time-lapse-of-moving-clouds-over-a-mountain-area-16754231/ | "Free" | 36 frames cut from the clip from about 8 s in, scaled from 1280x720 to 960x540, saved as JPEG and numbered `clouds_0001.jpg` to `clouds_0036.jpg`; the demo plays them as a 24 fps sequence |
+| `autumn-stream_high.mp4`, `autumn-stream_low.mp4` (`media/autumn-stream_high.js`, `media/autumn-stream_low.js`) | Outputs of `autumn-stream.mp4` | I Am Sorin (picture and sound) | https://www.pexels.com/video/forest-stream-flowing-through-mossy-rocks-8194489/ | "Free" | Frames 60 to 150 of `autumn-stream.mp4` (3 s), re-encoded with FFmpeg as H.264 at 3.5 Mb/s and at 0.45 Mb/s, the pair used for A/B |
+| `autumn-stream_Proxy.mp4` (`media/autumn-stream_Proxy.js`) | Proxy of `autumn-stream.mp4` | I Am Sorin | same page | "Free" | Whole 8 s, scaled to 960x540, re-encoded H.264 |
+| `autumn-stream_480.gif` (`media/autumn-stream_480.js`) | Animated GIF of `autumn-stream.mp4` | I Am Sorin | same page | "Free" | The same 3 s, scaled to 480x270, 15 fps, palette GIF |
+| `favicon.png` | formencoder app icon | NodeAgentc, Inc. | `assets/app-icon/formencoder-256.png` in this repository | Apache-2.0 (this repository) | Copied unchanged |
+
+The clips show landscape only: no people, brands or artwork. Each clip was matched to its Pexels page again by downloading the HD file and comparing its size or frames with the clip the demo was cut from. The three video clips keep the sound of the Pexels file.
