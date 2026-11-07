@@ -5,6 +5,7 @@ from starlette.responses import PlainTextResponse
 
 LOCAL_HEADER = "x-formencoder-local"
 SIGNED_PREFIX = "/api/family/hooks/"
+EXTENSION_FILES = "/api/extensions/files/"
 
 
 def loopback(value: str) -> bool:
@@ -67,6 +68,11 @@ class LocalOnly:
         except ValueError:
             allowed = False
         path = scope.get("path", "")
+        if not allowed and scope["type"] == "http" and scope.get("method") in ("GET", "HEAD") and path.startswith(EXTENSION_FILES):
+            try:
+                allowed = loopback(client) and loopback(urlsplit("http://" + headers.get("host", "")).hostname or "")
+            except ValueError:
+                allowed = False
         if (
             allowed
             and scope["type"] == "http"
@@ -82,7 +88,9 @@ class LocalOnly:
 
         async def safe_send(message):
             if message["type"] == "http.response.start":
-                message.setdefault("headers", []).append((b"x-content-type-options", b"nosniff"))
+                sent = message.setdefault("headers", [])
+                if not any(k.lower() == b"x-content-type-options" for k, _ in sent):
+                    sent.append((b"x-content-type-options", b"nosniff"))
             await send(message)
 
         await self.app(scope, receive, safe_send)
