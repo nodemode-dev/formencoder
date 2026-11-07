@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.0 · 2026-11-07
+
+An offline browser demo in `demo/`. The engine does not change.
+
+- `demo/index.html` opens from `file://` or any static server, with no engine, backend or network. It runs the real interface (the dock, tokens, themes, icons, Queue, Preset Browser, Media Info, Encoding and Log panels) on a client-side engine that probes a dropped video or audio file (MP4, MOV, WebM, Matroska, WAV, Ogg, FLAC, MP3), measures its loudness (BS.1770-4, EBU R128 range, true peak) and encodes it to WebM (VP9 or VP8 with Opus through WebCodecs), animated GIF, WAV, AIFF, Ogg Opus, PNG or JPEG, with loudness normalisation, in and out points and per-output Export Settings.
+- It starts with a sample generated in the page. The Preset Browser lists all 93 system presets; the 42 the browser can write run, and the rest (ProRes, DNxHR, MXF, DCP and others) are marked and skipped.
+- The build is committed under `demo/assets` (about 460 KB); rebuild with `npx vite build --config ../demo/vite.config.mjs` from `frontend/`. See `demo/README.md` and `demo/HASHOUT_LOG.md`.
+
 ## v0.5.5 · 2026-11-04
 
 The queue tests in `backend/tests/test_queue.py` (pause and resume, stop, an encode interrupted by a restart) pass on every run, and the delivery tools build with CMake 4. The engine does not change.

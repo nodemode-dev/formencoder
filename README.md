@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="version 0.5.5" src="https://img.shields.io/badge/version-0.5.5-eef0f4?style=flat-square">
+  <img alt="version 0.6.0" src="https://img.shields.io/badge/version-0.6.0-eef0f4?style=flat-square">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?style=flat-square&logo=rust&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-interface-3178c6?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
@@ -98,7 +98,7 @@ The window, the command line and the MCP server call the same 96 commands.
 
 ## Under the hood
 
-Version 0.5.5 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
+Version 0.6.0 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
 
 - **Engine:** seven `fencoder` Rust crates in `native/`, loaded by the Python service as the `fe_core` extension.
 - **FFmpeg:** a pinned LGPL build, run as a separate program and never linked.
