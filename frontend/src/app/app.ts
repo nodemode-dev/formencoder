@@ -124,6 +124,26 @@ class App {
     if (this.revealed) return;
     this.revealed = true;
     revealApp();
+    this.announceReady();
+  }
+
+  private announceReady(): void {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    const send = (): void => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        void import('@tauri-apps/api/core').then((m) => m.invoke('app_ready')).catch(() => undefined);
+      }));
+    };
+    if (document.body.classList.contains('app-ready')) {
+      send();
+      return;
+    }
+    const watch = new MutationObserver(() => {
+      if (!document.body.classList.contains('app-ready')) return;
+      watch.disconnect();
+      send();
+    });
+    watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
   private registerPanels(): void {

@@ -895,6 +895,8 @@ dependencies = [
 name = "formencoder"
 version = "0.6.1"
 dependencies = [
+ "objc2",
+ "objc2-app-kit",
  "regex",
  "serde_json",
  "tauri",
