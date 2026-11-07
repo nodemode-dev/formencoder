@@ -1,0 +1,30 @@
+.fe-q-head, .fe-q-out { grid-template-columns: minmax(64px, 0.5fr) minmax(120px, 1.3fr) minmax(150px, 1.6fr) 200px; }
+.fe-q-status { grid-template-columns: 104px minmax(0, 1fr); }
+.fe-p-head { white-space: nowrap; }
+.fe-p-head span { overflow: hidden; text-overflow: ellipsis; }
+.fd-shot { display: block; width: 100%; height: 100%; }
+.fe-info-shot { position: relative; }
+.fe-q-out .fd-act { width: 22px; height: 22px; flex: none; }
+.fe-q-out:not(.is-done) .fd-act { visibility: hidden; }
+.fe-q-cell .fe-link { flex: 0 1 auto; }
+.fe-q-fmt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fe-q-out.fd-desk .fe-q-cell { opacity: 0.55; }
+.fe-q-out.is-skip .fe-st-text { color: var(--warn); }
+.fd-desk > span { opacity: 0.5; }
+.fd-desk.is-selected > span { opacity: 0.8; }
+.fe-enc-shot canvas { display: block; width: 100%; height: 100%; }
+.fd-enc-btns { display: flex; align-items: center; gap: 2px; }
+.fe-enc-row:not(.is-active) [data-a="stop"] { visibility: hidden; }
+.fe-enc-row:not(.is-done) [data-a="play"], .fe-enc-row:not(.is-done) [data-a="save"] { visibility: hidden; }
+.fe-enc-msg { min-height: 28px; overflow-wrap: anywhere; }
+.fd-log-err { color: var(--danger-text); }
+.fd-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: #000; overflow: hidden; display: grid; place-items: center; }
+.fd-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.fd-audio { width: 90%; }
+.fd-caption { min-height: 32px; line-height: 1.45; }
+.fe-title-run { min-width: 0; }
+.fe-run-text { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+.fx-title-tools .fe-badge { border-color: var(--accent-line); color: var(--accent-ink); }
+.fe-ws { width: 150px; }
+.fd-file { display: none; }
+.fe-es-summary { min-height: 40px; }
