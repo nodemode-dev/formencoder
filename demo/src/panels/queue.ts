@@ -150,6 +150,7 @@ export class QueuePanel implements Panel {
     if (s.kind === 'video') bits.push(`${s.width}x${s.height}`, `${Number(s.fps.toFixed(3))} fps`);
     bits.push(fmtDuration(s.duration));
     if (s.sample) bits.push('generated');
+    if (item.loading) bits.push('loading');
     setText(q(n, '.fe-q-meta'), bits.filter(Boolean).join(' · '));
     setClass(n, 'is-collapsed', item.collapsed);
     patchList(q(n, '.fe-q-outs'), item.outputs, {

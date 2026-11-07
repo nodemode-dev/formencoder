@@ -4,6 +4,7 @@ import { measureLoudness, describeLoudness, type Loudness } from './engine/loudn
 import { probeFile, type ProbeInfo } from './engine/probe';
 import { PRESET_BY_ID, TARGET_EXT } from './engine/presets';
 import { createSample, openFile, type Source } from './engine/source';
+import { CURATED, loadFile, pendingSource } from './engine/media';
 
 export type Status = 'ready' | 'preparing' | 'encoding' | 'done' | 'failed' | 'stopped' | 'skipped';
 
@@ -36,6 +37,7 @@ export interface Item {
   poster: HTMLCanvasElement | null;
   outputs: Output[];
   collapsed: boolean;
+  loading: boolean;
 }
 
 export type Topic = 'items' | 'select' | 'progress' | 'log' | 'run' | 'settings';
@@ -141,7 +143,7 @@ class Store {
   }
 
   async addSource(source: Source, presets: string[]): Promise<Item> {
-    const item: Item = { id: source.id, source, probe: { container: '', duration: null, size: source.size, bitrate: null, video: null, audio: [], notes: [] }, loudness: null, loudnessState: 'pending', poster: null, outputs: [], collapsed: false };
+    const item: Item = { id: source.id, source, probe: { container: '', duration: null, size: source.size, bitrate: null, video: null, audio: [], notes: [] }, loudness: null, loudnessState: 'pending', poster: null, outputs: [], collapsed: false, loading: false };
     this.items.push(item);
     for (const p of presets) {
       const out = this.makeOutput(p);
@@ -218,6 +220,57 @@ class Store {
     }
   }
 
+  async addCurated(): Promise<void> {
+    const rows: Array<{ item: Item; index: number }> = [];
+    CURATED.forEach((c, index) => {
+      const item = this.addCuratedRow(c);
+      rows.push({ item, index });
+    });
+    this.selectedItem = rows[0].item.id;
+    this.emit('select');
+    let loaded = 0;
+    for (const { item, index } of rows) {
+      const c = CURATED[index];
+      try {
+        const file = await loadFile(c);
+        const source = await openFile(file, c.fps || null);
+        source.id = item.id;
+        item.source.dispose();
+        item.source = source;
+        item.loading = false;
+        this.emit('items');
+        await this.analyse(item, file);
+        loaded++;
+      } catch (e) {
+        this.log(`Could not load ${c.file}: ${(e as Error).message}`, true);
+        this.items = this.items.filter((i) => i.id !== item.id);
+        if (this.selectedItem === item.id) this.selectedItem = this.items[0]?.id ?? '';
+        this.emit('items');
+        this.emit('select');
+      }
+    }
+    if (!loaded) {
+      this.log('The curated media did not load; adding the built-in sample instead', true);
+      await this.addSample();
+    }
+  }
+
+  private addCuratedRow(c: (typeof CURATED)[number]): Item {
+    const source = pendingSource(c);
+    const item: Item = { id: source.id, source, probe: { container: '', duration: c.duration, size: c.bytes, bitrate: null, video: null, audio: [], notes: [] }, loudness: null, loudnessState: 'pending', poster: null, outputs: [], collapsed: false, loading: true };
+    this.items.push(item);
+    for (const o of c.outputs) {
+      const out = this.makeOutput(o.preset);
+      if (o.lufs !== undefined) out.settings.lufs = o.lufs;
+      if (o.size) out.settings.size = o.size;
+      out.fileName = this.nameFor(item, out);
+      item.outputs.push(out);
+    }
+    this.log(`Added source ${c.file}`);
+    this.emit('items');
+    return item;
+  }
+
   async addSample(): Promise<void> {
     const source = createSample();
     const item = await this.addSource(source, ['match-source-medium', 'gif-480', 'bwf-ebu']);
@@ -255,7 +308,7 @@ class Store {
   async start(): Promise<void> {
     if (this.running) return;
     const todo: Array<{ item: Item; out: Output }> = [];
-    for (const item of this.items) for (const out of item.outputs) if (out.status === 'ready' || out.status === 'failed' || out.status === 'stopped') todo.push({ item, out });
+    for (const item of this.items) for (const out of item.outputs) if (!item.loading && out.status === 'ready' || out.status === 'failed' || out.status === 'stopped') todo.push({ item, out });
     if (!todo.length) { this.log('Nothing to encode: every output is done'); return; }
     this.running = true;
     this.abort = new AbortController();

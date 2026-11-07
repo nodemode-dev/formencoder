@@ -36,6 +36,7 @@ function about(): void {
     <div class="fx-about-head"><img class="fx-mark" src="favicon.png" width="48" height="48" alt=""><div><div class="fx-about-name">FormEncoder ${VERSION}</div><div class="cv-note">Browser demo · offline · nothing leaves this page</div></div></div>
     <p class="fx-note">This page runs the interface of FormEncoder with a small encoding engine written for the browser: it reads your file, shows its streams and loudness, and writes WebM (VP9 or VP8 with Opus), animated GIF, WAV, AIFF, Ogg Opus and stills through WebCodecs and canvas.</p>
     <p class="fx-note">The desktop app does the rest of the 93 presets (ProRes, DNxHR, MXF, DCP, H.264 and HEVC files and more) with its Rust engine and a pinned LGPL FFmpeg. Those presets are listed here, marked, and skipped when the queue runs.</p>
+    <p class="fx-note">The queue opens on three Pexels clips (25, 29.97 and 59.94 fps, one of them vertical) and a LibriVox reading in the public domain; authors and licences are in demo/CREDITS.md.</p>
     <p class="fx-note">Apache-2.0 · NodeAgentc, Inc.</p>
   </div>`));
   d.button('Close', 'primary', () => d.close());
@@ -155,7 +156,7 @@ function start(): void {
   });
 
   revealApp();
-  void store.addSample();
+  void store.addCurated();
 }
 
 start();

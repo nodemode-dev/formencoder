@@ -96,7 +96,7 @@ export class InfoPanel implements Panel {
     });
     if (item.loudnessState === 'pending') rows.push(['Loudness', 'Measuring']);
     else if (item.loudness) rows.push(['Loudness', describeLoudness(item.loudness)]);
-    else rows.push(['Loudness', 'No audio the browser can decode']);
+    else rows.push(['Loudness', p.audio.length ? 'No audio the browser can decode' : 'No audio track']);
     p.notes.forEach((n, i) => rows.push([i === 0 ? 'Note' : '', n]));
     return rows;
   }
