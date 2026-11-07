@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.7.0 · 2026-11-07
+
+FormEncoder loads extensions made to the Form Extension Contract, API 1, installed by FormPortal or run from a form.ext folder. The extensions are not part of FormEncoder; its own process plug-ins keep working as before.
+
+- An Extensions menu between Effects and Window, an Extensions panel with one row per extension (version, source, permissions, state and why one is refused), contributed panels docked in the right-hand group or opened as dialogs, and contributed commands in the command palette.
+- Each extension runs in a sandboxed frame and reaches FormEncoder only through the contract's messages: the queue as its document, changes as one undoable History step, FormEncoder's own commands, files through FormEncoder's file dialog, and https requests made by the engine. The first open or run of a version asks the person, in plain words, before anything of the extension loads.
+- The engine reads FormPortal's `enabled.json` and form.ext's `dev.json`, picks up changes while the window is open, and serves each extension's files under `/api/extensions/files/` with the contract's headers and nothing outside the package.
+- Agents: the MCP tools `extensions_list` and `extension_command`, and `./formencoder extensions` and `./formencoder extension` on the command line. The API page is `docs/EXTENSIONS.md`.
+
 ## v0.6.3 · 2026-11-07
 
 Two more browser demos, each on real, credited media. The engine does not change.
