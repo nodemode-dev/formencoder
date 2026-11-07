@@ -13,7 +13,7 @@ Everything it needs (scripts, styles, fonts, the icon) is inside this folder. No
 
 The interface is the real one: the Studio Dark tokens, the fifteen theme profiles, the dock, the Queue, Preset Browser, Media Info, Encoding and Log panels, the inline icon set and the Export Settings idiom, all imported from `frontend/src/`. The engine behind it is a small TypeScript one written for the browser.
 
-It starts with a built-in sample (a 640x360, 24 fps, 8 s clip with stereo audio, generated procedurally in the page) and three outputs ready to run. Drop your own video or audio file on the window, press the plus in the Queue, or use Open File.
+It opens on four real sources with ten outputs ready to run: three Pexels sea clips with different frame rates and sizes (1280x720 at 29.97 fps, 1280x720 at 25 fps, a vertical 404x720 at 59.94 fps) and a 21 s public-domain LibriVox reading. The outputs include WebM, a GIF of each clip, a still, and the reading normalised to -16 LUFS as Ogg Opus beside a broadcast WAV. The files are in `media/` as JavaScript data packs (a page opened from `file://` cannot fetch local files), loaded when the page starts into rows that are already in the Queue; authors, source pages and licences are in `CREDITS.md`. If a pack fails to load, the built-in generated sample takes its place. Drop your own video or audio file on the window, press the plus in the Queue, or use Open File; the film icon adds the generated sample.
 
 Operations that run for real:
 

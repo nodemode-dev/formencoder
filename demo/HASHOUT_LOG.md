@@ -43,3 +43,15 @@ Living context for the offline browser demo. The code carries no comments; the r
 - A source is decoded whole for audio; files over 600 MB are encoded without their audio.
 - Seeking a 1080p H.264 clip frame by frame is slow on a CPU without hardware decode; a 5 s clip at 1080p takes about a minute per video output on a shared two-core machine.
 - Output frames and sizes are the browser's; nothing here is a claim about the desktop engine's output.
+
+## Media pass (0.6.1)
+
+The demo used to open on a procedural sample. It now opens on four real files, listed with authors, source pages and licences in `CREDITS.md`: three Pexels sea clips chosen to differ the way real deliveries do (1280x720 at 29.97 fps, 1280x720 at 25 fps, a vertical 404x720 at 59.94 fps) and a 21 s LibriVox reading (public domain) whose loudness (-24.6 LUFS as the browser decodes it) makes the -16 LUFS Ogg Opus output a visible change: the gain is +5.3 dB and the -1 dBTP hold stops it at -19.3 LUFS, which the output note says, so the true-peak hold is shown doing real work. Water only, so no people, brands or artwork can be in frame.
+
+- Packs, not fetches. A page on `file://` cannot fetch local files, and the engine reads pixels and decodes audio, so each file ships as `media/NAME.js` that sets `window.FE_MEDIA[file]` to a base64 string. `engine/media.ts` injects the script tag on demand, decodes the string into a `File` and hands it to the same `openFile` and `probeFile` a dropped file uses, so a curated source and the visitor's own file take one path. The packs live in `media/`, not `assets/`, because the build empties `assets/` on every run. A pack's entry is deleted after it is read so the string is not held twice.
+- Zero flash. `addCurated` adds all four rows with their ten outputs at once from known metadata (a pending source with the file name, frame size, rate and duration), so the Queue is laid out and stays laid out; each row says `loading` in its meta line until its file is decoded, then the real source replaces the pending one in place under the same id and `patchList` updates the existing nodes. Start skips rows still loading. Media Info paints its poster canvas in place when the first frame is drawn.
+- Fallback. If no pack loads, the generated sample is added (the film button adds it at any time), so the demo still works if a pack file is missing.
+- The vertical clip is 404 wide with a square pixel aspect ratio; an earlier 406 wide encode carried a leftover 405:406 sample aspect ratio that the browser showed as 406x722.
+- The GIF output of the vertical clip uses `size: 'source'` so it is not upscaled to the 480 px preset width.
+- A clip with no audio track now reads `No audio track` in Media Info instead of claiming the browser could not decode its audio.
+- Encoding real footage with the seek-based frame reader is slow on this shared machine (about 6 fps for 1280x720 WebM), which is why the clips are 7 to 8 s.

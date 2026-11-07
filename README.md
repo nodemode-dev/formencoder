@@ -108,7 +108,7 @@ Version 0.6.0 · Apache-2.0 · Rust encoding engine, Python service, TypeScript 
 
 ## Demo
 
-Open [`demo/index.html`](demo/index.html) in Chrome or Edge, with no install, engine or network: the interface on a browser-side engine that probes your video or audio file, measures its loudness, and encodes it to WebM, GIF, WAV, AIFF, Ogg Opus or a still, with the queue, Preset Browser and Export Settings. See [`demo/README.md`](demo/README.md).
+Open [`demo/index.html`](demo/index.html) in Chrome or Edge, with no install, engine or network: the interface on a browser-side engine that probes your video or audio file, measures its loudness, and encodes it to WebM, GIF, WAV, AIFF, Ogg Opus or a still, with the queue, Preset Browser and Export Settings. It opens on three real sea clips and a public-domain reading, credited in [`demo/CREDITS.md`](demo/CREDITS.md). See [`demo/README.md`](demo/README.md).
 
 ## Download
 
