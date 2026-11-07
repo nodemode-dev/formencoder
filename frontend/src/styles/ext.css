@@ -1,0 +1,34 @@
+.fe-ext { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.fe-ext-count { padding: 0 4px; color: var(--text-secondary); font-size: var(--fs-12); }
+.fe-ext-manage { height: 26px; font-size: var(--fs-12); }
+.fe-ext-list { flex: 1; min-height: 0; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.fe-ext-list[hidden], .fe-ext-empty[hidden] { display: none; }
+.fe-ext-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; }
+.fe-ext-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line-1); border-radius: var(--radius-md); background: var(--surface-2); }
+.fe-ext-row.is-refused { background: var(--surface-1); }
+.fe-ext-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fe-ext-meta { display: flex; gap: 8px; margin-top: -4px; }
+.fe-ext-name { flex: 1 1 0; width: 0; min-width: 0; overflow: hidden; color: var(--text-primary); font-size: var(--fs-13); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.fe-ext-ver, .fe-ext-src { flex: none; color: var(--text-muted); font-size: var(--fs-11); }
+.fe-ext-ver { font-family: var(--font-mono); }
+.fe-ext-state { flex: none; padding: 1px 8px; border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-secondary); font-size: var(--fs-11); }
+.fe-ext-state.is-ready { color: var(--ok-soft); }
+.fe-ext-state.is-needs-permission { color: var(--warn); }
+.fe-ext-state.is-refused { color: var(--danger-soft); }
+.fe-ext-desc { color: var(--text-secondary); font-size: var(--fs-12); line-height: 1.45; }
+.fe-ext-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.fe-ext-chip { padding: 1px 7px; border: 1px solid var(--line-2); border-radius: var(--radius-pill); color: var(--text-secondary); font-size: var(--fs-10); }
+.fe-ext-reason { color: var(--danger-soft); font-size: var(--fs-12); line-height: 1.45; }
+.fe-ext-path { overflow: hidden; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-10); text-overflow: ellipsis; white-space: nowrap; }
+.fe-ext-desc[hidden], .fe-ext-chips[hidden], .fe-ext-reason[hidden], .fe-ext-path[hidden] { display: none; }
+.fe-ext-actions { display: flex; gap: 6px; }
+.fe-ext-actions .cv-btn { height: 26px; font-size: var(--fs-12); }
+.fe-ext-actions .cv-btn[hidden] { display: none; }
+.fe-ext-foot { display: flex; gap: 12px; flex: none; height: 26px; align-items: center; padding: 0 10px; border-top: 1px solid var(--line-0); color: var(--text-muted); font-size: var(--fs-10); white-space: nowrap; overflow: hidden; }
+.fe-ext-root { flex: 1 1 0; width: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); }
+.fe-ext-docked, .fe-ext-frame-host { display: flex; flex: 1; min-height: 0; }
+.fe-ext-frame-host .formext-frame { flex: 1; width: 100%; height: 100%; border: 0; background: var(--bg-primary); }
+.fe-ext-dialog-frame { display: flex; height: var(--fe-ext-h, 360px); }
+.fe-ext-dialog-frame .formext-frame { flex: 1; width: 100%; border: 0; border-radius: var(--radius); background: var(--bg-primary); }
+.fe-ext-hidden { position: absolute; width: 0; height: 0; overflow: hidden; }
+.fe-ext-perms { margin: 8px 0 10px; padding-left: 18px; color: var(--text-primary); font-size: var(--fs-13); line-height: 1.6; }

@@ -893,8 +893,10 @@ dependencies = [
 
 [[package]]
 name = "formencoder"
-version = "0.5.5"
+version = "0.7.0"
 dependencies = [
+ "objc2",
+ "objc2-app-kit",
  "regex",
  "serde_json",
  "tauri",

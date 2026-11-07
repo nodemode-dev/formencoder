@@ -3,6 +3,7 @@
 - [Encoding](Encoding)
 - [Agents](Agents)
 - [Form Family](Form-Family)
+- [Extensions](Extensions)
 - [Architecture](Architecture)
 - [Desktop](Desktop)
 - [Releasing](Releasing)

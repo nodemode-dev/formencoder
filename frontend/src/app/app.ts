@@ -1,7 +1,9 @@
 import { api, type ServerEvent } from '../engine/client';
 import type { Approval } from '../engine/types';
 import { AgentsPanel } from '../panels/agents';
+import { Extensions } from '../ext/extensions';
 import { EncodingPanel } from '../panels/encoding';
+import { ExtensionsPanel } from '../panels/extensions';
 import { ExportSettings } from '../panels/export-settings';
 import { FamilyPanel } from '../panels/family';
 import { InfoPanel } from '../panels/info';
@@ -34,6 +36,7 @@ class App {
   private readonly shortcutEditor = new ShortcutEditor(ctx);
   private readonly keys = new Keys(ctx);
   private palette!: Palette;
+  private extensions!: Extensions;
   private terminal!: TerminalPanel;
   private queue!: QueuePanel;
   private exportSettings!: ExportSettings;
@@ -65,8 +68,10 @@ class App {
       <footer class="cv-status fx-status"></footer>
     </div>`);
     appEl.appendChild(shell);
+    this.extensions = new Extensions(ctx, this.dock);
     const menubar = new MenuBar(ctx, {
       after: {
+        Extensions: () => this.extensions.menuEntries(),
         Window: () => [
           ...this.dock.panelIds().map((id) => ({ label: this.dock.titleOf(id), checked: this.dock.isVisible(id), run: () => this.dock.show(id) })),
           '-',
@@ -98,7 +103,10 @@ class App {
     this.dock.load();
     this.exportSettings = new ExportSettings(ctx);
     this.palette = new Palette(ctx, (id) => this.keys.shortcutFor(id));
-    this.palette.extraEntries = () => this.dock.panelIds().map((id) => ({ id: `panel.${id}`, label: `Show ${this.dock.titleOf(id)}`, path: 'Window', keys: '', kind: 'panel' as const, run: () => this.dock.show(id) }));
+    this.palette.extraEntries = () => [
+      ...this.dock.panelIds().map((id) => ({ id: `panel.${id}`, label: `Show ${this.dock.titleOf(id)}`, path: 'Window', keys: '', kind: 'panel' as const, run: () => this.dock.show(id) })),
+      ...this.extensions.paletteEntries(),
+    ];
     this.keys.handlers = {
       palette: () => void this.palette.open(),
       maximize: () => this.dock.toggleMaximizeFocused(),
@@ -115,7 +123,7 @@ class App {
     });
     ctx.ui.on('result', (r) => void this.showResult(r.command, r.params, r.result));
     ctx.start();
-    ctx.store.events.on('state', () => this.reveal());
+    ctx.store.events.on('state', () => void this.extensions.ready.then(() => this.reveal()));
     window.setTimeout(() => this.reveal(), 1500);
     this.automation();
   }
@@ -124,6 +132,26 @@ class App {
     if (this.revealed) return;
     this.revealed = true;
     revealApp();
+    this.announceReady();
+  }
+
+  private announceReady(): void {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    const send = (): void => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        void import('@tauri-apps/api/core').then((m) => m.invoke('app_ready')).catch(() => undefined);
+      }));
+    };
+    if (document.body.classList.contains('app-ready')) {
+      send();
+      return;
+    }
+    const watch = new MutationObserver(() => {
+      if (!document.body.classList.contains('app-ready')) return;
+      watch.disconnect();
+      send();
+    });
+    watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
   private registerPanels(): void {
@@ -139,6 +167,7 @@ class App {
     this.dock.register('log', 'Log', () => new LogPanel(ctx));
     this.dock.register('terminal', 'Terminal', () => this.terminal);
     this.dock.register('agents', 'Agents', () => new AgentsPanel(ctx));
+    this.dock.register('extensions', 'Extensions', () => new ExtensionsPanel(ctx, this.extensions));
   }
 
   private buildTitleTools(shell: HTMLElement): void {
@@ -393,6 +422,7 @@ class App {
     (window as unknown as { formencoder: unknown }).formencoder = {
       version: VERSION,
       ctx,
+      extensions: this.extensions,
       execute: (command: string, params: Record<string, unknown> = {}) => ctx.client.exec(command, params),
       invoke: (command: string, params: Record<string, unknown> | null = null) => ctx.invoke(command, params),
       state: () => ctx.store.state,

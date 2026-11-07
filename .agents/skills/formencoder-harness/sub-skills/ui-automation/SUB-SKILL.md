@@ -36,6 +36,15 @@ These are queries: they change what the window shows, not the queue, so they nev
 - **Terminal**: the embedded terminal where Claude Code, Codex and Cursor run as trusted agents.
 - **Agents**: which outside agents are allowed, the MCP address, and installing the clients.
 
+## Extensions
+
+The window can load extensions (Form Extension Contract, API 1) that FormPortal installed or form.ext runs from a folder. Each runs in a sandboxed frame in the window and changes the queue only through formencoder's own commands.
+
+- `extensions_list` gives each extension's id, name, version, source (`catalogue`, `sideload`, `development`), state (`ready`, `needs-permission`, `refused` with its reason) and its commands. Without an open window the state of an allowed extension reads `unknown`.
+- `extension_command {id, command, args}` runs one of those commands in the open window and returns what the extension reported. The first run of an extension version asks the person in the window to allow its permissions; a refusal comes back as an error, and asking again is the person's call, not yours. Its queue changes are History steps like any other.
+- On the command line: `./formencoder extensions` and `./formencoder extension ID COMMAND --args '{...}'`.
+- What an extension can read and change is in `docs/EXTENSIONS.md` of the formencoder repository.
+
 ## Courtesy
 
 Do not switch the person's workspace or pull a panel to the front in the middle of their own work unless they asked to see something. A toast is the light way to say a long job has finished.

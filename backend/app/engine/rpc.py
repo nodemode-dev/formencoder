@@ -250,6 +250,14 @@ async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
             from . import links
 
             return links.status()
+        if method == "extensions.list":
+            from ..services import extensions
+
+            return await extensions.window_list()
+        if method == "extensions.run":
+            from ..services import extensions
+
+            return await extensions.window_run(str(p.get("id") or ""), str(p.get("command") or ""), p.get("args"))
         if method == "publish.destinations":
             from . import publish
 

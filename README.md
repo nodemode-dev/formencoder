@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="version 0.5.5" src="https://img.shields.io/badge/version-0.5.5-eef0f4?style=flat-square">
+  <img alt="version 0.7.0" src="https://img.shields.io/badge/version-0.7.0-eef0f4?style=flat-square">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?style=flat-square&logo=rust&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-interface-3178c6?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
@@ -96,15 +96,27 @@ The window, the command line and the MCP server call the same 96 commands.
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
 
+## Extensions
+
+FormEncoder loads extensions made to the Form Extension Contract (API 1): FormPortal installs them, form.ext makes them and runs them from a folder while you work on one. They show in the Extensions menu, the Extensions panel (name, version, source, permissions, state) and the command palette; their panels dock beside FormEncoder's own or open as dialogs. Each runs in a sandboxed frame, asks once per version for what it needs, and changes the queue only through FormEncoder's own commands, one undo step at a time. Agents reach them with the `extensions_list` and `extension_command` MCP tools or `./formencoder extensions`. What an extension can read and change here is in [`docs/EXTENSIONS.md`](docs/EXTENSIONS.md); FormEncoder's older process plug-ins are in [`docs/PLUGINS.md`](docs/PLUGINS.md).
+
 ## Under the hood
 
-Version 0.5.5 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
+Version 0.7.0 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
 
 - **Engine:** seven `fencoder` Rust crates in `native/`, loaded by the Python service as the `fe_core` extension.
 - **FFmpeg:** a pinned LGPL build, run as a separate program and never linked.
 - **Encoders:** hardware first (VideoToolbox, Media Foundation, NVENC, QSV, AMF, VA-API), found by a test encode on each machine.
 - **Capabilities:** [`docs/PARITY.md`](docs/PARITY.md) traces 84 capability rows: 82 Full, 2 Partial.
 - **Tested:** backend tests (engine boot, MCP, consent, captions, versions) and a browser window test.
+
+## Demo
+
+Three offline demos open in Chrome or Edge with no install, engine or network, each on real, credited media and each showing a different side of the app, with a link row to move between them:
+
+- [`demo/index.html`](demo/index.html), the Queue: the interface on a browser-side engine that probes your video or audio file, measures its loudness, and encodes it to WebM, GIF, WAV, AIFF, Ogg Opus or a still, with the Preset Browser and Export Settings. It opens on three sea clips and a public-domain reading ([`demo/CREDITS.md`](demo/CREDITS.md), [`demo/README.md`](demo/README.md)).
+- [`demos/broadcast/index.html`](demos/broadcast/index.html), delivery specs: loudness against EBU R128, ATSC A/85 and other standards, captions as a sidecar or burned in, timecode and name overlays, a profile per destination and a verify report on the rendered file ([`demos/broadcast/CREDITS.md`](demos/broadcast/CREDITS.md), [`demos/broadcast/README.md`](demos/broadcast/README.md)).
+- [`demos/inspect/index.html`](demos/inspect/index.html), inspect and convert: probe and compare sources, step frames exactly, put two encodes side by side, make a numbered image sequence, a GIF or a proxy, and check copies with MD5 ([`demos/inspect/CREDITS.md`](demos/inspect/CREDITS.md), [`demos/inspect/README.md`](demos/inspect/README.md)).
 
 ## Download
 

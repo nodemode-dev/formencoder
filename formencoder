@@ -32,6 +32,8 @@ usage: ./formencoder [command] [options]
   probe FILE            media information of a file
   frame OUT.png [--output ID|#n] [--path FILE --preset ID] [--time S] [--count N]  save a preview frame or contact sheet
   wait                  wait until the queue is idle
+  extensions            the extensions loaded in the window, with their commands
+  extension ID COMMAND [--args JSON]  run a command an extension contributes, in the open window
 
   mcp                   formencoder over MCP's stdio transport (starts the engine when needed)
   agents install|sync|status  set Claude Code, Codex and Cursor up (install), refresh the skill references (sync)
@@ -62,7 +64,7 @@ case "$cmd" in
       *) usage; exit 2 ;;
     esac ;;
   doctor) exec setup/doctor "$@" ;;
-  encode|queue|exec|batch|commands|describe|presets|probe|frame|wait)
+  encode|queue|exec|batch|commands|describe|presets|probe|frame|wait|extensions|extension)
     py=python3
     [ -x backend/venv/bin/python ] && py=backend/venv/bin/python
     exec "$py" setup/fe.py "$cmd" "$@" ;;

@@ -20,7 +20,7 @@ if /i "%CMD%"=="desktop" (
   goto :eof
 )
 if /i "%CMD%"=="doctor" ( call setup\doctor.bat & goto :eof )
-for %%C in (encode queue exec batch commands describe presets probe frame wait) do if /i "%CMD%"=="%%C" ( call :py setup\fe.py %* & goto :eof )
+for %%C in (encode queue exec batch commands describe presets probe frame wait extensions extension) do if /i "%CMD%"=="%%C" ( call :py setup\fe.py %* & goto :eof )
 if /i "%CMD%"=="mcp" ( call :py setup\mcp_stdio.py %2 %3 %4 & goto :eof )
 if /i "%CMD%"=="agents" ( call :py setup\agents.py %2 %3 %4 & goto :eof )
 if /i "%CMD%"=="counts" ( call :py setup\line_counts.py %2 & goto :eof )
@@ -38,5 +38,5 @@ echo formencoder.bat [command]
 echo   boot ^| install [--dev] ^| install-native [--dev] ^| install-desktop ^| install-tools [TOOL] [--stage] ^| backend ^| frontend
 echo   build ^| serve ^| freeze ^| desktop dev ^| desktop build ^| doctor
 echo   encode FILE... [--preset ID] ^| queue ^| exec ID [JSON] ^| batch JSON ^| commands [FILTER] ^| describe ID
-echo   presets [QUERY] ^| probe FILE ^| frame OUT.png ^| wait ^| mcp ^| agents install^|sync^|status ^| counts ^| clean [--all] ^| help
+echo   presets [QUERY] ^| probe FILE ^| frame OUT.png ^| wait ^| extensions ^| extension ID COMMAND ^| mcp ^| agents install^|sync^|status ^| counts ^| clean [--all] ^| help
 exit /b 0

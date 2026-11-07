@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.7.0 · 2026-11-07
+
+FormEncoder loads extensions made to the Form Extension Contract, API 1, installed by FormPortal or run from a form.ext folder. The extensions are not part of FormEncoder; its own process plug-ins keep working as before.
+
+- An Extensions menu between Effects and Window, an Extensions panel with one row per extension (version, source, permissions, state and why one is refused), contributed panels docked in the right-hand group or opened as dialogs, and contributed commands in the command palette.
+- Each extension runs in a sandboxed frame and reaches FormEncoder only through the contract's messages: the queue as its document, changes as one undoable History step, FormEncoder's own commands, files through FormEncoder's file dialog, and https requests made by the engine. The first open or run of a version asks the person, in plain words, before anything of the extension loads.
+- The engine reads FormPortal's `enabled.json` and form.ext's `dev.json`, picks up changes while the window is open, and serves each extension's files under `/api/extensions/files/` with the contract's headers and nothing outside the package.
+- Agents: the MCP tools `extensions_list` and `extension_command`, and `./formencoder extensions` and `./formencoder extension` on the command line. The API page is `docs/EXTENSIONS.md`.
+
+## v0.6.3 · 2026-11-07
+
+Two more browser demos, each on real, credited media. The engine does not change.
+
+- `demos/broadcast/` shows delivery specs: loudness measured against EBU R128, ATSC A/85, OP-59, ARIB TR-B32, streaming and podcast targets, Normalise with an optional look-ahead limiter, captions burned in or written as SRT, WebVTT, TTML or SCC, timecode, name and text overlays, a profile per destination, and a verify report measured on the rendered WebM. It opens on a public-domain reading over aerial waves with six caption cues.
+- `demos/inspect/` shows inspect and convert: a hike shoot of clips at 29.97, 23.976 and 60 fps and a numbered JPEG sequence, frame-exact stepping with drop-frame timecode, A, B and Compare views of two encodes, Media Info columns that mark the rows that differ, contact sheets, numbered PNG or JPEG frames in a ZIP, GIF, proxies, and ingest with size, MD5 or bit-for-bit verification.
+- The three demos link to each other from a quiet row in the status bar. Credits are in each demo's `CREDITS.md`, with rows in `NOTICE.md`.
+
+## v0.6.2 · 2026-11-07
+
+The desktop app opens with the same splash as formvis.
+
+- The splash is a rounded dark card with the icon, "Starting formencoder" and a family-gradient bar that completes as the window appears. On macOS the window's corners are masked so nothing square shows behind the card.
+- The main window is built with the dark background and stays unseen until the interface has painted its first content and the splash has been up for 2.6 s, so no white frame shows between the two. The shell shows the window anyway after 20 s if the interface never reports.
+
+## v0.6.1 · 2026-11-07
+
+The browser demo opens on real media instead of a generated sample. The engine does not change.
+
+- The queue starts with three Pexels sea clips (1280x720 at 29.97 fps, 1280x720 at 25 fps, a vertical 404x720 at 59.94 fps) and a 21 s public-domain LibriVox reading, with ten outputs ready to run: WebM, a GIF of each clip, a still, and the reading normalised to -16 LUFS as Ogg Opus beside a broadcast WAV. Authors, source pages and licences are in `demo/CREDITS.md`.
+- The files ship as data packs in `demo/media/` and load into rows that are already in the Queue, so nothing moves when they arrive. The generated sample remains as a fallback and from the film button.
+- A clip with no audio track reads "No audio track" in Media Info.
+
+## v0.6.0 · 2026-11-07
+
+An offline browser demo in `demo/`. The engine does not change.
+
+- `demo/index.html` opens from `file://` or any static server, with no engine, backend or network. It runs the real interface (the dock, tokens, themes, icons, Queue, Preset Browser, Media Info, Encoding and Log panels) on a client-side engine that probes a dropped video or audio file (MP4, MOV, WebM, Matroska, WAV, Ogg, FLAC, MP3), measures its loudness (BS.1770-4, EBU R128 range, true peak) and encodes it to WebM (VP9 or VP8 with Opus through WebCodecs), animated GIF, WAV, AIFF, Ogg Opus, PNG or JPEG, with loudness normalisation, in and out points and per-output Export Settings.
+- It starts with a sample generated in the page. The Preset Browser lists all 93 system presets; the 42 the browser can write run, and the rest (ProRes, DNxHR, MXF, DCP and others) are marked and skipped.
+- The build is committed under `demo/assets` (about 460 KB); rebuild with `npx vite build --config ../demo/vite.config.mjs` from `frontend/`. See `demo/README.md` and `demo/HASHOUT_LOG.md`.
+
 ## v0.5.5 · 2026-11-04
 
 The queue tests in `backend/tests/test_queue.py` (pause and resume, stop, an encode interrupted by a restart) pass on every run, and the delivery tools build with CMake 4. The engine does not change.

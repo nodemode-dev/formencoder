@@ -56,10 +56,12 @@ class Bus:
         else:
             loop.call_soon_threadsafe(self._deliver, message, kinds)
 
-    async def ask_window(self, message: dict, timeout: float) -> dict | None:
+    async def ask_window(self, message: dict, timeout: float, first: bool = False) -> dict | None:
         windows = self.windows()
         if not windows:
             return None
+        if first:
+            windows = [max(windows, key=lambda c: c.id)]
         rid = next(self._ids)
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self._replies[rid] = fut

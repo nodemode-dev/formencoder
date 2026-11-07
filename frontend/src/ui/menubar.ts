@@ -13,7 +13,7 @@ export interface MenuExtras {
   after?: Record<string, () => PopupEntry[]>;
 }
 
-const ORDER = ['File', 'Edit', 'Queue', 'Preset', 'Watch', 'Effects', 'Window', 'Help'];
+const ORDER = ['File', 'Edit', 'Queue', 'Preset', 'Watch', 'Effects', 'Extensions', 'Window', 'Help'];
 const HIDDEN = new Set([
   'family.resolved', 'publish.result', 'queue.select', 'family.queue', 'settings.apply', 'ui.toast', 'ui.panel', 'ui.workspace',
   'ui.exportSettings', 'queue.getSettings', 'history.list', 'queue.list', 'encode.status', 'preset.list', 'watch.list', 'media.browse',
@@ -27,6 +27,7 @@ const GROUPS: Record<string, string[][]> = {
   Preset: [['queue.setPreset'], ['preset.create', 'preset.duplicate', 'preset.newGroup'], ['preset.import', 'preset.export', 'preset.reveal']],
   Watch: [['watch.scan']],
   Effects: [['lut.list', 'lut.install']],
+  Extensions: [],
   Window: [],
   Help: [['app.capabilities']],
 };
