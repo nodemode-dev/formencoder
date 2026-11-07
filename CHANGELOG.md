@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.1 · 2026-11-07
+
+The browser demo opens on real media instead of a generated sample. The engine does not change.
+
+- The queue starts with three Pexels sea clips (1280x720 at 29.97 fps, 1280x720 at 25 fps, a vertical 404x720 at 59.94 fps) and a 21 s public-domain LibriVox reading, with ten outputs ready to run: WebM, a GIF of each clip, a still, and the reading normalised to -16 LUFS as Ogg Opus beside a broadcast WAV. Authors, source pages and licences are in `demo/CREDITS.md`.
+- The files ship as data packs in `demo/media/` and load into rows that are already in the Queue, so nothing moves when they arrive. The generated sample remains as a fallback and from the film button.
+- A clip with no audio track reads "No audio track" in Media Info.
+
 ## v0.6.0 · 2026-11-07
 
 An offline browser demo in `demo/`. The engine does not change.
