@@ -31,6 +31,7 @@ formencoder is licensed under the Apache License 2.0 (`LICENSE`). It includes or
 | Playwright 1.63.0 (Python) and its Chromium | runs the window smoke in `frontend/tests/window` in CI; never installed in the app | Apache-2.0 |
 | formvis and formvfx design system (NodeMode Studio tokens, shell, dock, panel, dialog, popup, palette, toast and file dialog code) | `frontend/src/styles`, `frontend/src/ui` | Apache-2.0 |
 | Inter and JetBrains Mono (`@fontsource`) | interface fonts | SIL Open Font License 1.1 |
+| Three Pexels video clips and one LibriVox reading (`demo/media/`), listed with author, source page and changes in `demo/CREDITS.md` | the sample sources the browser demo opens on; not part of the desktop app | Pexels License (the clips); Public Domain Mark 1.0 (the reading) |
 | xterm.js and its fit addon | the embedded terminal | MIT |
 | Vite, TypeScript, Tauri 2, its API and the dialog, shell and updater plugins | build and desktop | MIT, Apache-2.0 |
 
