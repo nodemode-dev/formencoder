@@ -186,6 +186,11 @@ def main(argv: list[str] | None = None) -> int:
     f.add_argument("--count", type=int, default=0, help="a contact sheet of this many frames")
     pr = sub.add_parser("probe", help="media information of a file")
     pr.add_argument("path")
+    sub.add_parser("extensions", help="the extensions loaded in the window, with their commands")
+    xc = sub.add_parser("extension", help="run a command an extension contributes, in the open window")
+    xc.add_argument("id")
+    xc.add_argument("command")
+    xc.add_argument("--args", help="JSON object of arguments, or a file")
     a = ap.parse_args(argv)
     try:
         if a.cmd == "exec":
@@ -235,6 +240,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{a.out} · {out.get('frames', 1)} frame(s)")
         elif a.cmd == "probe":
             _print(client.rpc("command.execute", {"command": "media.probe", "params": {"path": str(Path(a.path).expanduser().resolve())}}))
+        elif a.cmd == "extensions":
+            out = client.rpc("extensions.list")
+            for row in out.get("extensions", []):
+                print(f"{row['id']:<28} {row['version']:<9} {row['source']:<12} {row['state']:<17} {row['name']}{'  · ' + row['reason'] if row.get('reason') else ''}")
+                for c in row.get("commands", []):
+                    print(f"    {c['id']:<24} {c['title']}")
+            if out.get("note"):
+                print(out["note"], file=sys.stderr)
+        elif a.cmd == "extension":
+            _print(client.rpc("extensions.run", {"id": a.id, "command": a.command, "args": _load(a.args)}))
     except RuntimeError as exc:
         print(f"[formencoder] {exc}", file=sys.stderr)
         return 1

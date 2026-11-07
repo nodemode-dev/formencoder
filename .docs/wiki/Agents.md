@@ -20,4 +20,8 @@ formencoder's engine exposes every command to agents through MCP, the same comma
 
 ## The command line
 
-`./formencoder encode FILE --preset system/youtube-1080p`, `queue`, `exec ID 'JSON'`, `batch 'JSON'`, `commands FILTER`, `describe ID`, `presets QUERY`, `probe FILE`, `frame OUT.png --output '#1' --time 2`, `wait`.
+`./formencoder encode FILE --preset system/youtube-1080p`, `queue`, `exec ID 'JSON'`, `batch 'JSON'`, `commands FILTER`, `describe ID`, `presets QUERY`, `probe FILE`, `frame OUT.png --output '#1' --time 2`, `wait`, `extensions`, `extension ID COMMAND --args 'JSON'`.
+
+## Extensions
+
+`extensions_list` and `extension_command` reach the extensions loaded in the window (see [Extensions](Extensions)). Extension commands run in the open window, so they need one, and the first run of an extension version asks the person there.

@@ -167,7 +167,10 @@ TOOLS = [
           {"session": {"type": "string"}, "text": {"type": "string"}, "enter": {"type": "boolean", "default": True}, "wait": {"type": "number", "minimum": 0, "maximum": 30, "default": 1.5}}, ["session", "text"], destructive=True),
     _tool("terminal_read", "What a terminal printed, colour codes removed: the whole kept history, or only what came after since (the offset an earlier read returned). Returns the text, the new offset and whether the shell exited.",
           {"session": {"type": "string"}, "since": {"type": "integer", "minimum": 0}, "max_chars": {"type": "integer", "minimum": 200, "maximum": 100000, "default": 8000}}, ["session"], read=True, idempotent=True),
-    _tool("terminal_close", "Closes a terminal and ends what runs in it. Closing one this agent did not open needs the person's approval.", {"session": {"type": "string"}}, ["session"], destructive=True),
+    _tool("extensions_list", "The extensions loaded in formencoder (Form Extension Contract, API 1, installed by FormPortal or run from a form.ext folder): id, name, version, source (catalogue, sideload, development), state (ready, needs-permission, refused with its reason), permissions, panels and the commands extension_command runs.", {}, read=True, idempotent=True),
+    _tool("extension_command", "Runs a command an extension contributes (extensions_list shows them) in the open formencoder window, where the extension runs in its sandbox, and returns what the extension reports. The first run of an extension version asks the person in the window to allow its permissions; if they choose Not Now the call fails. Changes the extension makes to the queue are undoable History steps.",
+          {"id": {"type": "string", "description": "the extension id"}, "command": {"type": "string", "description": "one of its command ids"}, "args": {"type": "object", "additionalProperties": True}}, ["id", "command"]),
+    _tool("terminal_close","Closes a terminal and ends what runs in it. Closing one this agent did not open needs the person's approval.", {"session": {"type": "string"}}, ["session"], destructive=True),
 ]
 NAMES = {t["name"] for t in TOOLS}
 READ_ONLY = {t["name"] for t in TOOLS if t["annotations"]["readOnlyHint"]}
@@ -444,6 +447,10 @@ async def _call(name: str, args: dict, source: str) -> dict:
         return text(GUIDES.get(topic) or f"No guide {topic!r}. {GUIDES['index']}")
     if name == "approval_status":
         return text(approvals.status(int(args["id"])))
+    if name == "extensions_list":
+        return text(await rpc.dispatch("extensions.list", {}, source))
+    if name == "extension_command":
+        return text(await rpc.dispatch("extensions.run", {"id": args["id"], "command": args["command"], "args": args.get("args") or {}}, source))
     if name.startswith("terminal_"):
         return await _terminal(name, args, source)
     if name in _COMMANDS:

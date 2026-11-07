@@ -2,11 +2,11 @@
 
 Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand.
 
-The `formencoder` MCP server has 27 curated tools, listed here, plus one tool per engine command named from its id (`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, `commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, `command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents are in the last section.
+The `formencoder` MCP server has 29 curated tools, listed here, plus one tool per engine command named from its id (`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, `commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, `command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents are in the last section.
 
 ## Contents
 
-`status` `list_commands` `describe_command` `execute` `batch` `probe` `encode` `queue` `export_settings` `preview_frame` `contact_sheet` `wait` `verify` `presets` `formats` `watch_folder` `family` `log` `history` `ui` `guide` `approval_status` `terminal_list` `terminal_open` `terminal_send` `terminal_read` `terminal_close`
+`status` `list_commands` `describe_command` `execute` `batch` `probe` `encode` `queue` `export_settings` `preview_frame` `contact_sheet` `wait` `verify` `presets` `formats` `watch_folder` `family` `log` `history` `ui` `guide` `approval_status` `terminal_list` `terminal_open` `terminal_send` `terminal_read` `extensions_list` `extension_command` `terminal_close`
 
 ## status
 
@@ -287,6 +287,22 @@ What a terminal printed, colour codes removed: the whole kept history, or only w
 - `max_chars`: integer; default 8000
 
 Note: read-only.
+
+## extensions_list
+
+The extensions loaded in formencoder (Form Extension Contract, API 1, installed by FormPortal or run from a form.ext folder): id, name, version, source (catalogue, sideload, development), state (ready, needs-permission, refused with its reason), permissions, panels and the commands extension_command runs.
+
+- no parameters
+
+Note: read-only.
+
+## extension_command
+
+Runs a command an extension contributes (extensions_list shows them) in the open formencoder window, where the extension runs in its sandbox, and returns what the extension reports. The first run of an extension version asks the person in the window to allow its permissions; if they choose Not Now the call fails. Changes the extension makes to the queue are undoable History steps.
+
+- `id`: string; required; the extension id
+- `command`: string; required; one of its command ids
+- `args`: object
 
 ## terminal_close
 

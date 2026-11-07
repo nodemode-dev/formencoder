@@ -96,6 +96,10 @@ The window, the command line and the MCP server call the same 96 commands.
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
 
+## Extensions
+
+FormEncoder loads extensions made to the Form Extension Contract (API 1): FormPortal installs them, form.ext makes them and runs them from a folder while you work on one. They show in the Extensions menu, the Extensions panel (name, version, source, permissions, state) and the command palette; their panels dock beside FormEncoder's own or open as dialogs. Each runs in a sandboxed frame, asks once per version for what it needs, and changes the queue only through FormEncoder's own commands, one undo step at a time. Agents reach them with the `extensions_list` and `extension_command` MCP tools or `./formencoder extensions`. What an extension can read and change here is in [`docs/EXTENSIONS.md`](docs/EXTENSIONS.md); FormEncoder's older process plug-ins are in [`docs/PLUGINS.md`](docs/PLUGINS.md).
+
 ## Under the hood
 
 Version 0.6.3 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
