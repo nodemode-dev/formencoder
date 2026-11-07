@@ -32,6 +32,8 @@ formencoder is licensed under the Apache License 2.0 (`LICENSE`). It includes or
 | formvis and formvfx design system (NodeMode Studio tokens, shell, dock, panel, dialog, popup, palette, toast and file dialog code) | `frontend/src/styles`, `frontend/src/ui` | Apache-2.0 |
 | Inter and JetBrains Mono (`@fontsource`) | interface fonts | SIL Open Font License 1.1 |
 | Three Pexels video clips and one LibriVox reading (`demo/media/`), listed with author, source page and changes in `demo/CREDITS.md` | the sample sources the browser demo opens on; not part of the desktop app | Pexels License (the clips); Public Domain Mark 1.0 (the reading) |
+| One Pexels aerial clip, a LibriVox reading and Project Gutenberg text (`demos/broadcast/media/`), listed with author, source page and changes in `demos/broadcast/CREDITS.md` | the programme the delivery specs demo opens on; not part of the desktop app | Pexels License (the clip); Public Domain Mark 1.0 (the reading); public domain in the USA (the text) |
+| Four Pexels video clips, one of them cut into a numbered JPEG sequence, and outputs made from one clip (`demos/inspect/media/`), listed with author, source page and changes in `demos/inspect/CREDITS.md` | the hike shoot the inspect and convert demo opens on; not part of the desktop app | Pexels License |
 | xterm.js and its fit addon | the embedded terminal | MIT |
 | Vite, TypeScript, Tauri 2, its API and the dialog, shell and updater plugins | build and desktop | MIT, Apache-2.0 |
 

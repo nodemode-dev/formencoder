@@ -80,6 +80,12 @@ function start(): void {
       <span class="fx-st-engine"><span class="fx-st-dot is-on"></span><span class="fx-st-eng-text"></span></span>
       <span class="fe-st-counts"></span>
       <span class="fx-flex"></span>
+      <nav class="dm-demos" aria-label="Demos">
+        <span class="dm-demos-label">Demos</span>
+        <a class="dm-demo-link is-current" href="index.html" aria-current="page">Queue and presets</a>
+        <a class="dm-demo-link" href="../demos/broadcast/index.html">Delivery specs</a>
+        <a class="dm-demo-link" href="../demos/inspect/index.html">Inspect and convert</a>
+      </nav>
       <span class="fx-st-ver">${VERSION}</span>
     </footer>
   </div>`);

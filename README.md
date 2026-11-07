@@ -108,7 +108,11 @@ Version 0.6.2 · Apache-2.0 · Rust encoding engine, Python service, TypeScript 
 
 ## Demo
 
-Open [`demo/index.html`](demo/index.html) in Chrome or Edge, with no install, engine or network: the interface on a browser-side engine that probes your video or audio file, measures its loudness, and encodes it to WebM, GIF, WAV, AIFF, Ogg Opus or a still, with the queue, Preset Browser and Export Settings. It opens on three real sea clips and a public-domain reading, credited in [`demo/CREDITS.md`](demo/CREDITS.md). See [`demo/README.md`](demo/README.md).
+Three offline demos open in Chrome or Edge with no install, engine or network, each on real, credited media and each showing a different side of the app, with a link row to move between them:
+
+- [`demo/index.html`](demo/index.html), the Queue: the interface on a browser-side engine that probes your video or audio file, measures its loudness, and encodes it to WebM, GIF, WAV, AIFF, Ogg Opus or a still, with the Preset Browser and Export Settings. It opens on three sea clips and a public-domain reading ([`demo/CREDITS.md`](demo/CREDITS.md), [`demo/README.md`](demo/README.md)).
+- [`demos/broadcast/index.html`](demos/broadcast/index.html), delivery specs: loudness against EBU R128, ATSC A/85 and other standards, captions as a sidecar or burned in, timecode and name overlays, a profile per destination and a verify report on the rendered file ([`demos/broadcast/CREDITS.md`](demos/broadcast/CREDITS.md), [`demos/broadcast/README.md`](demos/broadcast/README.md)).
+- [`demos/inspect/index.html`](demos/inspect/index.html), inspect and convert: probe and compare sources, step frames exactly, put two encodes side by side, make a numbered image sequence, a GIF or a proxy, and check copies with MD5 ([`demos/inspect/CREDITS.md`](demos/inspect/CREDITS.md), [`demos/inspect/README.md`](demos/inspect/README.md)).
 
 ## Download
 

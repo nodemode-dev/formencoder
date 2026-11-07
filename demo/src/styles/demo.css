@@ -28,3 +28,8 @@
 .fe-ws { width: 150px; }
 .fd-file { display: none; }
 .fe-es-summary { min-height: 40px; }
+.dm-demos { display: inline-flex; align-items: center; gap: 12px; }
+.dm-demos-label { color: var(--text-muted); }
+.dm-demo-link { color: var(--text-secondary); text-decoration: none; }
+.dm-demo-link:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 2px; }
+.dm-demo-link.is-current { color: var(--accent-ink); pointer-events: none; }
