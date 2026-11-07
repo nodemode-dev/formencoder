@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.3 · 2026-11-07
+
+Two more browser demos, each on real, credited media. The engine does not change.
+
+- `demos/broadcast/` shows delivery specs: loudness measured against EBU R128, ATSC A/85, OP-59, ARIB TR-B32, streaming and podcast targets, Normalise with an optional look-ahead limiter, captions burned in or written as SRT, WebVTT, TTML or SCC, timecode, name and text overlays, a profile per destination, and a verify report measured on the rendered WebM. It opens on a public-domain reading over aerial waves with six caption cues.
+- `demos/inspect/` shows inspect and convert: a hike shoot of clips at 29.97, 23.976 and 60 fps and a numbered JPEG sequence, frame-exact stepping with drop-frame timecode, A, B and Compare views of two encodes, Media Info columns that mark the rows that differ, contact sheets, numbered PNG or JPEG frames in a ZIP, GIF, proxies, and ingest with size, MD5 or bit-for-bit verification.
+- The three demos link to each other from a quiet row in the status bar. Credits are in each demo's `CREDITS.md`, with rows in `NOTICE.md`.
+
 ## v0.6.2 · 2026-11-07
 
 The desktop app opens with the same splash as formvis.
