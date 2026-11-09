@@ -14,6 +14,7 @@ import { QueuePanel } from '../panels/queue';
 import { TerminalPanel } from '../panels/terminal';
 import { WatchPanel } from '../panels/watch';
 import { Dialog, promptName } from '../ui/dialogs';
+import { demoMenuEntries, openDemo } from '../ui/demos';
 import { Dock, WORKSPACES } from '../ui/dock';
 import { el, escapeHtml, q, revealApp, setClass, setText } from '../ui/dom';
 import { brandMark, icon } from '../ui/icons';
@@ -82,6 +83,8 @@ class App {
           { label: 'Maximize Panel', shortcut: '`', run: () => this.dock.toggleMaximizeFocused() },
         ],
         Help: () => [
+          ...demoMenuEntries(ctx),
+          '-',
           { label: 'formencoder on GitHub', run: () => window.open('https://github.com/nodemode-dev/formencoder', '_blank') },
           { label: 'Report an Issue', run: () => window.open('https://github.com/nodemode-dev/formencoder/issues', '_blank') },
           { label: 'Download formencoder’s FFmpeg (LGPL)', run: () => void ctx.client.call('ffmpeg.fetch').catch((e: Error) => toast(e.message, 'error')) },
@@ -255,6 +258,7 @@ class App {
       if (ev.action === 'panel' && typeof ev.panel === 'string') this.dock.show(ev.panel);
       if (ev.action === 'workspace' && typeof ev.name === 'string') this.dock.switchTo(WS_MAP[ev.name] ?? 'Default');
       if (ev.action === 'exportSettings' && typeof ev.output === 'string') void this.exportSettings.open(ev.output);
+      if (ev.action === 'demo' && typeof ev.id === 'string') void openDemo(ctx, ev.id);
     });
     ctx.client.events.on('activity', (ev) => {
       if (String(ev.source) !== 'ui' && ev.ok === false) toast(`${String(ev.source).replace(/^mcp:/, '')}: ${ev.error}`, 'error');
@@ -437,6 +441,7 @@ class App {
         showPanel: (id: string) => this.dock.show(id),
         workspace: (name: string) => this.dock.switchTo(name),
         exportSettings: (output: string) => this.exportSettings.open(output),
+        demo: (id: string) => openDemo(ctx, id),
       },
     };
     void api('/api/system').catch(() => undefined);

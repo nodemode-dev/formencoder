@@ -7,6 +7,7 @@ import { el, patchList, q, setClass, setDisabled, setHidden, setHtml, setStyleVa
 import { pickFiles } from '../ui/file-dialog';
 import { basename, fmtDuration, STATUS_LABEL } from '../ui/format';
 import { icon } from '../ui/icons';
+import { bindDemoCards, demosHtml } from '../ui/demos';
 import { contextMenu, type PopupEntry } from '../ui/popup';
 import { toast } from '../ui/toast';
 
@@ -44,10 +45,12 @@ export class QueuePanel implements Panel {
       <div class="fe-q-list" role="tree" tabindex="0" data-automation-id="queue.list"></div>
       <div class="fe-q-empty" hidden>
         <div class="fe-drop-card">${icon('film', 28)}<strong>Drag media here, or press + to add sources</strong><span>Each source gets an output from the default preset; drop a preset on a source to add another output. Agents add sources too.</span><button class="cv-btn" type="button" data-a="add2">${icon('plus', 14)}Add Source</button></div>
+        ${demosHtml()}
       </div>
     </div>`);
     this.list = q(this.el, '.fe-q-list');
     this.empty = q(this.el, '.fe-q-empty');
+    bindDemoCards(ctx, this.empty);
     for (const b of Array.from(this.el.querySelectorAll<HTMLElement>('[data-a]'))) {
       b.dataset.automationId = `queue.${b.dataset.a}`;
       if (b.dataset.a === 'autoWatch') {
