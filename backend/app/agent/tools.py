@@ -59,7 +59,7 @@ GUIDES = {
     "ingest": "ingest.copy {paths (files or card folders), destination, verify: size|md5|bit, preset (an ingest preset or any encoding preset to also transcode), transcodeFolder}. proxy.create {paths, preset (proxy presets: system/proxy-prores, system/proxy-h264-720...)} writes [source]_Proxy files in a Proxies folder. analyze.media {paths} writes a .feanalysis.json with scene changes, black frames, silences and loudness.",
     "family": "family {action: discover} reports which of formcut (8040), formvfx (8250), formwav (8060) and formvis (8190) are running. family {action: sources, app}. family {action: add, app, id or name, preset, in, out, start}: formcut exports the project through its own renderer then formencoder encodes it; formvfx comps are pulled frame by frame over Live Link (no render in formvfx) with their audio; formwav sessions are mixed by formwav; formvis images become stills or sequences. A .fvxlink file: family {action: addLink, path}. family {action: send, app: formcut|formvfx, files} imports finished files there.",
     "presets": "presets {action: list, query, category} · get {preset} · create {name, settings or fromOutput, group, comment} · update {preset, name, settings, group} · delete · duplicate {preset, name} · alias {preset, alias} · import {path} (.fepreset, JSON, or a Media Encoder .epr: format, frame size, rate, bitrates and sample rate are read) · export {preset, path}. User presets live in the formencoder data folder as .fepreset JSON.",
-    "ui": "ui {action: state} is what the person sees. ui {action: panel, panel: queue|encoding|watch|media|presets|family|log|info|terminal|agents}; ui {action: workspace, name: Default|Encoding|Ingest|Agent}; ui {action: exportSettings, output} opens the Export Settings window on an output; ui {action: toast, text} shows a message.",
+    "ui": "ui {action: state} is what the person sees. ui {action: panel, panel: queue|encoding|watch|media|presets|family|log|info|terminal|agents}; ui {action: workspace, name: Default|Encoding|Ingest|Agent}; ui {action: exportSettings, output} opens the Export Settings window on an output; ui {action: toast, text} shows a message; ui {action: demo, id: queue|broadcast|inspect} opens a demo in the window as a new queue with its media (the person is asked first when the queue has sources, and Undo brings their queue back).",
 }
 
 RECIPES = {
@@ -155,8 +155,8 @@ TOOLS = [
     _tool("log", "The Encoding log (every finished output: source, file, format, preset, encoder, time, size, notes) or the Error log (failures with FFmpeg's last lines).",
           {"kind": {"type": "string", "enum": ["encoding", "error"], "default": "encoding"}, "limit": {"type": "integer", "minimum": 1, "maximum": 2000, "default": 80}}, read=True, idempotent=True),
     _tool("history", "Undo, redo or list the queue history.", {"action": {"type": "string", "enum": ["undo", "redo", "list"]}, "steps": {"type": "integer", "minimum": 1, "maximum": 100, "default": 1}}, ["action"]),
-    _tool("ui", "The formencoder window: state, or show a panel, switch workspace, open Export Settings on an output, show a message.",
-          {"action": {"type": "string", "enum": ["state", "panel", "workspace", "exportSettings", "toast"]}, "panel": {"type": "string"}, "name": {"type": "string"}, "output": {"type": "string"}, "text": {"type": "string"}}, ["action"]),
+    _tool("ui", "The formencoder window: state, or show a panel, switch workspace, open Export Settings on an output, show a message, or open one of the three demos (queue, broadcast, inspect) as a new queue.",
+          {"action": {"type": "string", "enum": ["state", "panel", "workspace", "exportSettings", "toast", "demo"]}, "panel": {"type": "string"}, "name": {"type": "string"}, "output": {"type": "string"}, "text": {"type": "string"}, "id": {"type": "string", "enum": ["queue", "broadcast", "inspect"]}}, ["action"]),
     _tool("guide", "formencoder know-how for agents: workflow, queue, settings, video, audio, effects, captions, metadata, publish, watch, ingest, family, presets, ui.", {"topic": {"type": "string"}}, read=True, idempotent=True),
     _tool("approval_status", "The decision on an action that waited for the person's approval (a pendingApproval id from an earlier call): pending, approved with its result, declined, or failed with the reason.",
           {"id": {"type": "integer"}}, ["id"], read=True, idempotent=True),
@@ -441,6 +441,14 @@ async def _call(name: str, args: dict, source: str) -> dict:
             return text(await ex("ui.exportSettings", {"output": args.get("output")}, source))
         if action == "panel":
             return text(await ex("ui.panel", {"panel": args.get("panel")}, source))
+        if action == "demo":
+            demo = str(args.get("id") or "")
+            if demo not in ("queue", "broadcast", "inspect"):
+                return fail("ui demo needs id: queue, broadcast or inspect")
+            if not host.bus.windows():
+                return fail("no formencoder window is open to open the demo in")
+            host.bus.publish({"type": "uiAction", "action": "demo", "id": demo}, ("ui",))
+            return text({"opening": demo, "next": "the window opens it as a new queue (asking the person first when the queue has sources; Undo brings the old queue back); status shows it once it is there"})
         return text(await ex("ui.workspace", {"name": args.get("name")}, source))
     if name == "guide":
         topic = str(args.get("topic") or "index")

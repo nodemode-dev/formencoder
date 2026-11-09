@@ -229,13 +229,14 @@ Undo, redo or list the queue history.
 
 ## ui
 
-The formencoder window: state, or show a panel, switch workspace, open Export Settings on an output, show a message.
+The formencoder window: state, or show a panel, switch workspace, open Export Settings on an output, show a message, or open one of the three demos (queue, broadcast, inspect) as a new queue.
 
-- `action`: string (state | panel | workspace | exportSettings | toast); required
+- `action`: string (state | panel | workspace | exportSettings | toast | demo); required
 - `panel`: string
 - `name`: string
 - `output`: string
 - `text`: string
+- `id`: string (queue | broadcast | inspect)
 
 ## guide
 
@@ -377,7 +378,7 @@ presets {action: list, query, category} · get {preset} · create {name, setting
 
 ### ui
 
-ui {action: state} is what the person sees. ui {action: panel, panel: queue|encoding|watch|media|presets|family|log|info|terminal|agents}; ui {action: workspace, name: Default|Encoding|Ingest|Agent}; ui {action: exportSettings, output} opens the Export Settings window on an output; ui {action: toast, text} shows a message.
+ui {action: state} is what the person sees. ui {action: panel, panel: queue|encoding|watch|media|presets|family|log|info|terminal|agents}; ui {action: workspace, name: Default|Encoding|Ingest|Agent}; ui {action: exportSettings, output} opens the Export Settings window on an output; ui {action: toast, text} shows a message; ui {action: demo, id: queue|broadcast|inspect} opens a demo in the window as a new queue with its media (the person is asked first when the queue has sources, and Undo brings their queue back).
 
 ## The same surface from a shell
 

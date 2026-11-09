@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.0 · 2026-11-09
+
+The three demos open inside FormEncoder, not only in a browser.
+
+- An empty Queue shows a Demos section under the drop card, one card a demo: Queue and presets, Delivery specs, and Inspect and convert. Help > Demos lists the same three.
+- Opening a demo copies its credited sources into FormEncoder's imports folder (once; a second open reuses them) and queues them with the demo's outputs on the engine's own presets: ten outputs of three sea clips and a reading for the Queue demo; a review copy with timecode, name, FOR REVIEW ONLY and captions burned in, EBU R128 with TTML, ATSC A/85 with SCC, broadcast WAV and an XDCAM MXF master for Delivery specs; high and low bit rate encodes, proxies and GIFs of a hike shoot and its JPEG sequence for Inspect and convert, with Media Info on the stream clip. Start encodes them for real.
+- The demo replaces what is queued as one History step, so one Undo brings the queue back; when the queue has sources, FormEncoder asks first.
+- Agents: `ui {action: demo, id: queue|broadcast|inspect}` opens one in the window.
+- The media ships in the interface build under `frontend/public/demos/`, decoded from the browser demos' packs by `scripts/demo-media.py`, with its credits there and a row in `NOTICE.md`. The browser demos import their curated sources and delivery profiles from `frontend/src/demos/`.
+
 ## v0.7.0 · 2026-11-07
 
 FormEncoder loads extensions made to the Form Extension Contract, API 1, installed by FormPortal or run from a form.ext folder. The extensions are not part of FormEncoder; its own process plug-ins keep working as before.

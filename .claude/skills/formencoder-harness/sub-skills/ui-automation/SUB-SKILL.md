@@ -20,6 +20,7 @@ The window and the agent share one engine, so most work needs no UI at all: queu
 | Export Settings on an output | `ui {action: exportSettings, output}`: the person sees the full settings, the source and output previews, the summary and the estimate |
 | A message | `ui {action: toast, text}` (`execute ui.toast {text, kind: ok|error}` for a coloured one) |
 | A selection | `execute queue.select {items?, outputs?}` |
+| A demo | `ui {action: demo, id}`: `queue` (four sources, ten outputs), `broadcast` (the programme with five delivery outputs), `inspect` (four sources, seven outputs); the window opens it as a new queue with its media, asks the person first when the queue has sources, and one Undo brings their queue back |
 
 These are queries: they change what the window shows, not the queue, so they never ask permission and are not undo steps.
 
