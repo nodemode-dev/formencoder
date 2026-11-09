@@ -132,7 +132,7 @@ export async function openDemo(ctx: Ctx, id: string): Promise<boolean> {
     await ctx.client.call('command.batch', { steps, label: `Open the ${demo.title} demo`, atomic: true });
     ctx.ui.emit('showPanel', 'queue');
     if (demo.panel !== 'queue') ctx.ui.emit('showPanel', demo.panel);
-    if (demo.panel === 'info') ctx.ui.emit('inspect', { path: at(demo.sources[0].file) });
+    ctx.ui.emit('inspect', { path: at(demo.sources[0].file) });
     toast(`Opened the ${demo.title} demo: press Start to encode it, Undo to go back`, 'ok');
     return true;
   } catch (e) {
