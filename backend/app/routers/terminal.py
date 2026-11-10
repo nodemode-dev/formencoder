@@ -1,4 +1,5 @@
 import asyncio
+import codecs
 import contextlib
 import json
 import os
@@ -52,6 +53,7 @@ class Session:
         self.fd = None
         self.process = None
         self.winpty = None
+        self.decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         if POSIX:
             import pty
 
@@ -96,7 +98,19 @@ class Session:
 
     def read(self) -> str:
         if POSIX and self.fd is not None:
-            return os.read(self.fd, 65536).decode("utf-8", errors="replace")
+            while True:
+                try:
+                    raw = os.read(self.fd, 65536)
+                except OSError:
+                    tail = self.decoder.decode(b"", final=True)
+                    if tail:
+                        return tail
+                    raise
+                if not raw:
+                    return self.decoder.decode(b"", final=True)
+                text = self.decoder.decode(raw)
+                if text:
+                    return text
         if self.winpty is not None:
             return self.winpty.read(65536)
         if self.process and self.process.stdout:

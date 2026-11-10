@@ -152,3 +152,7 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 ## Agents open the demos (0.8.0)
 
 - `ui {action: demo, id: queue|broadcast|inspect}` publishes `{type: uiAction, action: demo, id}` to the windows only (kind `ui`) and returns at once; the window does the work (copying the demo's media into `imports`, one `command.batch`), so an agent and the person reach the same code and the same confirmation dialog. Without a window it fails plainly instead of queueing media nobody sees. Not a new engine command: the demos and their media live in the interface build, which the engine does not know about in development. The window side is in `frontend/HASHOUT_LOG.md` (#in-app-demos).
+
+## Terminal output keeps split characters whole (0.8.1)
+
+- `Session.read` on a pty used to decode each `os.read` chunk on its own, so a multi-byte character cut by a chunk boundary became two replacement characters in the Terminal panel. The session now holds one incremental UTF-8 decoder (`errors="replace"`) and `read` keeps reading while a chunk decodes to nothing, because `Term._start`'s pump takes an empty string as the end of the stream. At a real end (empty read, or the pty's `OSError` when the shell exits) the decoder is flushed first, so a dangling partial character is still delivered once.
