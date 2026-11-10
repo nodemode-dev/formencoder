@@ -96,26 +96,29 @@ class Session:
             self.process.stdin.write(data.replace("\r", "\r\n").encode("utf-8"))
             self.process.stdin.flush()
 
+    def _decoded(self, fetch) -> str:
+        while True:
+            try:
+                raw = fetch()
+            except OSError:
+                tail = self.decoder.decode(b"", final=True)
+                if tail:
+                    return tail
+                raise
+            if not raw:
+                return self.decoder.decode(b"", final=True)
+            text = self.decoder.decode(raw)
+            if text:
+                return text
+
     def read(self) -> str:
         if POSIX and self.fd is not None:
-            while True:
-                try:
-                    raw = os.read(self.fd, 65536)
-                except OSError:
-                    tail = self.decoder.decode(b"", final=True)
-                    if tail:
-                        return tail
-                    raise
-                if not raw:
-                    return self.decoder.decode(b"", final=True)
-                text = self.decoder.decode(raw)
-                if text:
-                    return text
+            return self._decoded(lambda: os.read(self.fd, 65536))
         if self.winpty is not None:
             return self.winpty.read(65536)
         if self.process and self.process.stdout:
-            data = self.process.stdout.read1(65536) if hasattr(self.process.stdout, "read1") else self.process.stdout.readline()
-            return data.decode("utf-8", errors="replace")
+            stdout = self.process.stdout
+            return self._decoded(lambda: stdout.read1(65536) if hasattr(stdout, "read1") else stdout.readline())
         return ""
 
     def close(self) -> None:

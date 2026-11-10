@@ -156,3 +156,4 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 ## Terminal output keeps split characters whole (0.8.1)
 
 - `Session.read` on a pty used to decode each `os.read` chunk on its own, so a multi-byte character cut by a chunk boundary became two replacement characters in the Terminal panel. The session now holds one incremental UTF-8 decoder (`errors="replace"`) and `read` keeps reading while a chunk decodes to nothing, because `Term._start`'s pump takes an empty string as the end of the stream. At a real end (empty read, or the pty's `OSError` when the shell exits) the decoder is flushed first, so a dangling partial character is still delivered once.
+- The same decoding now serves the non-pty fallback (the piped subprocess used when `winpty` is missing): both paths go through `Session._decoded(fetch)`, which owns the keep-reading-on-empty and flush-at-end rules. `winpty.read` returns text already and is untouched.
