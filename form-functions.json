@@ -405,7 +405,200 @@
           },
           "settings": {
             "type": "object",
-            "description": "Optional export settings patch merged over the preset, as queue.addSource and the MCP encode tool take it (for example {\"video\": {\"matchSource\": false, \"width\": 1280, \"height\": 720}})."
+            "description": "Optional export settings patch merged over the preset, as queue.addSource takes it, limited to these fields (for example {\"video\": {\"matchSource\": false, \"width\": 1280, \"height\": 720}}). Path-valued settings, publish, plug-ins, the output name and the format or codec cannot be patched.",
+            "properties": {
+              "exportVideo": {
+                "type": "boolean"
+              },
+              "exportAudio": {
+                "type": "boolean"
+              },
+              "video": {
+                "type": "object",
+                "description": "Picture size, rate and quality.",
+                "properties": {
+                  "matchSource": {
+                    "type": "boolean"
+                  },
+                  "width": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "height": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "frameRate": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "fieldOrder": {
+                    "type": "string"
+                  },
+                  "pixelAspect": {
+                    "type": "string"
+                  },
+                  "profile": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "type": "string"
+                  },
+                  "bitDepth": {
+                    "type": "integer"
+                  },
+                  "chroma": {
+                    "type": "string"
+                  },
+                  "rateControl": {
+                    "type": "string"
+                  },
+                  "targetBitrate": {
+                    "type": "number"
+                  },
+                  "maxBitrate": {
+                    "type": "number"
+                  },
+                  "quality": {
+                    "type": "integer"
+                  },
+                  "keyframeDistance": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "audio": {
+                "type": "object",
+                "description": "Audio rate, channels and bitrate.",
+                "properties": {
+                  "sampleRate": {
+                    "type": "integer"
+                  },
+                  "channels": {
+                    "type": "string"
+                  },
+                  "bitrate": {
+                    "type": "integer"
+                  },
+                  "bitDepth": {
+                    "type": "integer"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "multiplexer": {
+                "type": "object",
+                "description": "Container options.",
+                "properties": {
+                  "fastStart": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "range": {
+                "type": "object",
+                "description": "The part of the source to encode, in seconds.",
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "in": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "out": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "crop": {
+                "type": "object",
+                "description": "Crop in pixels.",
+                "properties": {
+                  "left": {
+                    "type": "integer"
+                  },
+                  "top": {
+                    "type": "integer"
+                  },
+                  "right": {
+                    "type": "integer"
+                  },
+                  "bottom": {
+                    "type": "integer"
+                  },
+                  "proportion": {
+                    "type": "string"
+                  },
+                  "anchorX": {
+                    "type": "number"
+                  },
+                  "anchorY": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "rotation": {
+                "type": "integer"
+              },
+              "scaling": {
+                "type": "string"
+              },
+              "effects": {
+                "type": "object",
+                "description": "Effects without files.",
+                "properties": {
+                  "loudness": {
+                    "type": "object",
+                    "description": "Loudness normalisation; the report is written beside the output.",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "standard": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "number"
+                      },
+                      "tolerance": {
+                        "type": "number"
+                      },
+                      "truePeak": {
+                        "type": "number"
+                      },
+                      "lra": {
+                        "type": "number"
+                      },
+                      "mode": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [

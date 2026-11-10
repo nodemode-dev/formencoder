@@ -7,14 +7,26 @@ from typing import Any
 _TYPES = {"object": dict, "string": str, "integer": int, "number": (int, float), "boolean": bool, "array": list}
 
 
+def _is(value: Any, kind: str) -> bool:
+    if kind == "null":
+        return value is None
+    return isinstance(value, _TYPES[kind]) and (kind == "boolean" or not isinstance(value, bool))
+
+
+def _article(kind: str) -> str:
+    return kind if kind == "null" else f"a{'n' if kind[0] in 'aeiou' else ''} {kind}"
+
+
 class ParamsError(ValueError):
     """The params do not match the function's schema."""
 
 
 def validate(value: Any, schema: dict, where: str = "params") -> None:
-    kind = schema.get("type")
-    if kind and (not isinstance(value, _TYPES[kind]) or (kind != "boolean" and isinstance(value, bool))):
-        raise ParamsError(f"{where} must be a{'n' if kind[0] in 'aeiou' else ''} {kind}")
+    kinds = schema.get("type")
+    kinds = [kinds] if isinstance(kinds, str) else kinds or []
+    if kinds and not any(_is(value, k) for k in kinds):
+        raise ParamsError(f"{where} must be {' or '.join(_article(k) for k in kinds)}")
+    kind = next((k for k in kinds if _is(value, k)), None)
     if "enum" in schema and value not in schema["enum"]:
         raise ParamsError(f"{where} {value!r} is not one of the {len(schema['enum'])} allowed values (see form-functions.json)")
     if kind != "object":
@@ -26,7 +38,7 @@ def validate(value: Any, schema: dict, where: str = "params") -> None:
     if schema.get("additionalProperties") is False:
         extra = sorted(set(value) - set(props))
         if extra:
-            raise ParamsError(f"{where} has unknown {', '.join(extra)}; allowed: {', '.join(props)}")
+            raise ParamsError(f"{where} has {', '.join(extra)}, which a function cannot set; allowed: {', '.join(props)}")
     for name, sub in props.items():
         if name in value:
             validate(value[name], sub, f"{where}.{name}")

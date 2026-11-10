@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -60,7 +61,7 @@ def test_audio_only_preset_writes_audio_without_video(clip, tmp_path):
     ({}, "params.preset is required"),
     ({"preset": "system/no-such-preset"}, "not one of"),
     ({"preset": "system/png-sequence"}, "not one of"),
-    ({"preset": "system/aac-256", "speed": 2}, "unknown speed"),
+    ({"preset": "system/aac-256", "speed": 2}, "params has speed, which a function cannot set"),
     ({"preset": "system/aac-256", "settings": "fast"}, "params.settings must be an object"),
 ])
 def test_bad_params_fail_with_a_clear_message(clip, tmp_path, params, needle):
@@ -81,14 +82,47 @@ def test_missing_or_unreadable_inputs_fail_with_a_clear_message(tmp_path):
             encode(inputs, {"preset": "system/aac-256"}, str(tmp_path / "out"))
 
 
-def test_an_output_name_cannot_leave_out_dir(clip, tmp_path):
-    from app.functions import encode
+UNSAFE = [
+    ({"effects": {"lut": {"enabled": True, "path": "/etc/passwd"}}}, "params.settings.effects has lut"),
+    ({"captions": {"mode": "burn", "source": "/etc/hosts"}}, "params.settings has captions"),
+    ({"effects": {"loudness": {"enabled": True, "reportFolder": "/tmp/elsewhere"}}}, "params.settings.effects.loudness has reportFolder"),
+    ({"effects": {"imageOverlay": {"enabled": True, "path": "/etc/passwd"}}}, "params.settings.effects has imageOverlay"),
+    ({"outputName": "../escaped"}, "params.settings has outputName"),
+    ({"publish": [{"type": "folder", "path": "/tmp"}]}, "params.settings has publish"),
+    ({"format": "png"}, "params.settings has format"),
+    ({"video": {"width": "wide"}}, "params.settings.video.width must be an integer or null"),
+]
+
+
+@pytest.mark.parametrize("settings,needle", UNSAFE)
+def test_settings_outside_the_allowlist_are_refused_not_dropped(clip, tmp_path, settings, needle):
+    from app.functions import ParamsError, encode
+
+    with pytest.raises(ParamsError, match=re.escape(needle)):
+        encode({"media": str(clip)}, {"preset": "system/aac-256", "settings": settings}, str(tmp_path / "out"))
+    assert not (tmp_path / "out").exists() or not list((tmp_path / "out").iterdir())
+    assert not list(tmp_path.glob("escaped*"))
+
+
+@pytest.mark.parametrize("settings,needle", UNSAFE[:3])
+def test_the_engine_side_guard_refuses_paths_even_past_the_allowlist(clip, tmp_path, settings, needle):
+    from app.functions import FunctionError, catalogue, guard
+    from app.functions.session import headless
 
     out = tmp_path / "out"
-    for name in ("../escaped", "/tmp/escaped"):
-        path = encode({"media": str(clip)}, {"preset": "system/aac-256", "settings": {"outputName": name}}, str(out))["media"]
-        assert os.path.dirname(path) == str(out.resolve())
-    assert not list(tmp_path.glob("escaped*"))
+    with headless() as s:
+        oid = s.run("queue.addSource", paths=[str(clip)], preset="system/aac-256", folder=str(out), settings=settings)["output"]
+        with pytest.raises(FunctionError, match="outside"):
+            guard.before(s, oid, out.resolve(), catalogue.planned(s, oid)["path"])
+    with pytest.raises(FunctionError, match="outside out_dir"):
+        guard.after({"path": str(out / "a.m4a"), "loudnessReport": "/tmp/elsewhere/a_loudness.xml"}, out.resolve())
+
+
+def test_an_allowed_bitrate_patch_still_encodes(clip, tmp_path):
+    from app.functions import encode
+
+    path = encode({"media": str(clip)}, {"preset": "system/aac-256", "settings": {"audio": {"bitrate": 96}}}, str(tmp_path))["media"]
+    assert int(streams(path, "audio")[0]["bit_rate"]) < 160_000
 
 
 def test_the_persons_data_folder_is_never_used(clip, tmp_path):

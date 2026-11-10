@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from .. import native
-from . import catalogue
+from . import allowlist, catalogue, guard
 from .schema import validate
 from .session import FunctionError, Session, headless
 
@@ -29,11 +29,7 @@ def params_schema(preset_ids: list[str]) -> dict:
                 "description": f"A formencoder preset id (preset.list in the engine, references/presets.md in the harness skill). "
                                f"Web video: {catalogue.WEB_VIDEO}; audio only: {catalogue.AUDIO_ONLY}.",
             },
-            "settings": {
-                "type": "object",
-                "description": "Optional export settings patch merged over the preset, as queue.addSource and the MCP encode tool take it "
-                               "(for example {\"video\": {\"matchSource\": false, \"width\": 1280, \"height\": 720}}).",
-            },
+            "settings": allowlist.SETTINGS,
         },
         "required": ["preset"],
         "additionalProperties": False,
@@ -55,13 +51,6 @@ def _source(inputs: dict) -> Path:
     return path
 
 
-def _inside(path: str, folder: Path, what: str) -> Path:
-    p = Path(path).resolve()
-    if not p.is_relative_to(folder):
-        raise FunctionError(f"the {what} {p} is outside out_dir; drop outputName or folder settings that leave it")
-    return p
-
-
 def _queue(s: Session, source: Path, params: dict, out: Path) -> str:
     request = {"paths": [str(source)], "preset": params["preset"], "folder": str(out)}
     if params.get("settings"):
@@ -70,7 +59,7 @@ def _queue(s: Session, source: Path, params: dict, out: Path) -> str:
     row = catalogue.planned(s, oid)
     if row.get("format") not in catalogue.media_formats(s):
         raise FunctionError(f"the settings turn the output into {row.get('format')}, which is not one video or audio file")
-    _inside(row["path"], out, "planned output")
+    guard.before(s, oid, out, row["path"])
     return oid
 
 
@@ -93,7 +82,8 @@ def encode(inputs: dict, params: dict, out_dir: str) -> dict:
         row = s.finish(oid, TIMEOUT_S)
         if row["status"] != "done":
             raise FunctionError(f"the encode {row['status']}: {row.get('error') or 'no reason given'}")
-        path = _inside(row["path"], out, "output")
+        guard.after(row, out)
+        path = Path(row["path"]).resolve()
         if not path.is_file():
             raise FunctionError(f"the engine reported {path.name} but wrote no file")
         _verify(s, oid)
