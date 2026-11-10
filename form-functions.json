@@ -1,0 +1,423 @@
+{
+  "format": "form-functions",
+  "format_version": 1,
+  "app": "formencoder",
+  "app_version": "0.8.0",
+  "functions": [
+    {
+      "id": "encode",
+      "title": "Encode",
+      "description": "Encode one video or audio file with a formencoder preset (and an optional settings patch) on formencoder's own engine and its LGPL FFmpeg; the output is verified against the settings before it is returned.",
+      "entry": "app.functions:encode",
+      "inputs": [
+        {
+          "name": "media",
+          "kind": "media",
+          "required": true,
+          "many": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "media",
+          "kind": "media",
+          "ext": "webm",
+          "by_param": {
+            "preset": {
+              "system/match-source-high": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/match-source-medium": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/match-source-adaptive-high": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/hevc-match-source-high": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/hevc-4k-hdr10": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/av1-match-source": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/webm-vp9-1080p": {
+                "kind": "video",
+                "ext": "webm"
+              },
+              "system/webm-vp9-alpha": {
+                "kind": "video",
+                "ext": "webm"
+              },
+              "system/youtube-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/youtube-1440p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/youtube-2160p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/youtube-shorts": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/vimeo-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/vimeo-2160p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/x-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/instagram-reels": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/instagram-feed-square": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/tiktok": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/facebook-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/linkedin-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/apple-tv-4k": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/iphone-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/android-1080p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/android-720p": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/prores-proxy": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/prores-lt": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/prores-422": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/prores-hq": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/prores-4444": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/prores-4444-alpha": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/prores-4444xq": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/dnxhr-lb": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/dnxhr-sq": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/dnxhr-hq": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/dnxhr-hqx": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/dnxhr-444": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/cineform-high": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/cineform-alpha": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/animation-alpha": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/uncompressed-10bit": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/xdcam-hd422-1080i50": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/xdcam-hd422-1080i5994": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/xdcam-hd422-720p50": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/dnxhr-hq-mxf": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/dnxhd-145-mxf": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/prores-hq-mxf": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/jpeg2000-mxf": {
+                "kind": "video",
+                "ext": "mxf"
+              },
+              "system/mpeg2-1080i": {
+                "kind": "video",
+                "ext": "mpg"
+              },
+              "system/h264-broadcast-ebu": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/h264-broadcast-atsc": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/mpeg2-dvd-ntsc": {
+                "kind": "video",
+                "ext": "mpg"
+              },
+              "system/bluray-mpeg2-1080i": {
+                "kind": "video",
+                "ext": "m2v"
+              },
+              "system/bluray-h264-1080p24": {
+                "kind": "video",
+                "ext": "264"
+              },
+              "system/mpeg2-dvd-pal": {
+                "kind": "video",
+                "ext": "mpg"
+              },
+              "system/gif-480": {
+                "kind": "video",
+                "ext": "gif"
+              },
+              "system/gif-720": {
+                "kind": "video",
+                "ext": "gif"
+              },
+              "system/wav-48-24": {
+                "kind": "audio",
+                "ext": "wav"
+              },
+              "system/wav-48-16": {
+                "kind": "audio",
+                "ext": "wav"
+              },
+              "system/bwf-ebu": {
+                "kind": "audio",
+                "ext": "wav"
+              },
+              "system/aiff-48-24": {
+                "kind": "audio",
+                "ext": "aif"
+              },
+              "system/mp3-320": {
+                "kind": "audio",
+                "ext": "mp3"
+              },
+              "system/mp3-podcast": {
+                "kind": "audio",
+                "ext": "mp3"
+              },
+              "system/aac-256": {
+                "kind": "audio",
+                "ext": "m4a"
+              },
+              "system/aac-streaming": {
+                "kind": "audio",
+                "ext": "m4a"
+              },
+              "system/flac-48-24": {
+                "kind": "audio",
+                "ext": "flac"
+              },
+              "system/ogg-opus": {
+                "kind": "audio",
+                "ext": "ogg"
+              },
+              "system/ffv1-archive": {
+                "kind": "video",
+                "ext": "mkv"
+              },
+              "system/proxy-prores": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/proxy-h264-540": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/proxy-h264-720": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "system/proxy-cineform": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/family-formcut-mezzanine": {
+                "kind": "video",
+                "ext": "mov"
+              },
+              "system/family-formwav-audio": {
+                "kind": "audio",
+                "ext": "wav"
+              }
+            }
+          }
+        }
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "preset": {
+            "type": "string",
+            "enum": [
+              "system/match-source-high",
+              "system/match-source-medium",
+              "system/match-source-adaptive-high",
+              "system/hevc-match-source-high",
+              "system/hevc-4k-hdr10",
+              "system/av1-match-source",
+              "system/webm-vp9-1080p",
+              "system/webm-vp9-alpha",
+              "system/youtube-1080p",
+              "system/youtube-1440p",
+              "system/youtube-2160p",
+              "system/youtube-shorts",
+              "system/vimeo-1080p",
+              "system/vimeo-2160p",
+              "system/x-1080p",
+              "system/instagram-reels",
+              "system/instagram-feed-square",
+              "system/tiktok",
+              "system/facebook-1080p",
+              "system/linkedin-1080p",
+              "system/apple-tv-4k",
+              "system/iphone-1080p",
+              "system/android-1080p",
+              "system/android-720p",
+              "system/prores-proxy",
+              "system/prores-lt",
+              "system/prores-422",
+              "system/prores-hq",
+              "system/prores-4444",
+              "system/prores-4444-alpha",
+              "system/prores-4444xq",
+              "system/dnxhr-lb",
+              "system/dnxhr-sq",
+              "system/dnxhr-hq",
+              "system/dnxhr-hqx",
+              "system/dnxhr-444",
+              "system/cineform-high",
+              "system/cineform-alpha",
+              "system/animation-alpha",
+              "system/uncompressed-10bit",
+              "system/xdcam-hd422-1080i50",
+              "system/xdcam-hd422-1080i5994",
+              "system/xdcam-hd422-720p50",
+              "system/dnxhr-hq-mxf",
+              "system/dnxhd-145-mxf",
+              "system/prores-hq-mxf",
+              "system/jpeg2000-mxf",
+              "system/mpeg2-1080i",
+              "system/h264-broadcast-ebu",
+              "system/h264-broadcast-atsc",
+              "system/mpeg2-dvd-ntsc",
+              "system/bluray-mpeg2-1080i",
+              "system/bluray-h264-1080p24",
+              "system/mpeg2-dvd-pal",
+              "system/gif-480",
+              "system/gif-720",
+              "system/wav-48-24",
+              "system/wav-48-16",
+              "system/bwf-ebu",
+              "system/aiff-48-24",
+              "system/mp3-320",
+              "system/mp3-podcast",
+              "system/aac-256",
+              "system/aac-streaming",
+              "system/flac-48-24",
+              "system/ogg-opus",
+              "system/ffv1-archive",
+              "system/proxy-prores",
+              "system/proxy-h264-540",
+              "system/proxy-h264-720",
+              "system/proxy-cineform",
+              "system/family-formcut-mezzanine",
+              "system/family-formwav-audio"
+            ],
+            "default": "system/webm-vp9-1080p",
+            "description": "A formencoder preset id (preset.list in the engine, references/presets.md in the harness skill). Web video: system/webm-vp9-1080p; audio only: system/aac-256."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Optional export settings patch merged over the preset, as queue.addSource and the MCP encode tool take it (for example {\"video\": {\"matchSource\": false, \"width\": 1280, \"height\": 720}})."
+          }
+        },
+        "required": [
+          "preset"
+        ],
+        "additionalProperties": false
+      },
+      "runs": [
+        "job"
+      ],
+      "cost": "cpu",
+      "timeout_s": 1800
+    }
+  ]
+}
