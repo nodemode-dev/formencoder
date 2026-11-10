@@ -405,7 +405,7 @@
           },
           "settings": {
             "type": "object",
-            "description": "Optional export settings patch merged over the preset, as queue.addSource takes it, limited to these fields (for example {\"video\": {\"matchSource\": false, \"width\": 1280, \"height\": 720}}). Path-valued settings, publish, plug-ins, the output name and the format or codec cannot be patched.",
+            "description": "Optional export settings patch merged over the preset, as queue.addSource takes it, limited to these fields and values (for example {\"video\": {\"matchSource\": false, \"width\": 1280, \"height\": 720}}). Path-valued settings, publish, plug-ins, the output name and the format or codec cannot be patched.",
             "properties": {
               "exportVideo": {
                 "type": "boolean"
@@ -424,54 +424,131 @@
                     "type": [
                       "integer",
                       "null"
-                    ]
+                    ],
+                    "minimum": 16,
+                    "maximum": 16384
                   },
                   "height": {
                     "type": [
                       "integer",
                       "null"
-                    ]
-                  },
-                  "frameRate": {
-                    "type": [
-                      "number",
-                      "null"
-                    ]
-                  },
-                  "fieldOrder": {
-                    "type": "string"
-                  },
-                  "pixelAspect": {
-                    "type": "string"
-                  },
-                  "profile": {
-                    "type": "string"
-                  },
-                  "level": {
-                    "type": "string"
-                  },
-                  "bitDepth": {
-                    "type": "integer"
-                  },
-                  "chroma": {
-                    "type": "string"
-                  },
-                  "rateControl": {
-                    "type": "string"
-                  },
-                  "targetBitrate": {
-                    "type": "number"
-                  },
-                  "maxBitrate": {
-                    "type": "number"
-                  },
-                  "quality": {
-                    "type": "integer"
+                    ],
+                    "minimum": 16,
+                    "maximum": 16384
                   },
                   "keyframeDistance": {
                     "type": [
                       "integer",
                       "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  "quality": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "targetBitrate": {
+                    "type": "number",
+                    "minimum": 0.05,
+                    "maximum": 2000
+                  },
+                  "maxBitrate": {
+                    "type": "number",
+                    "minimum": 0.05,
+                    "maximum": 3000
+                  },
+                  "fieldOrder": {
+                    "enum": [
+                      "source",
+                      "progressive",
+                      "tff",
+                      "bff"
+                    ]
+                  },
+                  "pixelAspect": {
+                    "enum": [
+                      "source",
+                      "1:1",
+                      "10:11",
+                      "40:33",
+                      "12:11",
+                      "16:11",
+                      "4:3",
+                      "3:2",
+                      "2:1"
+                    ]
+                  },
+                  "profile": {
+                    "enum": [
+                      "baseline",
+                      "main",
+                      "high",
+                      "high10",
+                      "high422",
+                      "main10",
+                      "main422-10",
+                      "422"
+                    ]
+                  },
+                  "level": {
+                    "enum": [
+                      "auto",
+                      "3.1",
+                      "4.0",
+                      "4.1",
+                      "4.2",
+                      "5.0",
+                      "5.1",
+                      "5.2",
+                      "6.0",
+                      "6.1",
+                      "6.2"
+                    ]
+                  },
+                  "bitDepth": {
+                    "enum": [
+                      8,
+                      10,
+                      12,
+                      16
+                    ]
+                  },
+                  "chroma": {
+                    "enum": [
+                      "420",
+                      "422"
+                    ]
+                  },
+                  "rateControl": {
+                    "enum": [
+                      "vbr1",
+                      "vbr2",
+                      "cbr",
+                      "quality"
+                    ]
+                  },
+                  "frameRate": {
+                    "enum": [
+                      null,
+                      10.0,
+                      12.0,
+                      12.5,
+                      15.0,
+                      23.976,
+                      24.0,
+                      25.0,
+                      29.97,
+                      30.0,
+                      47.952,
+                      48.0,
+                      50.0,
+                      59.94,
+                      60.0,
+                      100.0,
+                      119.88,
+                      120.0
                     ]
                   }
                 },
@@ -482,16 +559,51 @@
                 "description": "Audio rate, channels and bitrate.",
                 "properties": {
                   "sampleRate": {
-                    "type": "integer"
+                    "enum": [
+                      null,
+                      32000,
+                      44100,
+                      48000,
+                      96000,
+                      88200,
+                      192000
+                    ]
                   },
                   "channels": {
-                    "type": "string"
+                    "enum": [
+                      "source",
+                      "mono",
+                      "stereo",
+                      "5.1",
+                      "7.1",
+                      "tracks",
+                      "discrete",
+                      "custom"
+                    ]
                   },
                   "bitrate": {
-                    "type": "integer"
+                    "enum": [
+                      64,
+                      96,
+                      128,
+                      160,
+                      192,
+                      256,
+                      320,
+                      384,
+                      512,
+                      510,
+                      224,
+                      448,
+                      640
+                    ]
                   },
                   "bitDepth": {
-                    "type": "integer"
+                    "enum": [
+                      16,
+                      24,
+                      32
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -511,19 +623,28 @@
                 "description": "The part of the source to encode, in seconds.",
                 "properties": {
                   "mode": {
-                    "type": "string"
+                    "enum": [
+                      "entire",
+                      "inout",
+                      "custom",
+                      "workArea"
+                    ]
                   },
                   "in": {
                     "type": [
                       "number",
                       "null"
-                    ]
+                    ],
+                    "minimum": 0,
+                    "maximum": 86400
                   },
                   "out": {
                     "type": [
                       "number",
                       "null"
-                    ]
+                    ],
+                    "minimum": 0,
+                    "maximum": 86400
                   }
                 },
                 "additionalProperties": false
@@ -533,34 +654,66 @@
                 "description": "Crop in pixels.",
                 "properties": {
                   "left": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16384
                   },
                   "top": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16384
                   },
                   "right": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16384
                   },
                   "bottom": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16384
                   },
                   "proportion": {
-                    "type": "string"
+                    "enum": [
+                      "none",
+                      "1:1",
+                      "4:3",
+                      "16:9",
+                      "9:16",
+                      "4:5",
+                      "1.85:1",
+                      "2.39:1"
+                    ]
                   },
                   "anchorX": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
                   },
                   "anchorY": {
-                    "type": "number"
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
                   }
                 },
                 "additionalProperties": false
               },
               "rotation": {
-                "type": "integer"
+                "enum": [
+                  0,
+                  90,
+                  180,
+                  270
+                ]
               },
               "scaling": {
-                "type": "string"
+                "enum": [
+                  "fit",
+                  "fitBlack",
+                  "fill",
+                  "stretch",
+                  "matchWidth"
+                ]
               },
               "effects": {
                 "type": "object",
@@ -574,22 +727,36 @@
                         "type": "boolean"
                       },
                       "standard": {
-                        "type": "string"
+                        "enum": [
+                          "ebu-r128",
+                          "atsc-a85",
+                          "itu-bs1770",
+                          "arib-tr-b32",
+                          "op59",
+                          "streaming",
+                          "podcast",
+                          "custom"
+                        ]
                       },
                       "target": {
-                        "type": "number"
+                        "type": "number",
+                        "minimum": -70,
+                        "maximum": 0
                       },
                       "tolerance": {
-                        "type": "number"
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
                       },
                       "truePeak": {
-                        "type": "number"
+                        "type": "number",
+                        "minimum": -20,
+                        "maximum": 0
                       },
                       "lra": {
-                        "type": "number"
-                      },
-                      "mode": {
-                        "type": "string"
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 50
                       }
                     },
                     "additionalProperties": false

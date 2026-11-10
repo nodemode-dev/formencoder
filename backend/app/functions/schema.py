@@ -13,6 +13,15 @@ def _is(value: Any, kind: str) -> bool:
     return isinstance(value, _TYPES[kind]) and (kind == "boolean" or not isinstance(value, bool))
 
 
+def _same(a: Any, b: Any) -> bool:
+    """Equal and of the same JSON type: True is not 1, 25 matches 25.0."""
+    if isinstance(a, bool) or isinstance(b, bool) or a is None or b is None:
+        return type(a) is type(b) and a == b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return a == b
+    return type(a) is type(b) and a == b
+
+
 def _article(kind: str) -> str:
     return kind if kind == "null" else f"a{'n' if kind[0] in 'aeiou' else ''} {kind}"
 
@@ -27,8 +36,15 @@ def validate(value: Any, schema: dict, where: str = "params") -> None:
     if kinds and not any(_is(value, k) for k in kinds):
         raise ParamsError(f"{where} must be {' or '.join(_article(k) for k in kinds)}")
     kind = next((k for k in kinds if _is(value, k)), None)
-    if "enum" in schema and value not in schema["enum"]:
-        raise ParamsError(f"{where} {value!r} is not one of the {len(schema['enum'])} allowed values (see form-functions.json)")
+    if "enum" in schema and not any(_same(value, v) for v in schema["enum"]):
+        allowed = schema["enum"]
+        listed = ", ".join(map(repr, allowed)) if len(allowed) <= 20 else f"the {len(allowed)} allowed values (see form-functions.json)"
+        raise ParamsError(f"{where} {value!r} is not one of {listed}")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            raise ParamsError(f"{where} {value} is below {schema['minimum']}")
+        if "maximum" in schema and value > schema["maximum"]:
+            raise ParamsError(f"{where} {value} is above {schema['maximum']}")
     if kind != "object":
         return
     props = schema.get("properties") or {}

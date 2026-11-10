@@ -118,6 +118,61 @@ def test_the_engine_side_guard_refuses_paths_even_past_the_allowlist(clip, tmp_p
         guard.after({"path": str(out / "a.m4a"), "loudnessReport": "/tmp/elsewhere/a_loudness.xml"}, out.resolve())
 
 
+INJECT = "x,movie=/etc/passwd"
+INJECTIONS = [
+    ({"video": {"pixelAspect": "1:1,movie=/etc/passwd"}}, "params.settings.video.pixelAspect"),
+    ({"video": {"pixelAspect": "1:1;x"}}, "params.settings.video.pixelAspect"),
+    ({"video": {"fieldOrder": INJECT}}, "params.settings.video.fieldOrder"),
+    ({"video": {"profile": INJECT}}, "params.settings.video.profile"),
+    ({"video": {"level": "auto[x]"}}, "params.settings.video.level"),
+    ({"video": {"chroma": "420'"}}, "params.settings.video.chroma"),
+    ({"video": {"rateControl": "cbr\nx"}}, "params.settings.video.rateControl"),
+    ({"video": {"frameRate": "25,movie=/etc/passwd"}}, "params.settings.video.frameRate"),
+    ({"audio": {"channels": "stereo,amovie=/etc/passwd"}}, "params.settings.audio.channels"),
+    ({"range": {"mode": "entire=1"}}, "params.settings.range.mode"),
+    ({"crop": {"proportion": "16:9,movie=/etc/passwd"}}, "params.settings.crop.proportion"),
+    ({"scaling": "fit;x"}, "params.settings.scaling"),
+    ({"effects": {"loudness": {"standard": "ebu-r128\"x"}}}, "params.settings.effects.loudness.standard"),
+    ({"rotation": True}, "params.settings.rotation"),
+    ({"video": {"width": 99999}}, "params.settings.video.width 99999 is above"),
+]
+
+
+@pytest.mark.parametrize("settings,needle", INJECTIONS)
+def test_filtergraph_injection_in_any_string_field_is_refused(clip, tmp_path, settings, needle):
+    from app.functions import ParamsError, encode
+
+    with pytest.raises(ParamsError, match=re.escape(needle)):
+        encode({"media": str(clip)}, {"preset": "system/match-source-medium", "settings": settings}, str(tmp_path / "out"))
+    assert not (tmp_path / "out").exists() or not list((tmp_path / "out").iterdir())
+
+
+@pytest.mark.parametrize("value", ["1:1,movie=/etc/passwd", "1:1;x", "1:1 /etc/passwd"])
+def test_the_engine_side_guard_refuses_metacharacters_and_inner_paths(clip, tmp_path, value):
+    from app.functions import FunctionError, catalogue, guard
+    from app.functions.session import headless
+
+    out = tmp_path / "out"
+    with pytest.raises(FunctionError):
+        guard.patch({"video": {"pixelAspect": value}})
+    with headless() as s:
+        oid = s.run("queue.addSource", paths=[str(clip)], preset="system/match-source-medium", folder=str(out), settings={"video": {"pixelAspect": value}})["output"]
+        with pytest.raises(FunctionError, match="pixelAspect"):
+            guard.before(s, oid, out.resolve(), catalogue.planned(s, oid)["path"])
+
+
+def test_valid_enum_values_still_encode(clip, tmp_path):
+    from app.functions import encode
+
+    settings = {"video": {"matchSource": False, "width": 320, "height": 180, "pixelAspect": "1:1", "fieldOrder": "progressive",
+                          "rateControl": "vbr1", "targetBitrate": 2.0, "frameRate": 25},
+                "audio": {"channels": "stereo", "sampleRate": 48000}, "crop": {"proportion": "16:9"}, "scaling": "fitBlack", "rotation": 0,
+                "effects": {"loudness": {"enabled": True, "standard": "streaming"}}}
+    path = encode({"media": str(clip)}, {"preset": "system/match-source-medium", "settings": settings}, str(tmp_path))["media"]
+    video = streams(path, "video")[0]
+    assert (video["width"], video["height"]) == (320, 180) and video.get("sample_aspect_ratio", "1:1") in ("1:1", "N/A")
+
+
 def test_an_allowed_bitrate_patch_still_encodes(clip, tmp_path):
     from app.functions import encode
 

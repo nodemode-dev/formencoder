@@ -18,7 +18,7 @@ from .session import FunctionError, Session, headless
 TIMEOUT_S = 1800
 
 
-def params_schema(preset_ids: list[str]) -> dict:
+def params_schema(preset_ids: list[str], settings: dict) -> dict:
     return {
         "type": "object",
         "properties": {
@@ -29,11 +29,16 @@ def params_schema(preset_ids: list[str]) -> dict:
                 "description": f"A formencoder preset id (preset.list in the engine, references/presets.md in the harness skill). "
                                f"Web video: {catalogue.WEB_VIDEO}; audio only: {catalogue.AUDIO_ONLY}.",
             },
-            "settings": allowlist.SETTINGS,
+            "settings": settings,
         },
         "required": ["preset"],
         "additionalProperties": False,
     }
+
+
+def schema_for(s: Session) -> dict:
+    presets = [p["id"] for p in catalogue.media_presets(s)]
+    return params_schema(presets, allowlist.settings_schema(s, list(catalogue.media_formats(s))))
 
 
 def _source(inputs: dict) -> Path:
@@ -54,6 +59,7 @@ def _source(inputs: dict) -> Path:
 def _queue(s: Session, source: Path, params: dict, out: Path) -> str:
     request = {"paths": [str(source)], "preset": params["preset"], "folder": str(out)}
     if params.get("settings"):
+        guard.patch(params["settings"])
         request["settings"] = params["settings"]
     oid = s.run("queue.addSource", **request)["output"]
     row = catalogue.planned(s, oid)
@@ -75,7 +81,7 @@ def encode(inputs: dict, params: dict, out_dir: str) -> dict:
     out = Path(out_dir).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
     with headless() as s:
-        validate(params, params_schema([p["id"] for p in catalogue.media_presets(s)]))
+        validate(params, schema_for(s))
         source = _source(inputs)
         oid = _queue(s, source, params, out)
         s.run("queue.start")

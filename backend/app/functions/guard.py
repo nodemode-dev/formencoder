@@ -13,7 +13,13 @@ from pathlib import Path
 from ..core import config
 from .session import FunctionError, Session
 
-_LOOKS_LIKE_PATH = re.compile(r"^(/|~|[A-Za-z]:[\\/]|\\\\|\.\.?[\\/])")
+# A path anywhere in a value: a root, home, drive, UNC or relative-parent start, at the beginning or after a
+# non-word character (so "1:1,movie=/etc/passwd" and "a ../b" match, "ATSC A/85" does not).
+_PATH_INSIDE = re.compile(r"(?:^|[^\w.])(/|~[\\/]|[A-Za-z]:[\\/]|\\\\|\.\.?[\\/])")
+# FFmpeg filtergraph and option metacharacters: the planner interpolates some settings into -vf/-af chains.
+_META = re.compile(r"[,;\[\]='\"\\\n\r]")
+# Labels the engine itself copies from its own preset; never caller-settable (see allowlist.py).
+_LABELS = {"settings.presetName"}
 _READS = (("effects", "lut", "path"), ("effects", "imageOverlay", "path"), ("captions", "source"),
           ("contentCredentials", "certificate"), ("contentCredentials", "privateKey"), ("metadata", "template"))
 
@@ -58,8 +64,20 @@ def before(s: Session, oid: str, out: Path, planned: str) -> None:
             raise FunctionError(f"settings.{key} is not available to a function")
     allowed = [out, *install]
     for where, value in _strings(st):
-        if _LOOKS_LIKE_PATH.match(value) and not _within(value, allowed):
-            raise FunctionError(f"{where} names {value}, outside the inputs, the install and out_dir")
+        if where in _LABELS:
+            continue
+        if _META.search(value):
+            raise FunctionError(f"{where} {value!r} holds a filtergraph or option character (, ; [ ] = ' \" \\ or a newline)")
+        for m in _PATH_INSIDE.finditer(value):
+            if not _within(value[m.start(1):], allowed):
+                raise FunctionError(f"{where} names {value[m.start(1):]}, outside the inputs, the install and out_dir")
+
+
+def patch(settings: object) -> None:
+    """Refuse metacharacters and paths in the caller's own patch before the engine sees it."""
+    for where, value in _strings(settings or {}, "params.settings"):
+        if _META.search(value) or _PATH_INSIDE.search(value):
+            raise FunctionError(f"{where} {value!r} holds a filtergraph, option or path character")
 
 
 def after(row: dict, out: Path) -> None:
