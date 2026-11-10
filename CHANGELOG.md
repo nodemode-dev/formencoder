@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.1 · 2026-11-10
+
+A small fix to the Terminal panel.
+
+- Terminal output no longer shows replacement characters when a multi-byte character (an accent, a symbol) is split across two reads from the shell; the session decodes the stream incrementally and delivers a trailing partial character once when the shell exits. The piped fallback used when no pseudo-terminal library is available decodes the same way.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.1 by hand, without a rebuild.
+
 ## v0.8.0 · 2026-11-09
 
 The three demos open inside FormEncoder, not only in a browser.
