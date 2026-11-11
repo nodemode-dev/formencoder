@@ -144,6 +144,12 @@ pub fn normalize(settings: &Value) -> Res {
             out["video"][key] = json!(((x.max(16.0) / 2.0).round() * 2.0) as i64);
         }
     }
+    if out["video"]["dither"].as_str().is_some_and(|d| !["sierra2_4a", "bayer", "floyd_steinberg", "none"].contains(&d)) {
+        out["video"]["dither"] = json!("sierra2_4a");
+    }
+    if out["video"]["pixelAspect"].as_str().is_some_and(|px| px != "source" && !px.split_once(':').is_some_and(|(a, b)| !a.is_empty() && !b.is_empty() && a.bytes().chain(b.bytes()).all(|c| c.is_ascii_digit()))) {
+        out["video"]["pixelAspect"] = json!("1:1");
+    }
     let alist = &f["audio"];
     if alist.as_array().map(|a| a.is_empty()).unwrap_or(true) {
         out["exportAudio"] = json!(false);

@@ -151,3 +151,9 @@ Refers to `fencoder-core/src/colour.rs` `esc` · kind: fix · logged: v0.8.2 · 
 Refers to `fencoder-plan/src/pipeline.rs` `video_codec_args`, `build` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - The pass options went into `-x265-params` with the raw stats path, which libx265 splits on `:` and unescapes on `\`, so on Windows (`stats=C:\Users\...`) the list broke; and HDR10 pushed a second `-x265-params` into `common`, and FFmpeg keeps only the last, so pass 2 ran without `pass=2:stats=...`. Both delivered a one-pass file under a VBR 2 pass label. The stats path is now written with `/` and `\:`, and the HDR10 options are held in `x265_hdr` and appended to the final pass's own `-x265-params` (or added when there is none), so there is one option string per pass. Checked with FFmpeg 6.1 and libx265 in a scratch folder whose name holds a colon: pass 1 writes `pass.log` there, and pass 2 with the merged string reads it and writes the mastering display and content light side data.
+
+## Dither and pixel aspect are checked before they reach the graph (0.8.2)
+
+Refers to `fencoder-plan/src/settings.rs` `normalize` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `video.dither` (pasted into `paletteuse=dither=...`) and `video.pixelAspect` (pasted into `setsar=...`) were free strings, so a `.fepreset` or an agent's `export_settings` could add filters to the graph, for example one that writes a file. `normalize` now resets `video.dither` to `sierra2_4a` unless it is one of the four options `formats.rs` lists, and `video.pixelAspect` to `1:1` unless it is `source` or digits:digits; values that are not strings are left alone. Checked with a scratch binary outside the repo: `none[vout];movie=/etc/hosts` becomes `sierra2_4a`, `1:1,foo` and `4:3;x` become `1:1`, and `bayer`, `40:33` and `source` are kept.
