@@ -127,3 +127,9 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 Refers to `fencoder-run/src/runner.rs` `copy` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - When the destination resolved onto the source (a folder ingested into its own parent, or a drive root such as `E:\` whose `parent()` is `None`, which made the relative path absolute so `dest.join` returned the source), `File::create` truncated the camera original to 0 bytes and the size and MD5 checks of two empty files passed. The root of a parentless source is now the source itself, a folder source is refused when the destination is inside it, and each file is refused before `File::create` when its target and the source canonicalise to the same path. Checked with `cargo check -p fencoder-run`; not run against real media.
+
+## Parallel outputs of one source get their own file names (0.8.2)
+
+Refers to `fencoder-engine/src/engine.rs` `dispatch`, `fencoder-run/src/runner.rs` `encode` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- Two outputs of one source that resolve to the same name (two H.264 presets without `outputName`) started together under parallel encoding; each job ran `unique_path` before either file existed (both write to the part file until the end), so both chose the same output and part path and two FFmpeg processes wrote one file. `dispatch` now picks the final name itself: when the planned path is held by a running job (its runtime `path`), or exists with `incrementNames` on, it takes the first `_N` name that is neither held nor on disk, so the runner's own `unique_path` keeps it. The part file name also carries the output id (`.clip.mp4.<oid>.fe-part.mp4`). Checked with `cargo check`; not run with FFmpeg.

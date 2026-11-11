@@ -341,7 +341,7 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         let p = Path::new(&out_path);
         let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         let ext = p.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
-        Some(p.with_file_name(format!(".{name}.fe-part{ext}")).to_string_lossy().into_owned())
+        Some(p.with_file_name(format!(".{name}.{}.fe-part{ext}", ctx.oid)).to_string_lossy().into_owned())
     };
     if let Some(part) = &part_path {
         for pass in plan.passes.iter_mut().chain(plan.post.iter_mut()) {
