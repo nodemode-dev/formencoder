@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.8.3 · 2026-11-11
+
+Fixes from the QA pass after 0.8.2.
+
+- Ingest no longer destroys the source when the destination already holds a hard link to it: the copy used to open that link for writing, which emptied the original clip, and the size and MD5 checks then compared two empty files. A destination that is the same file as the source (same device and file number) is now refused, and every file is written to a hidden part file beside its destination and renamed into place, so an existing file is never truncated in place and a stopped or failed copy leaves no half-written file.
+- Ingesting a folder into a folder inside itself that does not exist yet (`CARD` into `CARD/backup`) is refused, as it already was when that folder existed.
+- `net.fetch` for extensions resolves the host once, refuses the request when any address is not public (now also the 100.64.0.0/10 shared range and IPv4 addresses inside IPv6 forms), and connects to the address it checked while TLS still verifies the certificate for the host name, so a second DNS answer can no longer point the request at this computer or the local network. Proxy settings in the environment are ignored.
+- Ingest checks the size, MD5 or bytes of each copied file before it replaces anything, so a copy that fails verification is deleted and the file already at the destination is kept. A part file left at the same hidden name (including a link placed there) is removed first and the new part file is created fresh, so the copy never writes through it.
+- `net.fetch` tries each checked address in turn, as an ordinary connection does, so a host with both IPv6 and IPv4 addresses still answers on a network where IPv6 does not work. Every address still has to be public before any is tried.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.3 by hand, without a rebuild.
+
 ## v0.8.2 · 2026-11-10
 
 Fixes from a review of the engine, the interface and the launchers.
