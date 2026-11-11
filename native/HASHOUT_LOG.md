@@ -139,3 +139,9 @@ Refers to `fencoder-engine/src/engine.rs` `dispatch`, `fencoder-run/src/runner.r
 Refers to `fencoder-io/src/ffmpeg.rs` `probe` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `probe` gave every `%0` pattern `first: 0`, so ffprobe ran with `-start_number 0`, image2 searched only indices 0 to 4, and a sequence numbered from 1001 (or 86400) had no video at add time and failed again at encode, where the runner re-probes and `input_args` reads `sequence.first`. `pattern_first` now lists the pattern's folder for names with the same head, digit count and extension and returns the lowest frame, used for `-start_number` and in the returned `sequence`. Checked with a scratch binary outside the repo: three PNGs numbered 1001 to 1003 probe as a 0.12 s sequence with `first: 1001`.
+
+## LUT paths with an apostrophe (0.8.2)
+
+Refers to `fencoder-core/src/colour.rs` `esc` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `esc` wrote `\'` inside the single-quoted `lut3d=file='...'`, but FFmpeg's graph parser has no escapes inside quotes, so the quote closed early and the whole graph failed ("Filter not found") for a LUT such as `Director's Cut.cube` or a cache under `C:\Users\o'brien`. An apostrophe is now written as `'\\\''`: close the quote, an escaped backslash and an escaped quote for the two parsing levels, reopen. `:` keeps its `\:`, which the graph level passes through inside quotes for the option level. Checked with FFmpeg 6.1 in a scratch folder: the path `o'brien/Director's Cut, v2.cube` through `esc` loads in both a `-filter_complex` graph and a `-vf` chain, and the old escaping fails with "Filter not found".

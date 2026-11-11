@@ -201,5 +201,5 @@ pub fn colorspace_name(space: &str) -> Option<&'static str> {
 }
 
 pub fn esc(p: &Path) -> String {
-    p.to_string_lossy().replace('\\', "/").replace(':', "\\:").replace('\'', "\\'")
+    p.to_string_lossy().replace('\\', "/").replace(':', "\\:").replace('\'', "'\\\\\\''")
 }
