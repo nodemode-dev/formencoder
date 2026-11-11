@@ -169,3 +169,9 @@ Refers to `fencoder-core/src/colour.rs` `sdr_conform_lut`, `dcp_xyz_lut`, `write
 Refers to `fencoder-run/src/runner.rs` `run_pass`, `run_pass_external` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `Job::stop` sets `stop` and kills the pid it finds. A Stop that landed after `encode`'s last `stopped()` check and before `run_pass` stored the child's pid killed nothing, so the whole encode ran before it was discarded as stopped. Both passes now look at `stop` under the same lock that stores the pid and kill the child at once. Not changed: the two-pass loudness and Fit Tuning measurements still run FFmpeg with `.output()` and no recorded pid, so Stop waits for them; registering those children needs a pid hook through `pipeline::measure_loudness` and `tuner_frames`. Checked with `cargo check`; not run with FFmpeg.
+
+## Batches keep the undo cap (0.8.2)
+
+Refers to `fencoder-commands/src/execute.rs` `batch` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `execute` keeps at most 100 undo steps, but `batch` pushed a full copy of the document for every batch with no cap, so an agent driving the queue through the MCP `batch` tool grew the engine's memory for the whole session. `batch` now drops the oldest step past 100, as `execute` does. Checked with `cargo check`; not run.
