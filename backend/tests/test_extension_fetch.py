@@ -107,3 +107,58 @@ def test_fetch_keeps_its_other_rules(monkeypatch):
         extensions.fetch(f"http://{HOST}/")
     with pytest.raises(ValueError, match="not allowed"):
         extensions.fetch(f"https://{HOST}/", method="TRACE")
+
+
+PUBLIC6 = "2606:2800:220:1:248:1893:25c8:1946"
+
+
+class Sock:
+    def setsockopt(self, *args):
+        pass
+
+    def close(self):
+        pass
+
+
+def test_fetch_tries_each_checked_address_in_order_when_ipv6_does_not_connect(monkeypatch):
+    calls = resolver(monkeypatch, [PUBLIC6, PUBLIC], ["127.0.0.1"])
+    seen = {"dialled": []}
+
+    def fake_dial(address, *args, **kwargs):
+        seen["dialled"].append(address)
+        if ":" in address[0]:
+            raise Refused("no IPv6 route")
+        return Sock()
+
+    def fake_wrap(self, sock, server_hostname=None, **kwargs):
+        seen["sni"] = server_hostname
+        raise Refused("test stops here")
+
+    monkeypatch.setattr(socket, "create_connection", fake_dial)
+    monkeypatch.setattr("ssl.SSLContext.wrap_socket", fake_wrap)
+    with pytest.raises(ValueError, match="test stops here"):
+        extensions.fetch(f"https://{HOST}/clip.json")
+    assert seen == {"dialled": [(PUBLIC6, 443), (PUBLIC, 443)], "sni": HOST}
+    assert calls == [HOST]
+
+
+def test_fetch_reports_the_last_error_when_no_checked_address_connects(monkeypatch):
+    resolver(monkeypatch, [PUBLIC6, PUBLIC])
+    dialled = []
+
+    def fake_dial(address, *args, **kwargs):
+        dialled.append(address)
+        raise Refused(f"cannot reach {address[0]}")
+
+    monkeypatch.setattr(socket, "create_connection", fake_dial)
+    with pytest.raises(ValueError, match=f"cannot reach {PUBLIC}"):
+        extensions.fetch(f"https://{HOST}/clip.json")
+    assert dialled == [(PUBLIC6, 443), (PUBLIC, 443)]
+
+
+def test_fetch_refuses_a_mix_when_a_later_address_is_not_public(monkeypatch):
+    resolver(monkeypatch, [PUBLIC6, PUBLIC, "10.0.0.1"])
+    dialled = dialer(monkeypatch)
+    with pytest.raises(PermissionError):
+        extensions.fetch(f"https://{HOST}/clip.json")
+    assert dialled == []

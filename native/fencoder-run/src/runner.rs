@@ -760,44 +760,15 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
         if fs::canonicalize(&target).ok().is_some_and(|t| fs::canonicalize(f).ok().as_ref() == Some(&t)) || same_file(f, &target) {
             return Err(format!("{} would be copied onto itself; choose another destination", f.display()));
         }
-        let mut hin = Md5::new();
         let part = target.with_file_name(format!(".{}.{}.fe-part", target.file_name().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default(), ctx.oid));
-        let written = write_part(ctx, f, &part, verify == "md5", &mut hin, &mut done, total).and_then(|_| fs::rename(&part, &target).map_err(|e| format!("cannot write {}: {e}", target.display())));
-        if let Err(e) = written {
+        let _ = fs::remove_file(&part);
+        let mut hin = Md5::new();
+        let placed = write_part(ctx, f, &part, verify == "md5", &mut hin, &mut done, total)
+            .and_then(|_| check_part(f, &part, &verify, hin))
+            .and_then(|_| fs::rename(&part, &target).map_err(|e| format!("cannot write {}: {e}", target.display())));
+        if let Err(e) = placed {
             let _ = fs::remove_file(&part);
             return Err(e);
-        }
-        let (a, b) = (fs::metadata(f).map(|m| m.len()).unwrap_or(0), fs::metadata(&target).map(|m| m.len()).unwrap_or(0));
-        if a != b {
-            return Err(format!("{}: the copy is {b} bytes, the original {a}", f.display()));
-        }
-        if verify == "md5" {
-            let mut hout = Md5::new();
-            let mut r = File::open(&target).map_err(|e| e.to_string())?;
-            let mut buf = vec![0u8; 4 << 20];
-            loop {
-                let n = r.read(&mut buf).map_err(|e| e.to_string())?;
-                if n == 0 {
-                    break;
-                }
-                hout.update(&buf[..n]);
-            }
-            if hin.finalize() != hout.finalize() {
-                return Err(format!("{}: the MD5 of the copy differs from the original", f.display()));
-            }
-        } else if verify == "bit" {
-            let (mut x, mut y) = (File::open(f).map_err(|e| e.to_string())?, File::open(&target).map_err(|e| e.to_string())?);
-            let (mut bx, mut by) = (vec![0u8; 1 << 20], vec![0u8; 1 << 20]);
-            loop {
-                let n1 = x.read(&mut bx).map_err(|e| e.to_string())?;
-                let n2 = y.read(&mut by).map_err(|e| e.to_string())?;
-                if n1 != n2 || bx[..n1] != by[..n2] {
-                    return Err(format!("{}: the copy differs from the original", f.display()));
-                }
-                if n1 == 0 {
-                    break;
-                }
-            }
         }
         copied.push(target.to_string_lossy().into_owned());
     }
@@ -807,7 +778,7 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
 
 fn write_part(ctx: &Ctx, f: &Path, part: &Path, md5: bool, hin: &mut Md5, done: &mut u64, total: u64) -> Res<()> {
     let mut r = File::open(f).map_err(|e| e.to_string())?;
-    let mut w = File::create(part).map_err(|e| format!("cannot write {}: {e}", part.display()))?;
+    let mut w = fs::OpenOptions::new().write(true).create_new(true).open(part).map_err(|e| format!("cannot write {}: {e}", part.display()))?;
     let mut buf = vec![0u8; 4 << 20];
     let label = format!("copying {}", f.file_name().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default());
     loop {
@@ -826,6 +797,42 @@ fn write_part(ctx: &Ctx, f: &Path, part: &Path, md5: bool, hin: &mut Md5, done: 
         ctx.report(0.95 * *done as f64 / total as f64, &label);
     }
     w.sync_all().map_err(|e| e.to_string())
+}
+
+fn check_part(f: &Path, part: &Path, verify: &str, hin: Md5) -> Res<()> {
+    let (a, b) = (fs::metadata(f).map(|m| m.len()).unwrap_or(0), fs::metadata(part).map(|m| m.len()).unwrap_or(0));
+    if a != b {
+        return Err(format!("{}: the copy is {b} bytes, the original {a}", f.display()));
+    }
+    if verify == "md5" {
+        let mut hout = Md5::new();
+        let mut r = File::open(part).map_err(|e| e.to_string())?;
+        let mut buf = vec![0u8; 4 << 20];
+        loop {
+            let n = r.read(&mut buf).map_err(|e| e.to_string())?;
+            if n == 0 {
+                break;
+            }
+            hout.update(&buf[..n]);
+        }
+        if hin.finalize() != hout.finalize() {
+            return Err(format!("{}: the MD5 of the copy differs from the original", f.display()));
+        }
+    } else if verify == "bit" {
+        let (mut x, mut y) = (File::open(f).map_err(|e| e.to_string())?, File::open(part).map_err(|e| e.to_string())?);
+        let (mut bx, mut by) = (vec![0u8; 1 << 20], vec![0u8; 1 << 20]);
+        loop {
+            let n1 = x.read(&mut bx).map_err(|e| e.to_string())?;
+            let n2 = y.read(&mut by).map_err(|e| e.to_string())?;
+            if n1 != n2 || bx[..n1] != by[..n2] {
+                return Err(format!("{}: the copy differs from the original", f.display()));
+            }
+            if n1 == 0 {
+                break;
+            }
+        }
+    }
+    Ok(())
 }
 
 fn resolved(p: &Path) -> Option<PathBuf> {

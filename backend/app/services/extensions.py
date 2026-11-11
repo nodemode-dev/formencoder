@@ -107,7 +107,7 @@ def _public(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return True
 
 
-def _resolve(host: str, port: int) -> str:
+def _resolve(host: str, port: int) -> list[str]:
     try:
         infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except OSError:
@@ -115,18 +115,27 @@ def _resolve(host: str, port: int) -> str:
     addrs = [ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos]
     if not addrs or not all(_public(a) for a in addrs):
         raise PermissionError("addresses on this computer or the local network are not reachable from extensions")
-    return str(addrs[0])
+    return list(dict.fromkeys(str(a) for a in addrs))
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
-    def __init__(self, host: str, address: str, context: ssl.SSLContext, **kwargs) -> None:
+    def __init__(self, host: str, addresses: list[str], context: ssl.SSLContext, **kwargs) -> None:
         kwargs.pop("context", None)
         super().__init__(host, context=context, **kwargs)
-        self._address = address
+        self._addresses = addresses
         self._pinned_context = context
 
+    def _dial(self) -> socket.socket:
+        error: OSError = OSError(f"{self.host} has no address to connect to")
+        for address in self._addresses:
+            try:
+                return socket.create_connection((address, self.port), self.timeout, self.source_address)
+            except OSError as exc:
+                error = exc
+        raise error
+
     def connect(self) -> None:
-        sock = socket.create_connection((self._address, self.port), self.timeout, self.source_address)
+        sock = self._dial()
         try:
             self.sock = self._pinned_context.wrap_socket(sock, server_hostname=self.host)
         except BaseException:
@@ -135,16 +144,16 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
 
 class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
-    def __init__(self, address: str) -> None:
+    def __init__(self, addresses: list[str]) -> None:
         self._pinned_context = ssl.create_default_context()
         super().__init__(context=self._pinned_context)
-        self._address = address
+        self._addresses = addresses
 
     def https_open(self, req):
         return self.do_open(self._connect, req)
 
     def _connect(self, host: str, **kwargs) -> _PinnedHTTPSConnection:
-        return _PinnedHTTPSConnection(host, self._address, self._pinned_context, **kwargs)
+        return _PinnedHTTPSConnection(host, self._addresses, self._pinned_context, **kwargs)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -160,7 +169,7 @@ def fetch(url: str, method: str = "GET", headers: dict | None = None, body: str 
         port = parts.port or 443
     except ValueError:
         raise ValueError("the address has an invalid port") from None
-    address = _resolve(parts.hostname, port)
+    addresses = _resolve(parts.hostname, port)
     method = (method or "GET").upper()
     if method not in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"):
         raise ValueError(f"method {method} is not allowed")
@@ -168,7 +177,7 @@ def fetch(url: str, method: str = "GET", headers: dict | None = None, body: str 
     clean = {str(k): str(v) for k, v in (headers or {}).items() if str(k).lower() not in ("host", "cookie", "connection", "content-length")}
     clean.setdefault("User-Agent", f"FormEncoder/{__version__}")
     req = urllib.request.Request(url, data=data, method=method, headers=clean)
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect, _PinnedHTTPSHandler(address))
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect, _PinnedHTTPSHandler(addresses))
     try:
         resp = opener.open(req, timeout=60)
     except urllib.error.HTTPError as exc:
