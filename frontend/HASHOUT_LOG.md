@@ -146,3 +146,9 @@ Refers to `engine/client.ts` `Client.receive` (hello) · kind: fix · logged: v0
 Refers to `panels/export-settings.ts` `buildEffects` (the Installed LUTs button) · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - The click handler read `e.currentTarget` after `await ctx.run('lut.list')`; by then dispatch had ended and `currentTarget` was null, so `getBoundingClientRect` threw and no menu appeared. The handler now measures the button itself (`pick`) after the await. Checked with `tsc --noEmit`; not run in the window.
+
+## A late submenu never opens orphaned (0.8.2)
+
+Refers to `ui/popup.ts` `PopupMenu.showSub`, `closeSub` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `showSub` awaited the row's asynchronous children (Apply Preset, Format) and then opened its menu whatever had happened meanwhile. Moving to another submenu row, or pressing Escape, before the first list arrived left a submenu that no parent would close and that `openRoots` did not hold, and `Keys.down` ignores keys while any `.cv-menu` is shown, so every shortcut stopped until reload. `closeSub` now bumps `subSeq`; `showSub` takes the value after its own `closeSub` and, after the await, drops its menu when the value moved on or its own panel is hidden. Checked with `tsc --noEmit`; not run in the window.
