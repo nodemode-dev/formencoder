@@ -163,3 +163,9 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 Refers to `routers/terminal.py` `Term._start` (pump) · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `Session.close` sends SIGHUP and at once calls `waitpid(WNOHANG)`, which returns before the shell has exited, and nothing reaped it later, so every closed, restarted or exited terminal left a zombie for the life of the engine. The pump thread now waits for the shell (`os.waitpid(pid, 0)`, POSIX, `OSError` suppressed when `close` already reaped it) once its read loop ends and before `_ended`. Checked with a scratch script in a venv outside the repo: five `Term`s on `/bin/sh` closed through `Session.close` leave no child of the engine a second later; the same script against the previous `terminal.py` leaves shells in state `Zs`.
+
+## Model downloads follow FORMENCODER_MODELS (0.8.2)
+
+Refers to `model_fetch.py` `models_folder` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The engine (`transcribe::models_dir`) looks for speech models in `FORMENCODER_MODELS` when it is set, but `model.fetch` always downloaded into the per-person folder, so with the variable set `captions.transcribe` kept saying the model was missing. `models_folder` now returns the variable's path (trimmed, `~` expanded) when it is set and not blank. Checked in a venv outside the repo: with `FORMENCODER_MODELS='~/m x '` it returns `/root/m x`, without it the XDG folder as before.
