@@ -188,3 +188,9 @@ Refers to `ui/dock.ts` `resetWorkspace` · kind: fix · logged: v0.8.2 · 2026-1
 Refers to `app/app.ts` `App.approvals` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - When the request shown in this window left the pending list (the person answered in another window), `approvals` closed the dialog while `this.approval` still named it, so the dialog's `onClose` ran `answer(false)`, sent `agents.decide` for a request already decided and showed the engine's "no pending approval N" error. `this.approval` is now cleared before the dialog closes, so `answer` returns at once. Checked with `tsc --noEmit`; not run with two windows.
+
+## Shortcuts load when the command list arrives (0.8.2)
+
+Refers to `app/ctx.ts` `Ctx.start`, `ui/keys.ts` `Keys` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `Keys` rebuilt its table on a 400 ms timer after `open`, not after `command.list` answered, so on a slow first connect the table held only Backspace and Cmd+I, Cmd+E, Enter and the rest did nothing for the session. `Ctx.start` now emits `specs` once `loadSpecs` has finished after each `open`, the same event a shortcut edit already raises, and `Keys` no longer keeps its timer. Checked with `tsc --noEmit`; not run against a slow engine.

@@ -23,7 +23,6 @@ export class Keys {
   handlers: { palette: () => void; maximize: () => void; focused: () => string } | null = null;
 
   constructor(private readonly ctx: Ctx) {
-    ctx.client.events.on('open', () => window.setTimeout(() => this.load(), 400));
     ctx.ui.on('specs', () => this.load());
     window.addEventListener('keydown', (e) => this.down(e));
   }
