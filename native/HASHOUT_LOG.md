@@ -157,3 +157,9 @@ Refers to `fencoder-plan/src/pipeline.rs` `video_codec_args`, `build` · kind: f
 Refers to `fencoder-plan/src/settings.rs` `normalize` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `video.dither` (pasted into `paletteuse=dither=...`) and `video.pixelAspect` (pasted into `setsar=...`) were free strings, so a `.fepreset` or an agent's `export_settings` could add filters to the graph, for example one that writes a file. `normalize` now resets `video.dither` to `sierra2_4a` unless it is one of the four options `formats.rs` lists, and `video.pixelAspect` to `1:1` unless it is `source` or digits:digits; values that are not strings are left alone. Checked with a scratch binary outside the repo: `none[vout];movie=/etc/hosts` becomes `sierra2_4a`, `1:1,foo` and `4:3;x` become `1:1`, and `bayer`, `40:33` and `source` are kept.
+
+## Generated LUTs appear in the cache whole (0.8.2)
+
+Refers to `fencoder-core/src/colour.rs` `sdr_conform_lut`, `dcp_xyz_lut`, `write_whole` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- Both wrote the cube straight to its final cache name and later callers trusted `is_file()`, so a second job starting while the first was writing (the DCP cube is about 7 MB) handed FFmpeg a truncated table, and a write cut short by quitting stayed in the cache and broke every later use. `write_whole` writes to `<name>.cube.<pid>.<n>.part` and renames it onto the final name; when the rename fails but another writer already put the file there, that file is used. Checked with a scratch binary outside the repo: four threads calling `dcp_xyz_lut` on an empty cache all return a 7,414,967 byte file and no `.part` file remains.

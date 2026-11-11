@@ -82,6 +82,19 @@ fn tone(x: f64, knee: f64, white: f64) -> f64 {
     knee + (1.0 - knee) * (1.0 - (-(x - knee) / span * 2.2).exp()) / (1.0 - (-2.2f64).exp())
 }
 
+fn write_whole(out: &Path, text: &str) -> Res<()> {
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let tmp = out.with_extension(format!("cube.{}.{}.part", std::process::id(), SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+    fs::write(&tmp, text).map_err(|e| e.to_string())?;
+    if let Err(e) = fs::rename(&tmp, out) {
+        let _ = fs::remove_file(&tmp);
+        if !out.is_file() {
+            return Err(e.to_string());
+        }
+    }
+    Ok(())
+}
+
 pub fn sdr_conform_lut(transfer: &str, knee: f64, peak: f64, brightness: f64, contrast: f64) -> Res<PathBuf> {
     let size = 33;
     let key = format!("sdr_{transfer}_{}_{}_{}_{}_{size}.cube", knee as i64, peak as i64, brightness as i64, contrast as i64);
@@ -121,7 +134,7 @@ pub fn sdr_conform_lut(transfer: &str, knee: f64, peak: f64, brightness: f64, co
             }
         }
     }
-    fs::write(&out, text).map_err(|e| e.to_string())?;
+    write_whole(&out, &text)?;
     Ok(out)
 }
 
@@ -145,7 +158,7 @@ pub fn dcp_xyz_lut() -> Res<PathBuf> {
             }
         }
     }
-    fs::write(&out, text).map_err(|e| e.to_string())?;
+    write_whole(&out, &text)?;
     Ok(out)
 }
 
