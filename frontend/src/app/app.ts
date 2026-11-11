@@ -103,7 +103,7 @@ class App {
     this.dock.onWorkspace = (name) => {
       if (this.wsSelect && this.wsSelect.value !== name) this.wsSelect.value = name;
     };
-    this.dock.load();
+    void this.extensions.ready.then(() => this.dock.load());
     this.exportSettings = new ExportSettings(ctx);
     this.palette = new Palette(ctx, (id) => this.keys.shortcutFor(id));
     this.palette.extraEntries = () => [

@@ -401,7 +401,7 @@ export class Dock {
         this.areas[a].appendChild(grp.el);
         this.groups[a].push(grp);
         for (const id of spec.panels) if (this.factories.has(id)) grp.add(id, false);
-        if (a === 'float' && !grp.panels.length) {
+        if (!grp.panels.length) {
           grp.el.remove();
           this.groups[a].pop();
           continue;

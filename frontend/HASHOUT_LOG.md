@@ -158,3 +158,9 @@ Refers to `ui/popup.ts` `PopupMenu.showSub`, `closeSub` · kind: fix · logged: 
 Refers to `ui/dock.ts` `applyLayout`, `close`, `move` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `.fx-dock.is-maximized .fx-group:not(.is-max)` hides every other group. Switching workspace, or closing or moving the last panel out of the maximized group, removed that group but kept `this.maximized` and the dock's `is-maximized` class, so every group on screen was hidden. `applyLayout` now clears both first, and `close` and `move` clear them when the group they remove is the maximized one. Checked with `tsc --noEmit`; not run in the window.
+
+## Docked extension panels survive a reload (0.8.2)
+
+Refers to `app/app.ts` `App.start`, `ui/dock.ts` `applyLayout` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `dock.load()` ran right after `new Extensions(...)`, whose `refresh` registers the `ext:*` panel factories only once `/api/extensions` answers, so `applyLayout` skipped every extension panel; a group that held only one stayed as an empty box, and the next `save()` wrote the layout without it. The layout is now restored when `extensions.ready` settles (the extension list arrived, or its 1.2 s limit passed; the window is revealed after the same promise, so nothing is seen before), and `applyLayout` drops any group left with no panels, not only floating ones. Checked with `tsc --noEmit`; not run in the window.
