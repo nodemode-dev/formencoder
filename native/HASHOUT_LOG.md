@@ -145,3 +145,9 @@ Refers to `fencoder-io/src/ffmpeg.rs` `probe` · kind: fix · logged: v0.8.2 · 
 Refers to `fencoder-core/src/colour.rs` `esc` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `esc` wrote `\'` inside the single-quoted `lut3d=file='...'`, but FFmpeg's graph parser has no escapes inside quotes, so the quote closed early and the whole graph failed ("Filter not found") for a LUT such as `Director's Cut.cube` or a cache under `C:\Users\o'brien`. An apostrophe is now written as `'\\\''`: close the quote, an escaped backslash and an escaped quote for the two parsing levels, reopen. `:` keeps its `\:`, which the graph level passes through inside quotes for the option level. Checked with FFmpeg 6.1 in a scratch folder: the path `o'brien/Director's Cut, v2.cube` through `esc` loads in both a `-filter_complex` graph and a `-vf` chain, and the old escaping fails with "Filter not found".
+
+## libx265 two pass keeps its pass options (0.8.2)
+
+Refers to `fencoder-plan/src/pipeline.rs` `video_codec_args`, `build` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The pass options went into `-x265-params` with the raw stats path, which libx265 splits on `:` and unescapes on `\`, so on Windows (`stats=C:\Users\...`) the list broke; and HDR10 pushed a second `-x265-params` into `common`, and FFmpeg keeps only the last, so pass 2 ran without `pass=2:stats=...`. Both delivered a one-pass file under a VBR 2 pass label. The stats path is now written with `/` and `\:`, and the HDR10 options are held in `x265_hdr` and appended to the final pass's own `-x265-params` (or added when there is none), so there is one option string per pass. Checked with FFmpeg 6.1 and libx265 in a scratch folder whose name holds a colon: pass 1 writes `pass.log` there, and pass 2 with the merged string reads it and writes the mastering display and content light side data.
