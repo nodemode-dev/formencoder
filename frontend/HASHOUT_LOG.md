@@ -164,3 +164,9 @@ Refers to `ui/dock.ts` `applyLayout`, `close`, `move` · kind: fix · logged: v0
 Refers to `app/app.ts` `App.start`, `ui/dock.ts` `applyLayout` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `dock.load()` ran right after `new Extensions(...)`, whose `refresh` registers the `ext:*` panel factories only once `/api/extensions` answers, so `applyLayout` skipped every extension panel; a group that held only one stayed as an empty box, and the next `save()` wrote the layout without it. The layout is now restored when `extensions.ready` settles (the extension list arrived, or its 1.2 s limit passed; the window is revealed after the same promise, so nothing is seen before), and `applyLayout` drops any group left with no panels, not only floating ones. Checked with `tsc --noEmit`; not run in the window.
+
+## The dev proxy follows FORMENCODER_PORT (0.8.2)
+
+Refers to `vite.config.ts` `BACKEND_PORT` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The README documents `FORMENCODER_PORT` and `boot_backend` and `boot_all` honour it, but the Vite proxy for `/api` and `/mcp` was fixed at 8270, so with another port the window never connected (or reached another engine on 8270). `BACKEND_PORT` now reads `FORMENCODER_PORT`, defaulting to 8270; `server.host` stays `false` and the interface port stays 5270. Checked by loading the config through Vite's `loadConfigFromFile`: the proxy target is `127.0.0.1:9270` with the variable set to 9270 and `127.0.0.1:8270` without it.
