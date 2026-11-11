@@ -70,3 +70,49 @@ def test_md5_check_catches_a_copy_that_changes_after_it_was_written(driver, tmp_
         worker.join(5)
     assert row["status"] == "failed", row
     assert "MD5" in str(row["error"])
+
+
+def ingest_file(d, src, dest, verify):
+    added = d.run("ingest.copy", paths=[str(src)], destination=str(dest), verify=verify, start=True)
+    item = added["items"][0]
+    rows = d.run("queue.list")
+    out = next(o["id"] for it in rows["items"] if it["id"] == item for o in it["outputs"])
+    return d.finish(out)
+
+
+@pytest.mark.skipif(not hasattr(os, "link"), reason="hard links")
+@pytest.mark.parametrize("verify", ["size", "md5"])
+def test_a_hard_link_to_the_source_in_the_destination_is_refused_and_the_source_kept(driver, tmp_path, verify):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    src.mkdir()
+    dst.mkdir()
+    clip = src / "bars.bin"
+    clip.write_bytes(os.urandom(200_000))
+    before = md5(clip)
+    os.link(clip, dst / "bars.bin")
+    row = ingest_file(driver(), clip, dst, verify)
+    assert clip.stat().st_size == 200_000
+    assert md5(clip) == before
+    assert row["status"] == "failed", row
+    assert "onto itself" in str(row["error"])
+
+
+def test_a_folder_is_not_copied_into_a_new_folder_inside_itself(driver, tmp_path):
+    root = card(tmp_path)
+    dest = root / "backup"
+    row = ingest(driver(), root, dest, "size")
+    assert row["status"] == "failed", row
+    assert "inside the folder being copied" in str(row["error"])
+    assert not (dest / "CARD").exists()
+
+
+def test_a_copy_over_an_older_file_leaves_no_part_file(driver, tmp_path):
+    root = card(tmp_path)
+    dest = tmp_path / "dest"
+    (dest / "CARD" / "DCIM" / "100").mkdir(parents=True)
+    (dest / "CARD" / "DCIM" / "100" / "A001.bin").write_bytes(b"old")
+    row = ingest(driver(), root, dest, "md5")
+    assert row["status"] == "done", row
+    assert md5(dest / "CARD" / "DCIM" / "100" / "A001.bin") == md5(root / "DCIM" / "100" / "A001.bin")
+    assert sorted(p.name for p in (dest / "CARD" / "DCIM" / "100").iterdir()) == ["A001.bin", "A002.bin"]

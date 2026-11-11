@@ -736,7 +736,7 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
     if dest.as_os_str().is_empty() {
         return Err("the copy output needs a destination folder".into());
     }
-    if src.is_dir() && fs::canonicalize(&dest).ok().zip(fs::canonicalize(&src).ok()).is_some_and(|(d, s)| d.starts_with(&s)) {
+    if src.is_dir() && resolved(&dest).zip(fs::canonicalize(&src).ok()).is_some_and(|(d, s)| d.starts_with(&s)) {
         return Err(format!("{} is inside the folder being copied; choose another destination", dest.display()));
     }
     let verify = output["verify"].as_str().unwrap_or("size").to_string();
@@ -757,29 +757,15 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
         if let Some(p) = target.parent() {
             fs::create_dir_all(p).map_err(|e| e.to_string())?;
         }
-        if fs::canonicalize(&target).ok().is_some_and(|t| fs::canonicalize(f).ok().as_ref() == Some(&t)) {
+        if fs::canonicalize(&target).ok().is_some_and(|t| fs::canonicalize(f).ok().as_ref() == Some(&t)) || same_file(f, &target) {
             return Err(format!("{} would be copied onto itself; choose another destination", f.display()));
         }
         let mut hin = Md5::new();
-        {
-            let mut r = File::open(f).map_err(|e| e.to_string())?;
-            let mut w = File::create(&target).map_err(|e| format!("cannot write {}: {e}", target.display()))?;
-            let mut buf = vec![0u8; 4 << 20];
-            loop {
-                if ctx.stopped() {
-                    return Err("stopped".into());
-                }
-                let n = r.read(&mut buf).map_err(|e| e.to_string())?;
-                if n == 0 {
-                    break;
-                }
-                w.write_all(&buf[..n]).map_err(|e| e.to_string())?;
-                if verify == "md5" {
-                    hin.update(&buf[..n]);
-                }
-                done += n as u64;
-                ctx.report(0.95 * done as f64 / total as f64, &format!("copying {}", f.file_name().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default()));
-            }
+        let part = target.with_file_name(format!(".{}.{}.fe-part", target.file_name().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default(), ctx.oid));
+        let written = write_part(ctx, f, &part, verify == "md5", &mut hin, &mut done, total).and_then(|_| fs::rename(&part, &target).map_err(|e| format!("cannot write {}: {e}", target.display())));
+        if let Err(e) = written {
+            let _ = fs::remove_file(&part);
+            return Err(e);
         }
         let (a, b) = (fs::metadata(f).map(|m| m.len()).unwrap_or(0), fs::metadata(&target).map(|m| m.len()).unwrap_or(0));
         if a != b {
@@ -817,6 +803,74 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
     }
     ctx.report(1.0, "copied");
     Ok(json!({"path": dest.to_string_lossy(), "files": copied, "count": copied.len(), "verify": verify, "bytes": total}))
+}
+
+fn write_part(ctx: &Ctx, f: &Path, part: &Path, md5: bool, hin: &mut Md5, done: &mut u64, total: u64) -> Res<()> {
+    let mut r = File::open(f).map_err(|e| e.to_string())?;
+    let mut w = File::create(part).map_err(|e| format!("cannot write {}: {e}", part.display()))?;
+    let mut buf = vec![0u8; 4 << 20];
+    let label = format!("copying {}", f.file_name().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default());
+    loop {
+        if ctx.stopped() {
+            return Err("stopped".into());
+        }
+        let n = r.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 {
+            break;
+        }
+        w.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+        if md5 {
+            hin.update(&buf[..n]);
+        }
+        *done += n as u64;
+        ctx.report(0.95 * *done as f64 / total as f64, &label);
+    }
+    w.sync_all().map_err(|e| e.to_string())
+}
+
+fn resolved(p: &Path) -> Option<PathBuf> {
+    let parts: Vec<std::path::Component> = p.components().collect();
+    for i in (0..=parts.len()).rev() {
+        let head: PathBuf = parts[..i].iter().collect();
+        let Ok(mut out) = fs::canonicalize(if head.as_os_str().is_empty() { Path::new(".") } else { &head }) else { continue };
+        for c in &parts[i..] {
+            match c {
+                std::path::Component::ParentDir => {
+                    out.pop();
+                }
+                std::path::Component::Normal(x) => out.push(x),
+                _ => {}
+            }
+        }
+        return Some(out);
+    }
+    None
+}
+
+#[cfg(unix)]
+fn same_file(a: &Path, b: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (fs::metadata(a), fs::metadata(b)) {
+        (Ok(x), Ok(y)) => x.dev() == y.dev() && x.ino() == y.ino(),
+        _ => false,
+    }
+}
+
+#[cfg(windows)]
+fn same_file(a: &Path, b: &Path) -> bool {
+    fn id(p: &Path) -> Option<(u32, u32, u32)> {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle};
+        let f = File::open(p).ok()?;
+        let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+        (unsafe { GetFileInformationByHandle(f.as_raw_handle() as _, &mut info) } != 0).then_some((info.dwVolumeSerialNumber, info.nFileIndexHigh, info.nFileIndexLow))
+    }
+    b.exists() && id(a).zip(id(b)).is_some_and(|(x, y)| x == y)
+}
+
+#[cfg(not(any(unix, windows)))]
+fn same_file(_: &Path, _: &Path) -> bool {
+    false
 }
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {

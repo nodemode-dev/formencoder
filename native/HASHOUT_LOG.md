@@ -175,3 +175,13 @@ Refers to `fencoder-run/src/runner.rs` `run_pass`, `run_pass_external` · kind: 
 Refers to `fencoder-commands/src/execute.rs` `batch` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `execute` keeps at most 100 undo steps, but `batch` pushed a full copy of the document for every batch with no cap, so an agent driving the queue through the MCP `batch` tool grew the engine's memory for the whole session. `batch` now drops the oldest step past 100, as `execute` does. Checked with `cargo check`; not run.
+
+## Ingest never writes through a link to the source (0.8.3)
+
+Refers to `fencoder-run/src/runner.rs` `copy`, `write_part`, `same_file`, `resolved` · kind: fix · logged: v0.8.3 · 2026-11-11
+
+- The 0.8.2 self-copy check compared canonical paths only, and a hard link has its own path, so with `dst/bars.mp4` linked to `src/bars.mp4` the target passed the check, `File::create` truncated the shared inode and the size and MD5 checks compared two empty files (QA repro on 0.8.2: the source became 0 bytes and the job reported done). `same_file` now compares the device and inode (`MetadataExt` `dev`/`ino`) on Unix and the volume serial number and file index (`GetFileInformationByHandle`, the `Win32_Storage_FileSystem` feature of `windows-sys`) on Windows, and the copy is refused with the existing "would be copied onto itself" message.
+- The destination is never opened with truncation any more: `write_part` writes `.<name>.<oid>.fe-part` beside the target, syncs it, and `copy` renames it onto the target; on a stop or an error the part file is removed. A link the check missed (another file system, a file that cannot be opened for its id on Windows) is then replaced by the rename and its inode is left alone. Verification still reads the final target after the rename, so a copy changed after it was written is still caught (`test_md5_check_catches_a_copy_that_changes_after_it_was_written`).
+- A folder ingested into a folder inside itself that does not exist yet (`CARD` into `CARD/backup`) was not refused, because `fs::canonicalize` of a missing folder is an error and the check was skipped, so the copy walked into `CARD/backup/CARD/...`. `resolved` canonicalises the nearest existing ancestor and appends the rest lexically (`..` pops, `.` is dropped).
+- Checked with `backend/tests/test_ingest.py`: the hard link tests (size and MD5) and the nested folder test fail on 0.8.2 (source 0 bytes; status done) and pass now; `cargo check --workspace --locked` with `-D warnings` passes on macOS and for `x86_64-pc-windows-msvc`.
+
