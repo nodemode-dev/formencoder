@@ -133,3 +133,9 @@ Refers to `fencoder-run/src/runner.rs` `copy` · kind: fix · logged: v0.8.2 · 
 Refers to `fencoder-engine/src/engine.rs` `dispatch`, `fencoder-run/src/runner.rs` `encode` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - Two outputs of one source that resolve to the same name (two H.264 presets without `outputName`) started together under parallel encoding; each job ran `unique_path` before either file existed (both write to the part file until the end), so both chose the same output and part path and two FFmpeg processes wrote one file. `dispatch` now picks the final name itself: when the planned path is held by a running job (its runtime `path`), or exists with `incrementNames` on, it takes the first `_N` name that is neither held nor on disk, so the runner's own `unique_path` keeps it. The part file name also carries the output id (`.clip.mp4.<oid>.fe-part.mp4`). Checked with `cargo check`; not run with FFmpeg.
+
+## Image sequences start at their real first frame (0.8.2)
+
+Refers to `fencoder-io/src/ffmpeg.rs` `probe` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `probe` gave every `%0` pattern `first: 0`, so ffprobe ran with `-start_number 0`, image2 searched only indices 0 to 4, and a sequence numbered from 1001 (or 86400) had no video at add time and failed again at encode, where the runner re-probes and `input_args` reads `sequence.first`. `pattern_first` now lists the pattern's folder for names with the same head, digit count and extension and returns the lowest frame, used for `-start_number` and in the returned `sequence`. Checked with a scratch binary outside the repo: three PNGs numbered 1001 to 1003 probe as a 0.12 s sequence with `first: 1001`.
