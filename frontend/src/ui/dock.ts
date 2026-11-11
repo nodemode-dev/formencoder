@@ -375,6 +375,10 @@ export class Dock {
   }
 
   applyLayout(layout: Layout, name: string): void {
+    if (this.maximized) {
+      this.maximized = null;
+      setClass(this.el, 'is-maximized', false);
+    }
     this.workspace = name;
     this.layout = structuredClone(layout);
     for (const a of ALL) {
@@ -541,6 +545,10 @@ export class Dock {
     if (!grp) return;
     grp.remove(id);
     if (!grp.panels.length) {
+      if (this.maximized === grp) {
+        this.maximized = null;
+        setClass(this.el, 'is-maximized', false);
+      }
       grp.el.remove();
       this.groups[grp.area] = this.groups[grp.area].filter((x) => x !== grp);
       this.applySizes();
@@ -553,6 +561,10 @@ export class Dock {
     if (from === target) return;
     from?.remove(id);
     if (from && !from.panels.length) {
+      if (this.maximized === from) {
+        this.maximized = null;
+        setClass(this.el, 'is-maximized', false);
+      }
       from.el.remove();
       this.groups[from.area] = this.groups[from.area].filter((x) => x !== from);
     }

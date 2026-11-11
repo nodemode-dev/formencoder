@@ -152,3 +152,9 @@ Refers to `panels/export-settings.ts` `buildEffects` (the Installed LUTs button)
 Refers to `ui/popup.ts` `PopupMenu.showSub`, `closeSub` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `showSub` awaited the row's asynchronous children (Apply Preset, Format) and then opened its menu whatever had happened meanwhile. Moving to another submenu row, or pressing Escape, before the first list arrived left a submenu that no parent would close and that `openRoots` did not hold, and `Keys.down` ignores keys while any `.cv-menu` is shown, so every shortcut stopped until reload. `closeSub` now bumps `subSeq`; `showSub` takes the value after its own `closeSub` and, after the await, drops its menu when the value moved on or its own panel is hidden. Checked with `tsc --noEmit`; not run in the window.
+
+## Maximize ends with its group (0.8.2)
+
+Refers to `ui/dock.ts` `applyLayout`, `close`, `move` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `.fx-dock.is-maximized .fx-group:not(.is-max)` hides every other group. Switching workspace, or closing or moving the last panel out of the maximized group, removed that group but kept `this.maximized` and the dock's `is-maximized` class, so every group on screen was hidden. `applyLayout` now clears both first, and `close` and `move` clear them when the group they remove is the maximized one. Checked with `tsc --noEmit`; not run in the window.
