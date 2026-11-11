@@ -179,6 +179,9 @@ class Term:
                 if not data:
                     break
                 self.loop.call_soon_threadsafe(self._feed, data)
+            if POSIX and session.pid:
+                with contextlib.suppress(OSError):
+                    os.waitpid(session.pid, 0)
             self.loop.call_soon_threadsafe(self._ended, session)
 
         threading.Thread(target=pump, daemon=True).start()

@@ -157,3 +157,9 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 
 - `Session.read` on a pty used to decode each `os.read` chunk on its own, so a multi-byte character cut by a chunk boundary became two replacement characters in the Terminal panel. The session now holds one incremental UTF-8 decoder (`errors="replace"`) and `read` keeps reading while a chunk decodes to nothing, because `Term._start`'s pump takes an empty string as the end of the stream. At a real end (empty read, or the pty's `OSError` when the shell exits) the decoder is flushed first, so a dangling partial character is still delivered once.
 - The same decoding now serves the non-pty fallback (the piped subprocess used when `winpty` is missing): both paths go through `Session._decoded(fetch)`, which owns the keep-reading-on-empty and flush-at-end rules. `winpty.read` returns text already and is untouched.
+
+## Closed terminals are reaped (0.8.2)
+
+Refers to `routers/terminal.py` `Term._start` (pump) · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `Session.close` sends SIGHUP and at once calls `waitpid(WNOHANG)`, which returns before the shell has exited, and nothing reaped it later, so every closed, restarted or exited terminal left a zombie for the life of the engine. The pump thread now waits for the shell (`os.waitpid(pid, 0)`, POSIX, `OSError` suppressed when `close` already reaped it) once its read loop ends and before `_ended`. Checked with a scratch script in a venv outside the repo: five `Term`s on `/bin/sh` closed through `Session.close` leave no child of the engine a second later; the same script against the previous `terminal.py` leaves shells in state `Zs`.
