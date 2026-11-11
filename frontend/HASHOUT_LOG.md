@@ -182,3 +182,9 @@ Refers to `panels/media.ts` the Up button and `go` · kind: fix · logged: v0.8.
 Refers to `ui/dock.ts` `resetWorkspace` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - A workspace saved with Save Workspace As has no entry in `WORKSPACES`, so Reset applied Default and saved it under `layouts[name]`; `switchTo` prefers `layouts` over `custom`, so the saved arrangement never came back. `resetWorkspace` now reads `custom[name]` from local storage first, then the built-in layout, then Default. Checked with `tsc --noEmit`; not run in the window.
+
+## An approval decided in another window closes quietly (0.8.2)
+
+Refers to `app/app.ts` `App.approvals` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- When the request shown in this window left the pending list (the person answered in another window), `approvals` closed the dialog while `this.approval` still named it, so the dialog's `onClose` ran `answer(false)`, sent `agents.decide` for a request already decided and showed the engine's "no pending approval N" error. `this.approval` is now cleared before the dialog closes, so `answer` returns at once. Checked with `tsc --noEmit`; not run with two windows.
