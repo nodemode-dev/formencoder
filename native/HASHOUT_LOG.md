@@ -163,3 +163,9 @@ Refers to `fencoder-plan/src/settings.rs` `normalize` · kind: fix · logged: v0
 Refers to `fencoder-core/src/colour.rs` `sdr_conform_lut`, `dcp_xyz_lut`, `write_whole` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - Both wrote the cube straight to its final cache name and later callers trusted `is_file()`, so a second job starting while the first was writing (the DCP cube is about 7 MB) handed FFmpeg a truncated table, and a write cut short by quitting stayed in the cache and broke every later use. `write_whole` writes to `<name>.cube.<pid>.<n>.part` and renames it onto the final name; when the rename fails but another writer already put the file there, that file is used. Checked with a scratch binary outside the repo: four threads calling `dcp_xyz_lut` on an empty cache all return a 7,414,967 byte file and no `.part` file remains.
+
+## Stop just before FFmpeg starts (0.8.2)
+
+Refers to `fencoder-run/src/runner.rs` `run_pass`, `run_pass_external` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `Job::stop` sets `stop` and kills the pid it finds. A Stop that landed after `encode`'s last `stopped()` check and before `run_pass` stored the child's pid killed nothing, so the whole encode ran before it was discarded as stopped. Both passes now look at `stop` under the same lock that stores the pid and kill the child at once. Not changed: the two-pass loudness and Fit Tuning measurements still run FFmpeg with `.output()` and no recorded pid, so Stop waits for them; registering those children needs a pid hook through `pipeline::measure_loudness` and `tuner_frames`. Checked with `cargo check`; not run with FFmpeg.

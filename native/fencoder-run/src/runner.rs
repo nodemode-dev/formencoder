@@ -541,7 +541,9 @@ fn run_pass_external(ctx: &Ctx, command: &[String], plan: &Plan, ext: &pipeline:
     {
         let mut s = ctx.shared.lock().unwrap();
         s.pid = Some(pid);
-        if s.paused {
+        if s.stop {
+            kill(pid);
+        } else if s.paused {
             suspend(pid, true);
         }
     }
@@ -647,7 +649,9 @@ fn run_pass(ctx: &Ctx, command: &[String], plan: &Plan, base: f64, span: f64, la
     {
         let mut s = ctx.shared.lock().unwrap();
         s.pid = Some(pid);
-        if s.paused {
+        if s.stop {
+            kill(pid);
+        } else if s.paused {
             suspend(pid, true);
         }
     }
