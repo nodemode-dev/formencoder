@@ -194,3 +194,9 @@ Refers to `app/app.ts` `App.approvals` · kind: fix · logged: v0.8.2 · 2026-11
 Refers to `app/ctx.ts` `Ctx.start`, `ui/keys.ts` `Keys` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `Keys` rebuilt its table on a 400 ms timer after `open`, not after `command.list` answered, so on a slow first connect the table held only Backspace and Cmd+I, Cmd+E, Enter and the rest did nothing for the session. `Ctx.start` now emits `specs` once `loadSpecs` has finished after each `open`, the same event a shortcut edit already raises, and `Keys` no longer keeps its timer. Checked with `tsc --noEmit`; not run against a slow engine.
+
+## Cancel undoes what FFmpeg Command wrote (0.8.2)
+
+Refers to `panels/export-settings.ts` `open`, `close`, actions `command` and `ok` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- FFmpeg Command needs the edited settings on the output to plan the command (`encode.command` reads the queue), so it writes them with `queue.setSettings`; Cancel then only hid the window, against "OK writes it; Cancel drops it". The dialog now marks `written` when the button writes, and closing by Cancel, the close button or Escape puts back the settings it opened with (`info.settings`); OK clears the mark before closing. Checked with `tsc --noEmit`; not run in the window. The restore is one more undo step in History.
