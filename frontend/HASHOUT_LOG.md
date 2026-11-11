@@ -140,3 +140,9 @@ Refers to `ext/extensions.ts` `gate`, `runApp`, `applyDocument` · kind: fix · 
 Refers to `engine/client.ts` `Client.receive` (hello) · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - A call made while the socket was connecting or reconnecting waited in `outbox`; when that socket closed, `onclose` rejected it (the window toasted "the engine connection closed") but left it in `outbox`, and the next `hello` sent it anyway, so Start Queue or Remove ran after the person was told it failed. On `hello` the outbox now sends a message only when it has no id (a consent `reply`) or its id is still in `pending`. Checked with `tsc --noEmit`; not run against a restarting engine.
+
+## Installed LUTs opens its menu (0.8.2)
+
+Refers to `panels/export-settings.ts` `buildEffects` (the Installed LUTs button) · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The click handler read `e.currentTarget` after `await ctx.run('lut.list')`; by then dispatch had ended and `currentTarget` was null, so `getBoundingClientRect` threw and no menu appeared. The handler now measures the button itself (`pick`) after the await. Checked with `tsc --noEmit`; not run in the window.

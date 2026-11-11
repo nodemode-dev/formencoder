@@ -252,9 +252,9 @@ export class ExportSettings {
       const body = q(box, '.fe-fx-body');
       if (fx.key === 'lut') {
         const pick = el<HTMLButtonElement>(`<button class="fe-link fe-fx-luts" type="button">Installed LUTs</button>`);
-        pick.addEventListener('click', async (e) => {
+        pick.addEventListener('click', async () => {
           const r = await this.ctx.run<{ luts: Array<{ name: string; path: string }> }>('lut.list', {});
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const rect = pick.getBoundingClientRect();
           contextMenu(rect.left, rect.bottom + 2, (r?.luts ?? []).length ? (r?.luts ?? []).map((l) => ({ label: l.name, run: () => void this.patch({ 'effects.lut.path': l.path, 'effects.lut.enabled': true }) })) : [{ label: 'No LUTs installed (Effects > Install LUT)', enabled: false }]);
         });
         body.appendChild(pick);
