@@ -134,3 +134,9 @@ Asked for: the owner's rule is that every Form app opens all of its demos from i
 Refers to `ext/extensions.ts` `gate`, `runApp`, `applyDocument` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - `app.run` and `document.apply` needed only `document`, and passed any engine command over the window's own socket, where the engine sees the person (source `ui`) and no approval applies. An extension granted "Read and change the open document" could `prefs.set` a raw decoder (a native program the engine runs), or set a publish destination that uploads encodes. `gate` now refuses with `ERR.PERMISSION` (-32001), before anything is sent: `prefs.`, `plugin.`, `tools.`, `lut.install`, `openh264.` and `shortcuts.` without `native-code`, `model.` without `models`, `family.` without `network`, `watch.` and `queue.setOutput` without `files-write`, and any call whose arguments carry a non-empty `publish` without `network`. `document.apply` checks every step. Checked with `tsc --noEmit`; not run against a loaded extension.
+
+## A call reported as failed is not sent later (0.8.2)
+
+Refers to `engine/client.ts` `Client.receive` (hello) · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- A call made while the socket was connecting or reconnecting waited in `outbox`; when that socket closed, `onclose` rejected it (the window toasted "the engine connection closed") but left it in `outbox`, and the next `hello` sent it anyway, so Start Queue or Remove ran after the person was told it failed. On `hello` the outbox now sends a message only when it has no id (a consent `reply`) or its id is still in `pending`. Checked with `tsc --noEmit`; not run against a restarting engine.
