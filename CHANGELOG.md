@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.8.2 · 2026-11-10
+
+Fixes from a review of the engine, the interface and the launchers.
+
+- Ingest never copies a file onto itself: ingesting a folder into its own parent, or a card mounted as a drive root, used to truncate the original clip to nothing and still report a verified copy. Such a copy now fails with a message and the source is untouched.
+- Two outputs of one source with the same name no longer encode into the same file at the same time; the second gets its own `_1` name.
+- Image sequences numbered from 1001 (or any frame above 4) can be added and encoded.
+- An extension needs the matching permission for engine commands that run programs, change preferences, plug-ins or tools, download models, reach other apps, write watch folders or output paths, or publish; "document" alone no longer covers them.
+- A LUT whose path contains an apostrophe no longer breaks the encode.
+- HEVC VBR 2 pass with libx265 keeps its second pass on Windows and with HDR10 metadata.
+- Dither and pixel aspect settings from a preset or an agent only accept the listed values.
+- Generated SDR conform and DCP colour tables are written whole, so two jobs starting together, or a quit during the write, no longer leave a broken table in the cache.
+- Stop pressed just as FFmpeg starts stops the encode instead of letting it run to the end.
+- Closed or restarted terminals no longer leave zombie shells behind.
+- Batches sent by agents keep to the 100-step undo history.
+- Speech model downloads go to `FORMENCODER_MODELS` when it is set, where transcription looks for them.
+- A command the window reported as failed while the engine was reconnecting is no longer sent once the engine is back.
+- Effects > Installed LUTs in Export Settings opens its menu again.
+- A submenu that loads late (Apply Preset, Format) can no longer stay on screen on its own and disable keyboard shortcuts.
+- Switching workspace or closing a maximized panel no longer leaves the dock blank.
+- Extension panels docked in the layout stay there across a reload.
+- The development interface follows `FORMENCODER_PORT` to the engine.
+- The Media Browser's Up goes from `C:\Users` to `C:\` on Windows.
+- Reset Workspace on a saved workspace brings back the saved arrangement, not Default.
+- Approving an agent's request in one window no longer shows an error in another open window.
+- `formencoder.bat` passes every argument on to `install`, `install-native`, `install-tools`, `mcp`, `agents` and `counts`.
+- Keyboard shortcuts work after a slow first connection to the engine.
+- Cancel in Export Settings drops the edits even after FFmpeg Command was used.
+- Opening a demo again replaces mismatched demo media instead of adding numbered copies.
+- The built-in save dialog keeps network share (`\\server\share`) paths.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.2 by hand, without a rebuild.
+
 ## v0.8.1 · 2026-11-10
 
 A small fix to the Terminal panel.
