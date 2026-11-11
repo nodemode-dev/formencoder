@@ -169,3 +169,9 @@ Refers to `routers/terminal.py` `Term._start` (pump) · kind: fix · logged: v0.
 Refers to `model_fetch.py` `models_folder` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - The engine (`transcribe::models_dir`) looks for speech models in `FORMENCODER_MODELS` when it is set, but `model.fetch` always downloaded into the per-person folder, so with the variable set `captions.transcribe` kept saying the model was missing. `models_folder` now returns the variable's path (trimmed, `~` expanded) when it is set and not blank. Checked in a venv outside the repo: with `FORMENCODER_MODELS='~/m x '` it returns `/root/m x`, without it the XDG folder as before.
+
+## Upload can replace a file of the same name (0.8.2)
+
+Refers to `routers/files.py` `upload` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `/api/fs/upload` always renamed on collision (`name 1.ext`), which made the window's demo staging pile up copies and break numbered sequences (see `frontend/HASHOUT_LOG.md`, "Demo media is staged once"). An `overwrite` query flag (default false) now writes over the same name in `imports`; only demo staging passes it. Checked with FastAPI's TestClient in a venv outside the repo.

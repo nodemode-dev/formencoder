@@ -200,3 +200,9 @@ Refers to `app/ctx.ts` `Ctx.start`, `ui/keys.ts` `Keys` · kind: fix · logged: 
 Refers to `panels/export-settings.ts` `open`, `close`, actions `command` and `ok` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - FFmpeg Command needs the edited settings on the output to plan the command (`encode.command` reads the queue), so it writes them with `queue.setSettings`; Cancel then only hid the window, against "OK writes it; Cancel drops it". The dialog now marks `written` when the button writes, and closing by Cancel, the close button or Escape puts back the settings it opened with (`info.settings`); OK clears the mark before closing. Checked with `tsc --noEmit`; not run in the window. The restore is one more undo step in History.
+
+## Demo media is staged once, not copied again (0.8.2)
+
+Refers to `ui/demos.ts` `stage`, `backend/app/routers/files.py` `upload` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- A staged demo file whose size no longer matched (an interrupted upload, older demo media) was sent again on every open, and the upload route renamed it on collision (`demo-inspect-clouds_0001 1.jpg`, then ` 2`), so `imports` grew with each open and the renamed cloud frames stopped being a numbered sequence. `/api/fs/upload` takes `overwrite=true`, which writes over a file of the same name, and `stage` passes it, so the demo's own `demo-<id>-` names are replaced in place. Other uploads keep the rename. Checked with FastAPI's TestClient in a venv outside the repo: two plain uploads of one name give `name` and `name 1`, and two with `overwrite=true` both return `name`.
