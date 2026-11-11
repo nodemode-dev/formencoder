@@ -88,14 +88,14 @@ async def mkdir(request: Request) -> dict:
 
 
 @router.post("/api/fs/upload")
-async def upload(files: list[UploadFile]) -> dict:
+async def upload(files: list[UploadFile], overwrite: bool = False) -> dict:
     dest = config.sub("imports")
     paths = []
     for f in files:
         name = _SAFE.sub("_", Path(f.filename or "file").name) or "file"
         target = dest / name
         stem, suffix, n = target.stem, target.suffix, 1
-        while target.exists():
+        while not overwrite and target.exists():
             target = dest / f"{stem} {n}{suffix}"
             n += 1
         with target.open("wb") as out:

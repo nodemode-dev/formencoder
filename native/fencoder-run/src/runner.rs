@@ -341,7 +341,7 @@ fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
         let p = Path::new(&out_path);
         let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         let ext = p.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
-        Some(p.with_file_name(format!(".{name}.fe-part{ext}")).to_string_lossy().into_owned())
+        Some(p.with_file_name(format!(".{name}.{}.fe-part{ext}", ctx.oid)).to_string_lossy().into_owned())
     };
     if let Some(part) = &part_path {
         for pass in plan.passes.iter_mut().chain(plan.post.iter_mut()) {
@@ -541,7 +541,9 @@ fn run_pass_external(ctx: &Ctx, command: &[String], plan: &Plan, ext: &pipeline:
     {
         let mut s = ctx.shared.lock().unwrap();
         s.pid = Some(pid);
-        if s.paused {
+        if s.stop {
+            kill(pid);
+        } else if s.paused {
             suspend(pid, true);
         }
     }
@@ -647,7 +649,9 @@ fn run_pass(ctx: &Ctx, command: &[String], plan: &Plan, base: f64, span: f64, la
     {
         let mut s = ctx.shared.lock().unwrap();
         s.pid = Some(pid);
-        if s.paused {
+        if s.stop {
+            kill(pid);
+        } else if s.paused {
             suspend(pid, true);
         }
     }
@@ -732,6 +736,9 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
     if dest.as_os_str().is_empty() {
         return Err("the copy output needs a destination folder".into());
     }
+    if src.is_dir() && fs::canonicalize(&dest).ok().zip(fs::canonicalize(&src).ok()).is_some_and(|(d, s)| d.starts_with(&s)) {
+        return Err(format!("{} is inside the folder being copied; choose another destination", dest.display()));
+    }
     let verify = output["verify"].as_str().unwrap_or("size").to_string();
     let mut files: Vec<PathBuf> = Vec::new();
     if src.is_file() {
@@ -740,7 +747,7 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
         walk(&src, &mut files);
     }
     files.sort();
-    let root = src.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let root = src.parent().map(Path::to_path_buf).unwrap_or_else(|| src.clone());
     let total: u64 = files.iter().filter_map(|f| fs::metadata(f).ok()).map(|m| m.len()).sum::<u64>().max(1);
     let mut done: u64 = 0;
     let mut copied = Vec::new();
@@ -749,6 +756,9 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
         let target = dest.join(rel);
         if let Some(p) = target.parent() {
             fs::create_dir_all(p).map_err(|e| e.to_string())?;
+        }
+        if fs::canonicalize(&target).ok().is_some_and(|t| fs::canonicalize(f).ok().as_ref() == Some(&t)) {
+            return Err(format!("{} would be copied onto itself; choose another destination", f.display()));
         }
         let mut hin = Md5::new();
         {

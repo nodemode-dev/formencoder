@@ -31,6 +31,7 @@ export class MediaPanel implements Panel {
   readonly el: HTMLElement;
   private readonly list: HTMLElement;
   private path = '';
+  private parent: string | null = null;
   private history: string[] = [];
   private selected = new Set<string>();
   private entries: Entry[] = [];
@@ -59,8 +60,7 @@ export class MediaPanel implements Panel {
       if (prev) void this.go(prev, false);
     });
     q(this.el, '[data-a="up"]').addEventListener('click', () => {
-      const parent = this.path.replace(/[\\/][^\\/]+[\\/]?$/, '') || '/';
-      if (parent !== this.path) void this.go(parent);
+      if (this.parent && this.parent !== this.path) void this.go(this.parent);
     });
     q(this.el, '[data-a="view"]').addEventListener('click', () => setClass(this.list, 'is-grid', !this.list.classList.contains('is-grid')));
     q(this.el, '[data-a="queue"]').addEventListener('click', () => this.addSelected());
@@ -98,6 +98,7 @@ export class MediaPanel implements Panel {
     if (push && this.path && this.path !== r.path) this.history.push(this.path);
     if (this.path !== r.path) this.selected.clear();
     this.path = r.path;
+    this.parent = r.parent;
     writeLocal('formencoder.media.path', r.path);
     this.entries = r.entries;
     setText(q(this.el, '.fe-m-path'), r.path);

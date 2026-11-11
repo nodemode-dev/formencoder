@@ -101,7 +101,11 @@ export class Client {
     const type = String(msg.type || '');
     if (type === 'hello') {
       this.connected = true;
-      while (this.outbox.length) this.ws?.send(this.outbox.shift() as string);
+      while (this.outbox.length) {
+        const text = this.outbox.shift() as string;
+        const id = (JSON.parse(text) as { id?: number }).id;
+        if (id === undefined || this.pending.has(id)) this.ws?.send(text);
+      }
       this.events.emit('open', msg as unknown as ClientEvents['open']);
       return;
     }

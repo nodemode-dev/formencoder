@@ -95,7 +95,7 @@ async function stage(demo: Demo): Promise<Map<string, string>> {
     }
   }
   if (send.length) {
-    const r = await api<{ paths: string[] }>('/api/fs/upload', { method: 'POST', body: form });
+    const r = await api<{ paths: string[] }>('/api/fs/upload?overwrite=true', { method: 'POST', body: form });
     send.forEach((f, i) => out.set(f, r.paths[i]));
   }
   return out;

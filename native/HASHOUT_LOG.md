@@ -121,3 +121,57 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 ## Logs
 
 `formencoder_encoding_log.txt` and `formencoder_error_log.txt` in `~/Formencoder/logs` (or the Preferences log folder), in the same plain shape Media Encoder's AMEEncodingLog uses so people who read those can read these.
+
+## Ingest never copies a file onto itself (0.8.2)
+
+Refers to `fencoder-run/src/runner.rs` `copy` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- When the destination resolved onto the source (a folder ingested into its own parent, or a drive root such as `E:\` whose `parent()` is `None`, which made the relative path absolute so `dest.join` returned the source), `File::create` truncated the camera original to 0 bytes and the size and MD5 checks of two empty files passed. The root of a parentless source is now the source itself, a folder source is refused when the destination is inside it, and each file is refused before `File::create` when its target and the source canonicalise to the same path. Checked with `cargo check -p fencoder-run`; not run against real media.
+
+## Parallel outputs of one source get their own file names (0.8.2)
+
+Refers to `fencoder-engine/src/engine.rs` `dispatch`, `fencoder-run/src/runner.rs` `encode` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- Two outputs of one source that resolve to the same name (two H.264 presets without `outputName`) started together under parallel encoding; each job ran `unique_path` before either file existed (both write to the part file until the end), so both chose the same output and part path and two FFmpeg processes wrote one file. `dispatch` now picks the final name itself: when the planned path is held by a running job (its runtime `path`), or exists with `incrementNames` on, it takes the first `_N` name that is neither held nor on disk, so the runner's own `unique_path` keeps it. The part file name also carries the output id (`.clip.mp4.<oid>.fe-part.mp4`). Checked with `cargo check`; not run with FFmpeg.
+
+## Image sequences start at their real first frame (0.8.2)
+
+Refers to `fencoder-io/src/ffmpeg.rs` `probe` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `probe` gave every `%0` pattern `first: 0`, so ffprobe ran with `-start_number 0`, image2 searched only indices 0 to 4, and a sequence numbered from 1001 (or 86400) had no video at add time and failed again at encode, where the runner re-probes and `input_args` reads `sequence.first`. `pattern_first` now lists the pattern's folder for names with the same head, digit count and extension and returns the lowest frame, used for `-start_number` and in the returned `sequence`. Checked with a scratch binary outside the repo: three PNGs numbered 1001 to 1003 probe as a 0.12 s sequence with `first: 1001`.
+
+## LUT paths with an apostrophe (0.8.2)
+
+Refers to `fencoder-core/src/colour.rs` `esc` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `esc` wrote `\'` inside the single-quoted `lut3d=file='...'`, but FFmpeg's graph parser has no escapes inside quotes, so the quote closed early and the whole graph failed ("Filter not found") for a LUT such as `Director's Cut.cube` or a cache under `C:\Users\o'brien`. An apostrophe is now written as `'\\\''`: close the quote, an escaped backslash and an escaped quote for the two parsing levels, reopen. `:` keeps its `\:`, which the graph level passes through inside quotes for the option level. Checked with FFmpeg 6.1 in a scratch folder: the path `o'brien/Director's Cut, v2.cube` through `esc` loads in both a `-filter_complex` graph and a `-vf` chain, and the old escaping fails with "Filter not found".
+
+## libx265 two pass keeps its pass options (0.8.2)
+
+Refers to `fencoder-plan/src/pipeline.rs` `video_codec_args`, `build` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The pass options went into `-x265-params` with the raw stats path, which libx265 splits on `:` and unescapes on `\`, so on Windows (`stats=C:\Users\...`) the list broke; and HDR10 pushed a second `-x265-params` into `common`, and FFmpeg keeps only the last, so pass 2 ran without `pass=2:stats=...`. Both delivered a one-pass file under a VBR 2 pass label. The stats path is now written with `/` and `\:`, and the HDR10 options are held in `x265_hdr` and appended to the final pass's own `-x265-params` (or added when there is none), so there is one option string per pass. Checked with FFmpeg 6.1 and libx265 in a scratch folder whose name holds a colon: pass 1 writes `pass.log` there, and pass 2 with the merged string reads it and writes the mastering display and content light side data.
+
+## Dither and pixel aspect are checked before they reach the graph (0.8.2)
+
+Refers to `fencoder-plan/src/settings.rs` `normalize` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `video.dither` (pasted into `paletteuse=dither=...`) and `video.pixelAspect` (pasted into `setsar=...`) were free strings, so a `.fepreset` or an agent's `export_settings` could add filters to the graph, for example one that writes a file. `normalize` now resets `video.dither` to `sierra2_4a` unless it is one of the four options `formats.rs` lists, and `video.pixelAspect` to `1:1` unless it is `source` or digits:digits; values that are not strings are left alone. Checked with a scratch binary outside the repo: `none[vout];movie=/etc/hosts` becomes `sierra2_4a`, `1:1,foo` and `4:3;x` become `1:1`, and `bayer`, `40:33` and `source` are kept.
+
+## Generated LUTs appear in the cache whole (0.8.2)
+
+Refers to `fencoder-core/src/colour.rs` `sdr_conform_lut`, `dcp_xyz_lut`, `write_whole` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- Both wrote the cube straight to its final cache name and later callers trusted `is_file()`, so a second job starting while the first was writing (the DCP cube is about 7 MB) handed FFmpeg a truncated table, and a write cut short by quitting stayed in the cache and broke every later use. `write_whole` writes to `<name>.cube.<pid>.<n>.part` and renames it onto the final name; when the rename fails but another writer already put the file there, that file is used. Checked with a scratch binary outside the repo: four threads calling `dcp_xyz_lut` on an empty cache all return a 7,414,967 byte file and no `.part` file remains.
+
+## Stop just before FFmpeg starts (0.8.2)
+
+Refers to `fencoder-run/src/runner.rs` `run_pass`, `run_pass_external` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `Job::stop` sets `stop` and kills the pid it finds. A Stop that landed after `encode`'s last `stopped()` check and before `run_pass` stored the child's pid killed nothing, so the whole encode ran before it was discarded as stopped. Both passes now look at `stop` under the same lock that stores the pid and kill the child at once. Not changed: the two-pass loudness and Fit Tuning measurements still run FFmpeg with `.output()` and no recorded pid, so Stop waits for them; registering those children needs a pid hook through `pipeline::measure_loudness` and `tuner_frames`. Checked with `cargo check`; not run with FFmpeg.
+
+## Batches keep the undo cap (0.8.2)
+
+Refers to `fencoder-commands/src/execute.rs` `batch` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `execute` keeps at most 100 undo steps, but `batch` pushed a full copy of the document for every batch with no cap, so an agent driving the queue through the MCP `batch` tool grew the engine's memory for the whole session. `batch` now drops the oldest step past 100, as `execute` does. Checked with `cargo check`; not run.

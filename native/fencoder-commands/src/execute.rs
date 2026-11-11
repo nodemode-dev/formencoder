@@ -79,6 +79,9 @@ impl Execute for Engine {
         }
         if self.doc != before {
             self.undo.push((label.unwrap_or(&format!("Batch of {}", steps.len())).to_string(), before));
+            if self.undo.len() > 100 {
+                self.undo.remove(0);
+            }
             self.redo.clear();
         }
         self.changed(true, source);

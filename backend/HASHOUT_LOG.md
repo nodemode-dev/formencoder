@@ -152,3 +152,26 @@ Cisco's 2.6.0 binary per platform, pinned by the SHA-256 of the `.bz2` Cisco ser
 ## Agents open the demos (0.8.0)
 
 - `ui {action: demo, id: queue|broadcast|inspect}` publishes `{type: uiAction, action: demo, id}` to the windows only (kind `ui`) and returns at once; the window does the work (copying the demo's media into `imports`, one `command.batch`), so an agent and the person reach the same code and the same confirmation dialog. Without a window it fails plainly instead of queueing media nobody sees. Not a new engine command: the demos and their media live in the interface build, which the engine does not know about in development. The window side is in `frontend/HASHOUT_LOG.md` (#in-app-demos).
+
+## Terminal output keeps split characters whole (0.8.1)
+
+- `Session.read` on a pty used to decode each `os.read` chunk on its own, so a multi-byte character cut by a chunk boundary became two replacement characters in the Terminal panel. The session now holds one incremental UTF-8 decoder (`errors="replace"`) and `read` keeps reading while a chunk decodes to nothing, because `Term._start`'s pump takes an empty string as the end of the stream. At a real end (empty read, or the pty's `OSError` when the shell exits) the decoder is flushed first, so a dangling partial character is still delivered once.
+- The same decoding now serves the non-pty fallback (the piped subprocess used when `winpty` is missing): both paths go through `Session._decoded(fetch)`, which owns the keep-reading-on-empty and flush-at-end rules. `winpty.read` returns text already and is untouched.
+
+## Closed terminals are reaped (0.8.2)
+
+Refers to `routers/terminal.py` `Term._start` (pump) · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `Session.close` sends SIGHUP and at once calls `waitpid(WNOHANG)`, which returns before the shell has exited, and nothing reaped it later, so every closed, restarted or exited terminal left a zombie for the life of the engine. The pump thread now waits for the shell (`os.waitpid(pid, 0)`, POSIX, `OSError` suppressed when `close` already reaped it) once its read loop ends and before `_ended`. Checked with a scratch script in a venv outside the repo: five `Term`s on `/bin/sh` closed through `Session.close` leave no child of the engine a second later; the same script against the previous `terminal.py` leaves shells in state `Zs`.
+
+## Model downloads follow FORMENCODER_MODELS (0.8.2)
+
+Refers to `model_fetch.py` `models_folder` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The engine (`transcribe::models_dir`) looks for speech models in `FORMENCODER_MODELS` when it is set, but `model.fetch` always downloaded into the per-person folder, so with the variable set `captions.transcribe` kept saying the model was missing. `models_folder` now returns the variable's path (trimmed, `~` expanded) when it is set and not blank. Checked in a venv outside the repo: with `FORMENCODER_MODELS='~/m x '` it returns `/root/m x`, without it the XDG folder as before.
+
+## Upload can replace a file of the same name (0.8.2)
+
+Refers to `routers/files.py` `upload` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `/api/fs/upload` always renamed on collision (`name 1.ext`), which made the window's demo staging pile up copies and break numbered sequences (see `frontend/HASHOUT_LOG.md`, "Demo media is staged once"). An `overwrite` query flag (default false) now writes over the same name in `imports`; only demo staging passes it. Checked with FastAPI's TestClient in a venv outside the repo.

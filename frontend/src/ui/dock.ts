@@ -375,6 +375,10 @@ export class Dock {
   }
 
   applyLayout(layout: Layout, name: string): void {
+    if (this.maximized) {
+      this.maximized = null;
+      setClass(this.el, 'is-maximized', false);
+    }
     this.workspace = name;
     this.layout = structuredClone(layout);
     for (const a of ALL) {
@@ -397,7 +401,7 @@ export class Dock {
         this.areas[a].appendChild(grp.el);
         this.groups[a].push(grp);
         for (const id of spec.panels) if (this.factories.has(id)) grp.add(id, false);
-        if (a === 'float' && !grp.panels.length) {
+        if (!grp.panels.length) {
           grp.el.remove();
           this.groups[a].pop();
           continue;
@@ -467,7 +471,13 @@ export class Dock {
   }
 
   resetWorkspace(): void {
-    this.applyLayout(WORKSPACES[this.workspace] ?? WORKSPACES.Default, this.workspace);
+    let custom: Layout | null = null;
+    try {
+      custom = JSON.parse(localStorage.getItem(STORE_KEY) || '{}').custom?.[this.workspace] ?? null;
+    } catch {
+      custom = null;
+    }
+    this.applyLayout(custom ?? WORKSPACES[this.workspace] ?? WORKSPACES.Default, this.workspace);
     this.save();
   }
 
@@ -541,6 +551,10 @@ export class Dock {
     if (!grp) return;
     grp.remove(id);
     if (!grp.panels.length) {
+      if (this.maximized === grp) {
+        this.maximized = null;
+        setClass(this.el, 'is-maximized', false);
+      }
       grp.el.remove();
       this.groups[grp.area] = this.groups[grp.area].filter((x) => x !== grp);
       this.applySizes();
@@ -553,6 +567,10 @@ export class Dock {
     if (from === target) return;
     from?.remove(id);
     if (from && !from.panels.length) {
+      if (this.maximized === from) {
+        this.maximized = null;
+        setClass(this.el, 'is-maximized', false);
+      }
       from.el.remove();
       this.groups[from.area] = this.groups[from.area].filter((x) => x !== from);
     }

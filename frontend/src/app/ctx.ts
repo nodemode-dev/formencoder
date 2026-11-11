@@ -59,7 +59,7 @@ export class Ctx {
 
   start(): void {
     this.client.connect();
-    this.client.events.on('open', () => void this.loadSpecs());
+    this.client.events.on('open', () => void this.loadSpecs().then(() => this.ui.emit('specs', undefined)));
     this.client.events.on('activity', (ev) => {
       if (String(ev.command || '').startsWith('preset.')) this.presetCache = null;
       if (String(ev.command || '').startsWith('shortcuts.')) void this.loadSpecs().then(() => this.ui.emit('specs', undefined));

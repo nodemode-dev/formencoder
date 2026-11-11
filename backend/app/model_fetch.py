@@ -22,6 +22,9 @@ MODELS = {
 
 
 def models_folder() -> Path:
+    raw = os.environ.get("FORMENCODER_MODELS", "").strip()
+    if raw:
+        return Path(raw).expanduser()
     if sys.platform == "darwin":
         base = Path.home() / "Library" / "Application Support"
     elif os.name == "nt":

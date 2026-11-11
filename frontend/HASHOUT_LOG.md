@@ -128,3 +128,87 @@ Asked for: the owner's rule is that every Form app opens all of its demos from i
 - New, never over the person's work: the whole open is one `command.batch` (removing what is queued, then one `queue.addSource` a source with its `outputs`), labelled "Open the ... demo", so one Undo brings the person's queue back. When the queue has sources, a dialog says so before anything changes (Cancel or Open Demo); formencoder has no unsaved-changes prompt of its own, the queue is kept by the engine. Outputs land beside the copies in `imports`, never beside the demo sources in the repository.
 - Agents: `ui {action: demo, id}` publishes `{type: uiAction, action: demo}` to the windows and the window runs the same `openDemo`, with the same dialog; `window.formencoder.ui.demo(id)` for automation.
 - `scripts/demo-media.py` decodes the packs into `public/demos/{id}/` with a `files.json` each; only sources, not the inspect demo's ready-made outputs (the engine encodes those). About 34 MB in all.
+
+## Extension engine calls follow the extension's permissions (0.8.2)
+
+Refers to `ext/extensions.ts` `gate`, `runApp`, `applyDocument` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `app.run` and `document.apply` needed only `document`, and passed any engine command over the window's own socket, where the engine sees the person (source `ui`) and no approval applies. An extension granted "Read and change the open document" could `prefs.set` a raw decoder (a native program the engine runs), or set a publish destination that uploads encodes. `gate` now refuses with `ERR.PERMISSION` (-32001), before anything is sent: `prefs.`, `plugin.`, `tools.`, `lut.install`, `openh264.` and `shortcuts.` without `native-code`, `model.` without `models`, `family.` without `network`, `watch.` and `queue.setOutput` without `files-write`, and any call whose arguments carry a non-empty `publish` without `network`. `document.apply` checks every step. Checked with `tsc --noEmit`; not run against a loaded extension.
+
+## A call reported as failed is not sent later (0.8.2)
+
+Refers to `engine/client.ts` `Client.receive` (hello) · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- A call made while the socket was connecting or reconnecting waited in `outbox`; when that socket closed, `onclose` rejected it (the window toasted "the engine connection closed") but left it in `outbox`, and the next `hello` sent it anyway, so Start Queue or Remove ran after the person was told it failed. On `hello` the outbox now sends a message only when it has no id (a consent `reply`) or its id is still in `pending`. Checked with `tsc --noEmit`; not run against a restarting engine.
+
+## Installed LUTs opens its menu (0.8.2)
+
+Refers to `panels/export-settings.ts` `buildEffects` (the Installed LUTs button) · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The click handler read `e.currentTarget` after `await ctx.run('lut.list')`; by then dispatch had ended and `currentTarget` was null, so `getBoundingClientRect` threw and no menu appeared. The handler now measures the button itself (`pick`) after the await. Checked with `tsc --noEmit`; not run in the window.
+
+## A late submenu never opens orphaned (0.8.2)
+
+Refers to `ui/popup.ts` `PopupMenu.showSub`, `closeSub` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `showSub` awaited the row's asynchronous children (Apply Preset, Format) and then opened its menu whatever had happened meanwhile. Moving to another submenu row, or pressing Escape, before the first list arrived left a submenu that no parent would close and that `openRoots` did not hold, and `Keys.down` ignores keys while any `.cv-menu` is shown, so every shortcut stopped until reload. `closeSub` now bumps `subSeq`; `showSub` takes the value after its own `closeSub` and, after the await, drops its menu when the value moved on or its own panel is hidden. Checked with `tsc --noEmit`; not run in the window.
+
+## Maximize ends with its group (0.8.2)
+
+Refers to `ui/dock.ts` `applyLayout`, `close`, `move` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `.fx-dock.is-maximized .fx-group:not(.is-max)` hides every other group. Switching workspace, or closing or moving the last panel out of the maximized group, removed that group but kept `this.maximized` and the dock's `is-maximized` class, so every group on screen was hidden. `applyLayout` now clears both first, and `close` and `move` clear them when the group they remove is the maximized one. Checked with `tsc --noEmit`; not run in the window.
+
+## Docked extension panels survive a reload (0.8.2)
+
+Refers to `app/app.ts` `App.start`, `ui/dock.ts` `applyLayout` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `dock.load()` ran right after `new Extensions(...)`, whose `refresh` registers the `ext:*` panel factories only once `/api/extensions` answers, so `applyLayout` skipped every extension panel; a group that held only one stayed as an empty box, and the next `save()` wrote the layout without it. The layout is now restored when `extensions.ready` settles (the extension list arrived, or its 1.2 s limit passed; the window is revealed after the same promise, so nothing is seen before), and `applyLayout` drops any group left with no panels, not only floating ones. Checked with `tsc --noEmit`; not run in the window.
+
+## The dev proxy follows FORMENCODER_PORT (0.8.2)
+
+Refers to `vite.config.ts` `BACKEND_PORT` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- The README documents `FORMENCODER_PORT` and `boot_backend` and `boot_all` honour it, but the Vite proxy for `/api` and `/mcp` was fixed at 8270, so with another port the window never connected (or reached another engine on 8270). `BACKEND_PORT` now reads `FORMENCODER_PORT`, defaulting to 8270; `server.host` stays `false` and the interface port stays 5270. Checked by loading the config through Vite's `loadConfigFromFile`: the proxy target is `127.0.0.1:9270` with the variable set to 9270 and `127.0.0.1:8270` without it.
+
+## Media Browser Up uses the engine's parent (0.8.2)
+
+Refers to `panels/media.ts` the Up button and `go` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- Up worked out the parent with a regex, which turns `C:\Users` into `C:`, a drive-relative path that lists the engine's working directory on C:, after which Up did nothing. `go` now keeps the `parent` that `media.browse` returns (Rust `Path::parent`, `C:\` for `C:\Users`, none at a root) and Up goes there when there is one. Checked with `tsc --noEmit`; not run on Windows.
+
+## Reset Workspace returns a saved workspace to how it was saved (0.8.2)
+
+Refers to `ui/dock.ts` `resetWorkspace` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- A workspace saved with Save Workspace As has no entry in `WORKSPACES`, so Reset applied Default and saved it under `layouts[name]`; `switchTo` prefers `layouts` over `custom`, so the saved arrangement never came back. `resetWorkspace` now reads `custom[name]` from local storage first, then the built-in layout, then Default. Checked with `tsc --noEmit`; not run in the window.
+
+## An approval decided in another window closes quietly (0.8.2)
+
+Refers to `app/app.ts` `App.approvals` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- When the request shown in this window left the pending list (the person answered in another window), `approvals` closed the dialog while `this.approval` still named it, so the dialog's `onClose` ran `answer(false)`, sent `agents.decide` for a request already decided and showed the engine's "no pending approval N" error. `this.approval` is now cleared before the dialog closes, so `answer` returns at once. Checked with `tsc --noEmit`; not run with two windows.
+
+## Shortcuts load when the command list arrives (0.8.2)
+
+Refers to `app/ctx.ts` `Ctx.start`, `ui/keys.ts` `Keys` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- `Keys` rebuilt its table on a 400 ms timer after `open`, not after `command.list` answered, so on a slow first connect the table held only Backspace and Cmd+I, Cmd+E, Enter and the rest did nothing for the session. `Ctx.start` now emits `specs` once `loadSpecs` has finished after each `open`, the same event a shortcut edit already raises, and `Keys` no longer keeps its timer. Checked with `tsc --noEmit`; not run against a slow engine.
+
+## Cancel undoes what FFmpeg Command wrote (0.8.2)
+
+Refers to `panels/export-settings.ts` `open`, `close`, actions `command` and `ok` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- FFmpeg Command needs the edited settings on the output to plan the command (`encode.command` reads the queue), so it writes them with `queue.setSettings`; Cancel then only hid the window, against "OK writes it; Cancel drops it". The dialog now marks `written` when the button writes, and closing by Cancel, the close button or Escape puts back the settings it opened with (`info.settings`); OK clears the mark before closing. Checked with `tsc --noEmit`; not run in the window. The restore is one more undo step in History.
+
+## Demo media is staged once, not copied again (0.8.2)
+
+Refers to `ui/demos.ts` `stage`, `backend/app/routers/files.py` `upload` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- A staged demo file whose size no longer matched (an interrupted upload, older demo media) was sent again on every open, and the upload route renamed it on collision (`demo-inspect-clouds_0001 1.jpg`, then ` 2`), so `imports` grew with each open and the renamed cloud frames stopped being a numbered sequence. `/api/fs/upload` takes `overwrite=true`, which writes over a file of the same name, and `stage` passes it, so the demo's own `demo-<id>-` names are replaced in place. Other uploads keep the rename. Checked with FastAPI's TestClient in a venv outside the repo: two plain uploads of one name give `name` and `name 1`, and two with `overwrite=true` both return `name`.
+
+## The built-in save dialog keeps UNC paths (0.8.2)
+
+Refers to `ui/file-dialog.ts` the Save button · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- Save joined the folder and name and then collapsed every run of slashes to one separator, which turned `\\server\share\out` into `\server\share\out`, a folder on the current drive. The name is now joined to the folder with one separator, added only when the folder does not already end with it, and nothing else is rewritten. Checked with `tsc --noEmit`; not run on Windows.
