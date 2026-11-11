@@ -471,7 +471,13 @@ export class Dock {
   }
 
   resetWorkspace(): void {
-    this.applyLayout(WORKSPACES[this.workspace] ?? WORKSPACES.Default, this.workspace);
+    let custom: Layout | null = null;
+    try {
+      custom = JSON.parse(localStorage.getItem(STORE_KEY) || '{}').custom?.[this.workspace] ?? null;
+    } catch {
+      custom = null;
+    }
+    this.applyLayout(custom ?? WORKSPACES[this.workspace] ?? WORKSPACES.Default, this.workspace);
     this.save();
   }
 

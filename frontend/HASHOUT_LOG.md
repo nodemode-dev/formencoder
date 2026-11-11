@@ -176,3 +176,9 @@ Refers to `vite.config.ts` `BACKEND_PORT` · kind: fix · logged: v0.8.2 · 2026
 Refers to `panels/media.ts` the Up button and `go` · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - Up worked out the parent with a regex, which turns `C:\Users` into `C:`, a drive-relative path that lists the engine's working directory on C:, after which Up did nothing. `go` now keeps the `parent` that `media.browse` returns (Rust `Path::parent`, `C:\` for `C:\Users`, none at a root) and Up goes there when there is one. Checked with `tsc --noEmit`; not run on Windows.
+
+## Reset Workspace returns a saved workspace to how it was saved (0.8.2)
+
+Refers to `ui/dock.ts` `resetWorkspace` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- A workspace saved with Save Workspace As has no entry in `WORKSPACES`, so Reset applied Default and saved it under `layouts[name]`; `switchTo` prefers `layouts` over `custom`, so the saved arrangement never came back. `resetWorkspace` now reads `custom[name]` from local storage first, then the built-in layout, then Default. Checked with `tsc --noEmit`; not run in the window.
