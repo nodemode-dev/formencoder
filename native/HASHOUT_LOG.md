@@ -121,3 +121,9 @@ FFmpeg is a separate program, never linked. The engine builds argument lists and
 ## Logs
 
 `formencoder_encoding_log.txt` and `formencoder_error_log.txt` in `~/Formencoder/logs` (or the Preferences log folder), in the same plain shape Media Encoder's AMEEncodingLog uses so people who read those can read these.
+
+## Ingest never copies a file onto itself (0.8.2)
+
+Refers to `fencoder-run/src/runner.rs` `copy` · kind: fix · logged: v0.8.2 · 2026-11-10
+
+- When the destination resolved onto the source (a folder ingested into its own parent, or a drive root such as `E:\` whose `parent()` is `None`, which made the relative path absolute so `dest.join` returned the source), `File::create` truncated the camera original to 0 bytes and the size and MD5 checks of two empty files passed. The root of a parentless source is now the source itself, a folder source is refused when the destination is inside it, and each file is refused before `File::create` when its target and the source canonicalise to the same path. Checked with `cargo check -p fencoder-run`; not run against real media.

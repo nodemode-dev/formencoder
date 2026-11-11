@@ -732,6 +732,9 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
     if dest.as_os_str().is_empty() {
         return Err("the copy output needs a destination folder".into());
     }
+    if src.is_dir() && fs::canonicalize(&dest).ok().zip(fs::canonicalize(&src).ok()).is_some_and(|(d, s)| d.starts_with(&s)) {
+        return Err(format!("{} is inside the folder being copied; choose another destination", dest.display()));
+    }
     let verify = output["verify"].as_str().unwrap_or("size").to_string();
     let mut files: Vec<PathBuf> = Vec::new();
     if src.is_file() {
@@ -740,7 +743,7 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
         walk(&src, &mut files);
     }
     files.sort();
-    let root = src.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let root = src.parent().map(Path::to_path_buf).unwrap_or_else(|| src.clone());
     let total: u64 = files.iter().filter_map(|f| fs::metadata(f).ok()).map(|m| m.len()).sum::<u64>().max(1);
     let mut done: u64 = 0;
     let mut copied = Vec::new();
@@ -749,6 +752,9 @@ fn copy(ctx: &Ctx, item: &Value, output: &Value) -> Res {
         let target = dest.join(rel);
         if let Some(p) = target.parent() {
             fs::create_dir_all(p).map_err(|e| e.to_string())?;
+        }
+        if fs::canonicalize(&target).ok().is_some_and(|t| fs::canonicalize(f).ok().as_ref() == Some(&t)) {
+            return Err(format!("{} would be copied onto itself; choose another destination", f.display()));
         }
         let mut hin = Md5::new();
         {
