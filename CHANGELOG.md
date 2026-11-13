@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.4 · 2026-11-13
+
+A start-up fix found by running the Linux AppImage.
+
+- The window no longer opens on "Could not connect to 127.0.0.1: Connection refused". The engine printed its address before it was listening, and the window navigated the moment it read the line; the engine now listens as soon as it has its port, so an early connection waits and is answered instead of being refused.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.4 by hand, without a rebuild.
+
 ## v0.8.3 · 2026-11-11
 
 Fixes from the QA pass after 0.8.2.
