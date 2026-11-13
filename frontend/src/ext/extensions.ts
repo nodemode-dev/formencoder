@@ -9,7 +9,7 @@ import { pickFiles } from '../ui/file-dialog';
 import type { PopupEntry } from '../ui/popup';
 import { toast } from '../ui/toast';
 import { VERSION } from '../version';
-import { ERR, ExtensionHost, HostError, PERMISSION_WORDS, type ExtensionRecord, type Frame, type Theme } from './host-bridge';
+import { ERR, ExtensionHost, HostError, PERMISSION_WORDS, type ExtensionRecord, type Frame, type Permission, type Theme } from './host-bridge';
 
 export interface Listing {
   product: string;
@@ -62,6 +62,32 @@ function toBase64(buf: ArrayBuffer): string {
 function failure(e: unknown): HostError {
   if (e instanceof HostError) return e;
   return new HostError(ERR.REFUSED, e instanceof RpcFailure || e instanceof Error ? e.message : String(e));
+}
+
+const GATED: [string, Permission][] = [
+  ['prefs.', 'native-code'],
+  ['plugin.', 'native-code'],
+  ['tools.', 'native-code'],
+  ['lut.install', 'native-code'],
+  ['openh264.', 'native-code'],
+  ['shortcuts.', 'native-code'],
+  ['model.', 'models'],
+  ['family.', 'network'],
+  ['watch.', 'files-write'],
+  ['queue.setOutput', 'files-write'],
+];
+
+function carriesPublish(v: unknown): boolean {
+  if (Array.isArray(v)) return v.some(carriesPublish);
+  if (!v || typeof v !== 'object') return false;
+  return Object.entries(v).some(([k, x]) => (k === 'publish' && x != null && !(Array.isArray(x) && x.length === 0)) || carriesPublish(x));
+}
+
+function gate(ext: ExtensionRecord, command: string, args: unknown): void {
+  const needs = GATED.filter(([p]) => (p.endsWith('.') ? command.startsWith(p) : command === p)).map(([, n]) => n);
+  if (carriesPublish(args)) needs.push('network');
+  const missing = needs.find((n) => !ext.permissions.includes(n));
+  if (missing) throw new HostError(ERR.PERMISSION, `${ext.name} does not have the ${missing} permission needed for ${command}`);
 }
 
 class ExtPanel implements Panel {
@@ -140,9 +166,9 @@ export class Extensions {
       notify: (ext, message, level) => toast(`${ext.name}: ${message}`, level === 'error' || level === 'warning' ? 'error' : level === 'success' ? 'ok' : 'info'),
       setTitle: (ext, frame, title) => this.setTitle(ext, frame, title),
       readDocument: (_ext, p) => this.readDocument(p.what),
-      applyDocument: (_ext, label, ops) => this.applyDocument(label, ops),
+      applyDocument: (ext, label, ops) => this.applyDocument(ext, label, ops),
       commands: () => this.commands(),
-      run: (_ext, command, args) => this.runApp(command, args),
+      run: (ext, command, args) => this.runApp(ext, command, args),
       openFiles: (ext, accept, multiple) => this.openFiles(ext, accept, multiple),
       saveFile: (ext, name, type, data) => this.saveFile(ext, name, type, data),
       fetch: (_ext, req) => this.fetch(req),
@@ -495,8 +521,9 @@ export class Extensions {
     throw new HostError(ERR.INVALID, 'document.read takes what: queue, selection, watch, presets, formats or history');
   }
 
-  private async applyDocument(label: string, ops: { command: string; args?: unknown }[]): Promise<{ applied: number; results: unknown[] }> {
+  private async applyDocument(ext: ExtensionRecord, label: string, ops: { command: string; args?: unknown }[]): Promise<{ applied: number; results: unknown[] }> {
     if (!ops.length) return { applied: 0, results: [] };
+    for (const o of ops) gate(ext, o.command, o.args);
     try {
       const r = await this.ctx.client.call<{ results: unknown[] }>('command.batch', { label: label.slice(0, 120), atomic: true, steps: ops.map((o) => ({ command: o.command, params: o.args ?? {} })) });
       return { applied: r.results.length, results: r.results };
@@ -509,7 +536,8 @@ export class Extensions {
     return [...this.ctx.specs.values()].map((s) => ({ id: s.id, title: s.label.replace(/\.\.\.$/, ''), args: s.schema ?? { type: 'object', properties: {} }, query: s.query, undoable: s.undoable }));
   }
 
-  private async runApp(command: string, args: unknown): Promise<unknown> {
+  private async runApp(ext: ExtensionRecord, command: string, args: unknown): Promise<unknown> {
+    gate(ext, command, args);
     try {
       return await this.ctx.client.exec(command, (args && typeof args === 'object' ? args : {}) as Record<string, unknown>);
     } catch (e) {

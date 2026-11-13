@@ -103,7 +103,7 @@ class App {
     this.dock.onWorkspace = (name) => {
       if (this.wsSelect && this.wsSelect.value !== name) this.wsSelect.value = name;
     };
-    this.dock.load();
+    void this.extensions.ready.then(() => this.dock.load());
     this.exportSettings = new ExportSettings(ctx);
     this.palette = new Palette(ctx, (id) => this.keys.shortcutFor(id));
     this.palette.extraEntries = () => [
@@ -365,9 +365,10 @@ class App {
   private approvals(pending: Approval[]): void {
     const open = new Set(pending.map((r) => r.id));
     if (this.approval && !open.has(this.approval.id)) {
-      this.approval.dialog.close();
-      this.approval.dialog.scrim.remove();
+      const decided = this.approval;
       this.approval = null;
+      decided.dialog.close();
+      decided.dialog.scrim.remove();
     }
     if (this.approval || this.consent?.isOpen) return;
     const next = pending.find((r) => !this.answered.has(r.id));

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import http.client
 import ipaddress
 import socket
+import ssl
 import threading
 import urllib.error
 import urllib.request
@@ -81,16 +83,77 @@ def save(path: str, data: str, overwrite: bool) -> dict:
     return {"saved": True, "name": target.name, "path": str(target)}
 
 
-def _public_host(host: str) -> bool:
-    try:
-        infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
-    except OSError:
-        raise ValueError(f"{host} could not be found") from None
-    for info in infos:
-        addr = ipaddress.ip_address(info[4][0].split("%")[0])
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved or addr.is_multicast or addr.is_unspecified:
+_SHARED = ipaddress.ip_network("100.64.0.0/10")
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
+def _embedded(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    if isinstance(addr, ipaddress.IPv6Address):
+        if addr.ipv4_mapped:
+            return addr.ipv4_mapped
+        if addr.sixtofour:
+            return addr.sixtofour
+        if addr in _NAT64:
+            return ipaddress.IPv4Address(int(addr) & 0xFFFFFFFF)
+    return addr
+
+
+def _public(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    for a in {addr, _embedded(addr)}:
+        if not a.is_global or a.is_private or a.is_loopback or a.is_link_local or a.is_multicast or a.is_reserved or a.is_unspecified:
+            return False
+        if isinstance(a, ipaddress.IPv4Address) and a in _SHARED:
             return False
     return True
+
+
+def _resolve(host: str, port: int) -> list[str]:
+    try:
+        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+    except OSError:
+        raise ValueError(f"{host} could not be found") from None
+    addrs = [ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos]
+    if not addrs or not all(_public(a) for a in addrs):
+        raise PermissionError("addresses on this computer or the local network are not reachable from extensions")
+    return list(dict.fromkeys(str(a) for a in addrs))
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    def __init__(self, host: str, addresses: list[str], context: ssl.SSLContext, **kwargs) -> None:
+        kwargs.pop("context", None)
+        super().__init__(host, context=context, **kwargs)
+        self._addresses = addresses
+        self._pinned_context = context
+
+    def _dial(self) -> socket.socket:
+        error: OSError = OSError(f"{self.host} has no address to connect to")
+        for address in self._addresses:
+            try:
+                return socket.create_connection((address, self.port), self.timeout, self.source_address)
+            except OSError as exc:
+                error = exc
+        raise error
+
+    def connect(self) -> None:
+        sock = self._dial()
+        try:
+            self.sock = self._pinned_context.wrap_socket(sock, server_hostname=self.host)
+        except BaseException:
+            sock.close()
+            raise
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, addresses: list[str]) -> None:
+        self._pinned_context = ssl.create_default_context()
+        super().__init__(context=self._pinned_context)
+        self._addresses = addresses
+
+    def https_open(self, req):
+        return self.do_open(self._connect, req)
+
+    def _connect(self, host: str, **kwargs) -> _PinnedHTTPSConnection:
+        return _PinnedHTTPSConnection(host, self._addresses, self._pinned_context, **kwargs)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -102,8 +165,11 @@ def fetch(url: str, method: str = "GET", headers: dict | None = None, body: str 
     parts = urlsplit(url)
     if parts.scheme != "https" or not parts.hostname:
         raise ValueError("only https:// addresses")
-    if not _public_host(parts.hostname):
-        raise PermissionError("addresses on this computer or the local network are not reachable from extensions")
+    try:
+        port = parts.port or 443
+    except ValueError:
+        raise ValueError("the address has an invalid port") from None
+    addresses = _resolve(parts.hostname, port)
     method = (method or "GET").upper()
     if method not in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"):
         raise ValueError(f"method {method} is not allowed")
@@ -111,7 +177,7 @@ def fetch(url: str, method: str = "GET", headers: dict | None = None, body: str 
     clean = {str(k): str(v) for k, v in (headers or {}).items() if str(k).lower() not in ("host", "cookie", "connection", "content-length")}
     clean.setdefault("User-Agent", f"FormEncoder/{__version__}")
     req = urllib.request.Request(url, data=data, method=method, headers=clean)
-    opener = urllib.request.build_opener(_NoRedirect)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect, _PinnedHTTPSHandler(addresses))
     try:
         resp = opener.open(req, timeout=60)
     except urllib.error.HTTPError as exc:

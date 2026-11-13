@@ -616,7 +616,18 @@ impl Engine {
                 started = true;
                 continue;
             }
-            let out_path = self.output_path(&item, &output);
+            let mut out_path = self.output_path(&item, &output);
+            let busy: HashSet<String> = self.jobs.keys().filter_map(|k| self.runtime.get(k).and_then(|r| r["path"].as_str()).map(String::from)).collect();
+            let encodes = !matches!(output["kind"].as_str(), Some("copy" | "analysis" | "transcribe"));
+            if encodes && !out_path.contains("%0") && (busy.contains(&out_path) || (p["incrementNames"].as_bool().unwrap_or(true) && Path::new(&out_path).exists())) {
+                let pb = Path::new(&out_path);
+                let stem = pb.file_stem().map(|x| x.to_string_lossy().into_owned()).unwrap_or_default();
+                let ext = pb.extension().map(|x| format!(".{}", x.to_string_lossy())).unwrap_or_default();
+                let next = (1..10000).map(|i| pb.with_file_name(format!("{stem}_{i}{ext}")).to_string_lossy().into_owned()).find(|c| !busy.contains(c) && !Path::new(c).exists());
+                if let Some(c) = next {
+                    out_path = c;
+                }
+            }
             self.runtime.insert(oid.clone(), json!({"status": "encoding", "progress": 0.0, "started": now(), "path": out_path}));
             let job = runner::start(item, output, out_path, p.clone());
             self.jobs.insert(oid.clone(), job);

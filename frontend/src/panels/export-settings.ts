@@ -41,6 +41,7 @@ export class ExportSettings {
   private readonly scrim: HTMLElement;
   private s!: Settings;
   private info: OutputSettings | null = null;
+  private written = false;
   private desc: FormatDescription | null = null;
   private output = '';
   private tab: Tab = 'video';
@@ -152,6 +153,7 @@ export class ExportSettings {
     }
     this.output = info.output;
     this.info = info;
+    this.written = false;
     this.s = info.settings;
     this.summary = info.summary;
     this.time = 0;
@@ -176,6 +178,8 @@ export class ExportSettings {
   }
 
   private close(): void {
+    if (this.written && this.info) void this.ctx.run('queue.setSettings', { refs: [this.output], settings: this.info.settings, replace: true });
+    this.written = false;
     this.scrim.hidden = true;
     window.clearTimeout(this.previewTimer);
     this.previewSeq++;
@@ -252,9 +256,9 @@ export class ExportSettings {
       const body = q(box, '.fe-fx-body');
       if (fx.key === 'lut') {
         const pick = el<HTMLButtonElement>(`<button class="fe-link fe-fx-luts" type="button">Installed LUTs</button>`);
-        pick.addEventListener('click', async (e) => {
+        pick.addEventListener('click', async () => {
           const r = await this.ctx.run<{ luts: Array<{ name: string; path: string }> }>('lut.list', {});
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const rect = pick.getBoundingClientRect();
           contextMenu(rect.left, rect.bottom + 2, (r?.luts ?? []).length ? (r?.luts ?? []).map((l) => ({ label: l.name, run: () => void this.patch({ 'effects.lut.path': l.path, 'effects.lut.enabled': true }) })) : [{ label: 'No LUTs installed (Effects > Install LUT)', enabled: false }]);
         });
         body.appendChild(pick);
@@ -700,7 +704,10 @@ export class ExportSettings {
         return;
       case 'ok':
         await this.applying;
-        if (await this.ctx.run('queue.setSettings', { refs: [this.output], settings: this.s, replace: true })) this.close();
+        if (await this.ctx.run('queue.setSettings', { refs: [this.output], settings: this.s, replace: true })) {
+          this.written = false;
+          this.close();
+        }
         return;
       case 'format': {
         const rows = await formats(this.ctx);
@@ -759,6 +766,7 @@ export class ExportSettings {
         await this.applying;
         const saved = await this.ctx.run('queue.setSettings', { refs: [this.output], settings: this.s, replace: true });
         if (!saved) return;
+        this.written = true;
         const r = await this.ctx.run<{ command: string; notes: string[] }>('encode.command', { output: this.output });
         if (r) {
           const { report } = await import('../ui/report');

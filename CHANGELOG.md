@@ -1,5 +1,62 @@
 # Changelog
 
+## v0.8.4 · 2026-11-13
+
+A start-up fix found by running the Linux AppImage.
+
+- The window no longer opens on "Could not connect to 127.0.0.1: Connection refused". The engine printed its address before it was listening, and the window navigated the moment it read the line; the engine now listens as soon as it has its port, so an early connection waits and is answered instead of being refused.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.4 by hand, without a rebuild.
+
+## v0.8.3 · 2026-11-11
+
+Fixes from the QA pass after 0.8.2.
+
+- Ingest no longer destroys the source when the destination already holds a hard link to it: the copy used to open that link for writing, which emptied the original clip, and the size and MD5 checks then compared two empty files. A destination that is the same file as the source (same device and file number) is now refused, and every file is written to a hidden part file beside its destination and renamed into place, so an existing file is never truncated in place and a stopped or failed copy leaves no half-written file.
+- Ingesting a folder into a folder inside itself that does not exist yet (`CARD` into `CARD/backup`) is refused, as it already was when that folder existed.
+- `net.fetch` for extensions resolves the host once, refuses the request when any address is not public (now also the 100.64.0.0/10 shared range and IPv4 addresses inside IPv6 forms), and connects to the address it checked while TLS still verifies the certificate for the host name, so a second DNS answer can no longer point the request at this computer or the local network. Proxy settings in the environment are ignored.
+- Ingest checks the size, MD5 or bytes of each copied file before it replaces anything, so a copy that fails verification is deleted and the file already at the destination is kept. A part file left at the same hidden name (including a link placed there) is removed first and the new part file is created fresh, so the copy never writes through it.
+- `net.fetch` tries each checked address in turn, as an ordinary connection does, so a host with both IPv6 and IPv4 addresses still answers on a network where IPv6 does not work. Every address still has to be public before any is tried.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.3 by hand, without a rebuild.
+
+## v0.8.2 · 2026-11-10
+
+Fixes from a review of the engine, the interface and the launchers.
+
+- Ingest never copies a file onto itself: ingesting a folder into its own parent, or a card mounted as a drive root, used to truncate the original clip to nothing and still report a verified copy. Such a copy now fails with a message and the source is untouched.
+- Two outputs of one source with the same name no longer encode into the same file at the same time; the second gets its own `_1` name.
+- Image sequences numbered from 1001 (or any frame above 4) can be added and encoded.
+- An extension needs the matching permission for engine commands that run programs, change preferences, plug-ins or tools, download models, reach other apps, write watch folders or output paths, or publish; "document" alone no longer covers them.
+- A LUT whose path contains an apostrophe no longer breaks the encode.
+- HEVC VBR 2 pass with libx265 keeps its second pass on Windows and with HDR10 metadata.
+- Dither and pixel aspect settings from a preset or an agent only accept the listed values.
+- Generated SDR conform and DCP colour tables are written whole, so two jobs starting together, or a quit during the write, no longer leave a broken table in the cache.
+- Stop pressed just as FFmpeg starts stops the encode instead of letting it run to the end.
+- Closed or restarted terminals no longer leave zombie shells behind.
+- Batches sent by agents keep to the 100-step undo history.
+- Speech model downloads go to `FORMENCODER_MODELS` when it is set, where transcription looks for them.
+- A command the window reported as failed while the engine was reconnecting is no longer sent once the engine is back.
+- Effects > Installed LUTs in Export Settings opens its menu again.
+- A submenu that loads late (Apply Preset, Format) can no longer stay on screen on its own and disable keyboard shortcuts.
+- Switching workspace or closing a maximized panel no longer leaves the dock blank.
+- Extension panels docked in the layout stay there across a reload.
+- The development interface follows `FORMENCODER_PORT` to the engine.
+- The Media Browser's Up goes from `C:\Users` to `C:\` on Windows.
+- Reset Workspace on a saved workspace brings back the saved arrangement, not Default.
+- Approving an agent's request in one window no longer shows an error in another open window.
+- `formencoder.bat` passes every argument on to `install`, `install-native`, `install-tools`, `mcp`, `agents` and `counts`.
+- Keyboard shortcuts work after a slow first connection to the engine.
+- Cancel in Export Settings drops the edits even after FFmpeg Command was used.
+- Opening a demo again replaces mismatched demo media instead of adding numbered copies.
+- The built-in save dialog keeps network share (`\\server\share`) paths.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.2 by hand, without a rebuild.
+
+## v0.8.1 · 2026-11-10
+
+A small fix to the Terminal panel.
+
+- Terminal output no longer shows replacement characters when a multi-byte character (an accent, a symbol) is split across two reads from the shell; the session decodes the stream incrementally and delivers a trailing partial character once when the shell exits. The piped fallback used when no pseudo-terminal library is available decodes the same way.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.8.1 by hand, without a rebuild.
+
 ## v0.8.0 · 2026-11-09
 
 The three demos open inside FormEncoder, not only in a browser.

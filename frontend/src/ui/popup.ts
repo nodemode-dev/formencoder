@@ -30,6 +30,7 @@ export class PopupMenu {
   readonly panel: HTMLElement;
   private openSub: PopupMenu | null = null;
   private subRow: HTMLElement | null = null;
+  private subSeq = 0;
   private focusIndex = -1;
   private rows: Array<{ node: HTMLButtonElement; item: PopupItem }> = [];
   onClose: (() => void) | null = null;
@@ -99,8 +100,13 @@ export class PopupMenu {
   private async showSub(item: PopupItem, row: HTMLElement): Promise<void> {
     if (this.subRow === row && this.openSub?.isOpen) return;
     this.closeSub();
+    const seq = this.subSeq;
     const menu = new PopupMenu(this);
     const kids = typeof item.children === 'function' ? await item.children() : item.children || [];
+    if (seq !== this.subSeq || this.panel.hidden) {
+      menu.panel.remove();
+      return;
+    }
     menu.setItems(kids);
     this.openSub = menu;
     this.subRow = row;
@@ -111,6 +117,7 @@ export class PopupMenu {
 
   private closeSub(): void {
     const s = this.openSub;
+    this.subSeq++;
     this.openSub = null;
     this.subRow = null;
     if (s) {

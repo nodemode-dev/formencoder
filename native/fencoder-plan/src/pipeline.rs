@@ -412,7 +412,7 @@ fn video_codec_args(codec: &str, encoder: &str, s: &Value, fps: f64, w: u32, h: 
                         if encoder == "libx264" {
                             push(&["-pass", &pass_no.to_string(), "-passlogfile", passlog]);
                         } else {
-                            push(&["-x265-params", &format!("pass={pass_no}:stats={passlog}.log")]);
+                            push(&["-x265-params", &format!("pass={pass_no}:stats={}.log", passlog.replace('\\', "/").replace(':', "\\:"))]);
                         }
                     }
                 }
@@ -1399,6 +1399,7 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
             }
         }
     }
+    let mut x265_hdr: Option<String> = None;
     if has_video {
         common.extend(colour::tag_args(s["video"]["colorSpace"].as_str().unwrap_or("rec709"), &info["video"]));
         let fo = s["video"]["fieldOrder"].as_str().unwrap_or("progressive");
@@ -1408,7 +1409,7 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
         if s["video"]["hdr10"].as_bool().unwrap_or(false) {
             if vcodec_id == "hevc" && s["video"]["colorSpace"] == "rec2100pq" && encoder == "libx265" {
                 let cll = format!("{},{}", s["video"]["maxCLL"].as_i64().unwrap_or(1000), s["video"]["maxFALL"].as_i64().unwrap_or(400));
-                common.extend(sv(&["-x265-params", &format!("hdr10=1:repeat-headers=1:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1):max-cll={cll}")]));
+                x265_hdr = Some(format!("hdr10=1:repeat-headers=1:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1):max-cll={cll}"));
             } else {
                 plan.notes.push(format!("HDR10 mastering metadata is written by libx265; {encoder} gets the PQ and Rec. 2020 tags only"));
             }
@@ -1594,7 +1595,7 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
         plan.passes = vec![p1, p2];
         return Ok(plan);
     }
-    let vargs = if two {
+    let mut vargs = if two {
         let mut p1 = base.clone();
         p1.extend(fc.clone());
         p1.extend(maps_v.clone());
@@ -1611,6 +1612,12 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     } else {
         vargs1
     };
+    if let Some(hdr) = x265_hdr {
+        match vargs.iter().position(|a| a == "-x265-params") {
+            Some(i) if i + 1 < vargs.len() => vargs[i + 1] = format!("{}:{hdr}", vargs[i + 1]),
+            _ => vargs.extend(["-x265-params".to_string(), hdr]),
+        }
+    }
     let mut fin = base;
     fin.extend(fc);
     fin.extend(maps_v);

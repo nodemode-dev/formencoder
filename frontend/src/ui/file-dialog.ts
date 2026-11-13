@@ -148,7 +148,7 @@ async function browse(o: PickOptions): Promise<string[] | null> {
       let name = nameInput.value.trim();
       if (!name) return;
       if (exts.length && !exts.some((x) => name.toLowerCase().endsWith('.' + x))) name += '.' + exts[0];
-      finishWith([`${current}${roots.sep}${name}`.replace(/[\\/]+/g, roots.sep)]);
+      finishWith([current.endsWith(roots.sep) ? current + name : current + roots.sep + name]);
     } else if (o.mode === 'folder') finishWith([selected.size ? [...selected][0] : current]);
     else if (selected.size) finishWith([...selected]);
   });

@@ -343,11 +343,25 @@ fn alpha(pix: &str) -> bool {
     ["yuva", "rgba", "bgra", "argb", "abgr", "gbrap", "ya8", "ya16"].iter().any(|t| pix.contains(t))
 }
 
+fn pattern_first(pattern: &str) -> Option<i64> {
+    let p = Path::new(pattern);
+    let name = p.file_name()?.to_string_lossy().into_owned();
+    let (head, rest) = name.split_once("%0")?;
+    let (width, ext) = rest.split_once('d')?;
+    let width: usize = width.parse().ok()?;
+    let parent = p.parent().filter(|x| !x.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    fs::read_dir(parent).ok()?.flatten().filter_map(|e| {
+        let n = e.file_name().to_string_lossy().into_owned();
+        let mid = n.strip_prefix(head)?.strip_suffix(ext)?;
+        if mid.len() == width && mid.bytes().all(|b| b.is_ascii_digit()) { mid.parse::<i64>().ok() } else { None }
+    }).min()
+}
+
 pub fn probe(path: &str, frame_rate: Option<f64>) -> Value {
     let p = Path::new(path);
     let mut seq: Option<Value> = None;
     if path.contains("%0") {
-        seq = Some(json!({"pattern": path, "first": 0}));
+        seq = Some(json!({"pattern": path, "first": pattern_first(path).unwrap_or(0)}));
     } else if kind_of(path) == "image" && frame_rate.is_some() {
         seq = sequence_of(path);
     }
