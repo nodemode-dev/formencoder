@@ -344,3 +344,5 @@
 .fe-sc-row.is-changed .fe-sc-label { color: var(--text-primary); }
 .fe-raw-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
 .fe-raw-json { width: 100%; min-height: 120px; resize: vertical; font-family: var(--font-mono); font-size: var(--fs-11); }
+:root[data-oled] .fe-es-summary { background: var(--bg-primary); box-shadow: inset 0 0 0 1px var(--border-color); }
+:root[data-oled] .fe-w-item,:root[data-oled] .fe-enc-row, :root[data-oled] .fe-f-app, :root[data-oled] .fe-fx, :root[data-oled] .fe-pub, :root[data-oled] .fe-demo-card { background: var(--bg-primary); }
