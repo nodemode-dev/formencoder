@@ -2,8 +2,8 @@
 """./formencoder agents: Claude Code, Codex and Cursor driving formencoder.
 
   sync [--check]    regenerate the formencoder-harness skill's generated references from the engine (commands, MCP tools,
-                    presets, formats and settings) and mirror .claude/skills/formencoder-harness to .agents/skills;
-                    --check exits 1 when anything drifted
+                    presets, formats and settings), mirror .claude/skills/formencoder-harness to .agents/skills and write
+                    agents/manifest.json (what the app offers agents); --check exits 1 when anything drifted
   install [--dry-run] [claude|codex|cursor ...]
                     set the clients up for this user account: the MCP server and the skill (all three by default)
   status            which clients are on this computer and whether the skill is in step
@@ -23,6 +23,9 @@ ROOT = Path(__file__).resolve().parent.parent
 BACKEND = ROOT / "backend"
 SKILL = ROOT / ".claude" / "skills" / "formencoder-harness"
 MIRROR = ROOT / ".agents" / "skills" / "formencoder-harness"
+SKILLS = ROOT / ".claude" / "skills"
+MANIFEST = ROOT / "agents" / "manifest.json"
+DOCK = {"present": True, "positions": ["left", "right", "bottom", "floating"], "tabs": ["terminal", "agents"]}
 ORDER = ["queue", "encode", "preset", "format", "watch", "ingest", "proxy", "analyze", "media", "captions", "lut", "family", "publish", "log", "prefs", "edit", "history", "ui", "app", "settings"]
 HEAD = "Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand."
 
@@ -219,6 +222,30 @@ def generate() -> dict[str, str]:
     return {k: v.replace(" — ", " · ").replace("—", "·") for k, v in docs.items()}
 
 
+def manifest_text(eng: Engine) -> str:
+    from app.agent.tools import NAMES, READ_ONLY, TOOLS, _command_tool
+    from app.services.formext_host import API
+
+    listed = list(TOOLS)
+    gated = [t["name"] for t in TOOLS if t["name"] not in READ_ONLY]
+    seen = set(NAMES)
+    for r in eng.commands():
+        name = r.get("mcpName")
+        if name and name not in seen:
+            seen.add(name)
+            listed.append(_command_tool(r))
+            if not r.get("query"):
+                gated.append(name)
+    skills = [{"name": s.name, "sub_skills": sorted(p.parent.name for p in s.glob("sub-skills/*/SUB-SKILL.md"))}
+              for s in sorted(SKILLS.iterdir()) if (s / "SKILL.md").is_file()]
+    doc = {"format": "form-agent-manifest", "version": 1, "app": "formencoder",
+           "mcp": {"tools": [t["name"] for t in listed],
+                   "read_only": [t["name"] for t in listed if t["annotations"].get("readOnlyHint")],
+                   "approval_gated": gated, "transports": ["stdio", "http"]},
+           "skills": skills, "dock": DOCK, "extensions": {"host_api": API}}
+    return json.dumps(doc, indent=2) + "\n"
+
+
 def _mcp_name(cid: str) -> str:
     return "".join("_" if ch == "." else ("_" + ch.lower() if ch.isupper() else ch) for ch in cid)
 
@@ -273,6 +300,12 @@ def sync(check: bool) -> int:
     for p in problems:
         print(f"agents: surface: {p}")
     drift = ["the registry, the MCP tools and the command line disagree"] if problems else []
+    wanted = manifest_text(Engine())
+    if not MANIFEST.exists() or MANIFEST.read_text(encoding="utf-8") != wanted:
+        drift.append(str(MANIFEST.relative_to(ROOT)))
+        if not check:
+            MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+            MANIFEST.write_text(wanted, encoding="utf-8")
     for name, text in generate().items():
         ref = SKILL / "references" / name
         if not ref.exists() or ref.read_text(encoding="utf-8") != text:
