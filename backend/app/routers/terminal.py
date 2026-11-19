@@ -3,9 +3,11 @@ import codecs
 import contextlib
 import json
 import os
+import re
 import shutil
 import signal
 import struct
+import subprocess
 import threading
 import time
 
@@ -17,6 +19,37 @@ from ..core import config, window_key
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
 AGENTS = {"claude": "claude", "codex": "codex", "cursor": "cursor-agent"}
+PROGRAMS = {
+    "claude": {"title": "Claude Code", "install": "irm https://claude.ai/install.ps1 | iex" if os.name == "nt" else "curl -fsSL https://claude.ai/install.sh | bash"},
+    "codex": {"title": "Codex", "install": "npm install -g @openai/codex"},
+    "cursor": {"title": "Cursor", "install": "curl https://cursor.com/install -fsS | bash"},
+}
+RESUME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{7,79}")
+PROMPT_MAX = 20000
+VERSION_KEEP = 60.0
+_VERSIONS: dict[str, tuple[float, str | None]] = {}
+
+
+def _version(path: str) -> str | None:
+    now = time.monotonic()
+    kept = _VERSIONS.get(path)
+    if kept and now - kept[0] < VERSION_KEEP:
+        return kept[1]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("FORMENCODER_")}
+    try:
+        out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=5, stdin=subprocess.DEVNULL, env=env)
+        lines = out.stdout.strip().splitlines() if out.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError):
+        lines = []
+    found = lines[0].strip()[:80] if lines else None
+    _VERSIONS[path] = (now, found)
+    return found
+
+
+def _program(kind: str) -> dict:
+    path = shutil.which(AGENTS[kind])
+    return {"installed": path is not None, "path": path, "version": _version(path) if path else None, "signedIn": None,
+            "install": PROGRAMS[kind]["install"], "title": PROGRAMS[kind]["title"], "program": AGENTS[kind]}
 
 
 def _environment(base_url: str, token: str | None) -> dict:
@@ -49,13 +82,14 @@ def _shell() -> list[str]:
 
 
 class Session:
-    def __init__(self, cols: int, rows: int, env: dict, cwd: str):
+    def __init__(self, cols: int, rows: int, env: dict, cwd: str, argv: list[str] | None = None):
         self.cols, self.rows = max(20, min(500, cols)), max(5, min(300, rows))
         self.pid = None
         self.fd = None
         self.process = None
         self.winpty = None
         self.decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        command = argv or _shell()
         if POSIX:
             import pty
 
@@ -65,18 +99,19 @@ class Session:
                     os.chdir(cwd)
                 except OSError:
                     os.chdir(os.path.expanduser("~"))
-                os.execvpe(_shell()[0], _shell(), env)
+                try:
+                    os.execvpe(command[0], command, env)
+                except OSError:
+                    os._exit(127)
             self.pid, self.fd = pid, fd
             self.resize(self.cols, self.rows)
             return
         try:
             from winpty import PtyProcess
 
-            self.winpty = PtyProcess.spawn(_shell(), cwd=cwd, env=env, dimensions=(self.rows, self.cols))
+            self.winpty = PtyProcess.spawn(command, cwd=cwd, env=env, dimensions=(self.rows, self.cols))
         except Exception:
-            import subprocess
-
-            self.process = subprocess.Popen(_shell(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, cwd=cwd)
+            self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, cwd=cwd)
 
     def resize(self, cols: int, rows: int) -> None:
         self.cols, self.rows = max(20, min(500, cols)), max(5, min(300, rows))
@@ -151,13 +186,21 @@ def status() -> dict:
     }
 
 
+@router.get("/agents")
+def agent_programs(request: Request) -> dict:
+    window_key.require(request)
+    return {"agents": {kind: _program(kind) for kind in PROGRAMS}}
+
+
 KEEP = 256_000
 
 
 class Term:
-    def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool, trusted: bool = False) -> None:
+    def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool, trusted: bool = False,
+                 kind: str = "shell", window: bool = False, argv: list[str] | None = None) -> None:
         self.id, self.title, self.cwd, self.base, self.owned = tid, title, cwd, base, owned
         self.trusted = trusted
+        self.kind, self.window, self.argv = kind, window, argv
         self.token: str | None = None
         self.opener = "ui"
         self.created = time.time()
@@ -173,7 +216,7 @@ class Term:
         self.exited = False
         consent.revoke(self.token)
         self.token = consent.issue() if self.trusted else None
-        self.session = Session(cols, rows, _environment(self.base, self.token), self.cwd)
+        self.session = Session(cols, rows, _environment(self.base, self.token), self.cwd, self.argv)
         session = self.session
 
         def pump() -> None:
@@ -203,6 +246,9 @@ class Term:
         if session is not self.session:
             return
         self.exited = True
+        if self.window:
+            consent.revoke(self.token)
+            self.token = None
         for q in list(self.listeners):
             with contextlib.suppress(asyncio.QueueFull):
                 q.put_nowait(None)
@@ -222,6 +268,9 @@ class Term:
         old, self.session = self.session, None
         if old:
             old.close()
+        for q in list(self.listeners):
+            with contextlib.suppress(asyncio.QueueFull):
+                q.put_nowait({"type": "restart"})
         self._feed("\r\n[formencoder] terminal restarted\r\n")
         self._start(cols, rows)
 
@@ -231,9 +280,13 @@ class Term:
         self.exited = True
         consent.revoke(self.token)
         self.token = None
+        for q in list(self.listeners):
+            with contextlib.suppress(asyncio.QueueFull):
+                q.put_nowait({"type": "closed"})
 
     def row(self) -> dict:
-        return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener}
+        return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener,
+                "kind": self.kind if self.opener == "ui" else "agent", "alive": not self.exited}
 
 
 class Hub:
@@ -245,15 +298,26 @@ class Hub:
         from ..engine.host import host as engine_host
 
         engine_host.bus.publish({"type": "terminals", "sessions": self.listing()}, ("ui",))
+        engine_host.bus.publish({"type": "terminalTabs", "tabs": self.tabs()}, ("ui",))
 
     def listing(self) -> list[dict]:
-        return [t.row() for t in self.terms.values() if not t.owned]
+        return [t.row() for t in self.terms.values() if not t.owned and not t.window]
 
-    def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None, trusted: bool = False) -> Term:
+    def tabs(self) -> list[dict]:
+        return [t.row() for t in self.terms.values() if t.window]
+
+    def listed(self, tid: str) -> Term:
+        term = self.get(tid)
+        if term.window:
+            raise KeyError(f"no terminal {tid!r}; open terminals: {', '.join(t['id'] for t in self.listing()) or 'none'}")
+        return term
+
+    def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None, trusted: bool = False,
+             kind: str = "shell", window: bool = False, argv: list[str] | None = None) -> Term:
         self._n += 1
         tid = f"t{self._n}"
         place = cwd or str(workspace.ensure())
-        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted)
+        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted, kind, window, argv)
         self.terms[tid] = term
         if run:
             term.write(run + "\r")
@@ -288,6 +352,44 @@ def _base(host_header: str | None, engine: str | None = None) -> str:
 @router.get("/sessions")
 def sessions() -> dict:
     return {"sessions": hub.listing()}
+
+
+@router.get("/tabs")
+def tabs(request: Request) -> dict:
+    window_key.require(request)
+    return {"tabs": hub.tabs()}
+
+
+@router.post("/tabs")
+async def open_tab(request: Request) -> dict:
+    body = await request.json() if (await request.body()) else {}
+    if not isinstance(body, dict):
+        body = {}
+    kind = body.get("kind") or "shell"
+    prompt, resume = body.get("prompt") or None, body.get("resume") or None
+    if kind != "shell" and kind not in PROGRAMS:
+        raise HTTPException(422, {"code": "unknown_kind", "message": f"No tab kind called {kind}. Kinds: shell, {', '.join(PROGRAMS)}."})
+    if prompt is not None and (kind == "shell" or not isinstance(prompt, str) or len(prompt) > PROMPT_MAX):
+        raise HTTPException(422, {"code": "bad_prompt", "message": f"A prompt is text of at most {PROMPT_MAX} characters for an agent tab."})
+    if resume is not None and (kind != "claude" or not isinstance(resume, str) or not RESUME.fullmatch(resume)):
+        raise HTTPException(422, {"code": "bad_resume", "message": "resume is a Claude Code session id, for a claude tab only."})
+    try:
+        cols, rows = int(body.get("cols") or 100), int(body.get("rows") or 30)
+    except (TypeError, ValueError):
+        cols, rows = 100, 30
+    argv = None
+    if kind in PROGRAMS:
+        path = shutil.which(AGENTS[kind])
+        if path is None:
+            raise HTTPException(404, {"code": "not_installed", "message": f"{PROGRAMS[kind]['title']} is not installed on this computer.", "install": PROGRAMS[kind]["install"]})
+        argv = [path, *(["--resume", resume] if resume else []), *((["--", prompt] if prompt.startswith("-") else [prompt]) if prompt else [])]
+    title = body.get("title") if isinstance(body.get("title"), str) else None
+    cwd = body.get("cwd") if isinstance(body.get("cwd"), str) else None
+    try:
+        term = hub.open(title or (PROGRAMS[kind]["title"] if argv else None), cwd, cols, rows, _base(request.headers.get("host")), trusted=argv is not None, kind=kind, window=True, argv=argv)
+    except OSError as exc:
+        raise HTTPException(500, {"code": "failed", "message": f"The program could not start: {exc}"}) from None
+    return term.row()
 
 
 @router.post("/sessions")
@@ -361,25 +463,44 @@ async def terminal(socket: WebSocket) -> None:
     except ValueError:
         cols, rows = 100, 30
     attach = socket.query_params.get("session")
+    typed = socket.query_params.get("typed") == "1"
     if attach and attach in hub.terms:
         term = hub.terms[attach]
         if term.session:
             term.session.resize(cols, rows)
+    elif attach and typed:
+        await socket.send_bytes(json.dumps({"type": "gone", "id": attach}).encode("utf-8"))
+        await socket.close(code=4404)
+        return
     else:
         base = _base(socket.headers.get("host"), socket.query_params.get("engine"))
         term = hub.open(None, socket.query_params.get("cwd"), cols, rows, base, owned=True, trusted=True)
     queue: asyncio.Queue = asyncio.Queue(maxsize=4000)
     replay, _ = term.read(None)
+    if typed:
+        await socket.send_bytes(json.dumps({"type": "hello", "id": term.id, "kind": term.kind, "alive": not term.exited}).encode("utf-8"))
     if replay and attach:
         await socket.send_text(replay)
+    if typed and term.exited:
+        await socket.send_bytes(json.dumps({"type": "exit"}).encode("utf-8"))
     term.listeners.add(queue)
 
     async def send() -> None:
         while True:
             data = await queue.get()
+            if isinstance(data, dict):
+                if typed:
+                    await socket.send_bytes(json.dumps(data).encode("utf-8"))
+                    if data.get("type") == "closed":
+                        await socket.close()
+                        break
+                continue
             if data is None:
                 with contextlib.suppress(Exception):
-                    await socket.send_text(json.dumps({"exit": True}))
+                    if typed:
+                        await socket.send_bytes(json.dumps({"type": "exit"}).encode("utf-8"))
+                    else:
+                        await socket.send_text(json.dumps({"exit": True}))
                 if term.owned:
                     break
                 continue
@@ -392,6 +513,19 @@ async def terminal(socket: WebSocket) -> None:
     try:
         while True:
             message = await socket.receive_text()
+            if typed:
+                try:
+                    control = json.loads(message)
+                except ValueError:
+                    control = None
+                if not isinstance(control, dict):
+                    continue
+                if control.get("type") == "input" and isinstance(control.get("data"), str):
+                    term.write(control["data"])
+                elif control.get("type") == "resize" and term.session:
+                    with contextlib.suppress(TypeError, ValueError):
+                        term.session.resize(int(control.get("cols")), int(control.get("rows")))
+                continue
             if message.startswith("\x00{"):
                 try:
                     control = json.loads(message[1:])
