@@ -15,7 +15,7 @@ interface Activity {
 
 interface AgentStatus {
   workspace: { path: string; mcp: { command: string; args: string[] } };
-  consent: { policy: string; session: string[]; always: string[] };
+  consent: { policy: string; session: string[]; always: string[]; sealBroken?: boolean };
   clients: Record<string, boolean>;
   windows: number;
   activity: Activity[];
@@ -44,6 +44,7 @@ export class AgentsPanel implements Panel {
       <section class="fx-agents-sec">
         <div class="fx-agents-h">${icon('lock', 14)}<span>Permissions</span><span class="fx-flex"></span><button class="fx-link" type="button" data-act="forget">Forget all</button></div>
         <div class="fx-agents-allowed"></div>
+        <div class="fx-agents-seal" data-automation-id="agents.sealBroken" role="status">The saved agent permission was changed outside FormEncoder, so it is back to Ask.</div>
         <label class="fe-faith"><input type="checkbox" class="fx-check" data-automation-id="agents.fullFaith"><span><strong>Full faith</strong> · agents may delete, clear or reset, publish to outside services, overwrite files, change where watch folders write and type into terminals without asking you first. Off, each of those waits for your approval.</span></label>
       </section>
       <section class="fx-agents-sec fx-agents-grow">
@@ -101,6 +102,7 @@ export class AgentsPanel implements Panel {
       for (const b of Array.from(this.el.querySelectorAll<HTMLElement>('[data-install]'))) setClass(b, 'is-missing', !s.clients[b.dataset.install as string]);
       const allowed = [...s.consent.always.map((c) => `${c} (always)`), ...s.consent.session.filter((c) => !s.consent.always.includes(c)).map((c) => `${c} (this session)`)];
       setText(q(this.el, '.fx-agents-allowed'), allowed.length ? allowed.join(', ') : `Policy: ${s.consent.policy}. Agents from the Terminal panel are always trusted; others ask once.`);
+      setClass(q(this.el, '.fx-agents-seal'), 'is-shown', s.consent.sealBroken === true);
       if (!this.feed.length) this.feed = s.activity.filter((a) => a.source !== 'ui');
       this.renderFeed();
       const ap = await this.ctx.client.call<{ fullFaith: boolean }>('agents.approvals');
