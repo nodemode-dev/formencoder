@@ -12,7 +12,7 @@ formencoder's engine exposes every command to agents through MCP, the same comma
 
 ## The tools
 
-21 tools: `status`, `list_commands`, `describe_command`, `execute`, `batch`, `probe`, `encode`, `queue`, `export_settings`, `preview_frame`, `contact_sheet`, `wait`, `verify`, `presets`, `formats`, `watch_folder`, `family`, `log`, `history`, `ui`, `guide`. `encode` queues, encodes, waits and verifies in one call; `preview_frame` and `contact_sheet` render frames through an output's exact settings so an agent looks before it encodes; `verify` probes the file against its settings.
+29 curated tools: `status`, `list_commands`, `describe_command`, `execute`, `batch`, `probe`, `encode`, `queue`, `export_settings`, `preview_frame`, `contact_sheet`, `wait`, `verify`, `presets`, `formats`, `watch_folder`, `family`, `log`, `history`, `ui`, `guide`, `approval_status`, `terminal_list`, `terminal_open`, `terminal_send`, `terminal_read`, `terminal_close`, `extensions_list`, `extension_command`. The core profile (Cursor) lists these 29; the full profile (Claude Code and Codex) adds one tool per engine command, such as `queue_add_source`, 125 tools in all today (`.claude/skills/formencoder-harness/references/tools.md` and `commands.md` are generated from the engine and list them). `encode` queues, encodes, waits and verifies in one call; `preview_frame` and `contact_sheet` render frames through an output's exact settings so an agent looks before it encodes; `verify` probes the file against its settings.
 
 ## The skill
 
