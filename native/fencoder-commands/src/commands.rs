@@ -122,6 +122,7 @@ fn path_list(p: &Value, key: &str) -> Res<Vec<String>> {
     let mut out = Vec::new();
     for x in list {
         let e = paths::expand(&x);
+        paths::local_input(&e, "the input")?;
         if !e.contains("%0") && !Path::new(&e).exists() {
             return Err(format!("no file at {x}"));
         }

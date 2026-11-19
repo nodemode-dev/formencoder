@@ -82,6 +82,37 @@ pub fn expand(p: &str) -> String {
     p.to_string()
 }
 
+pub fn has_scheme(p: &str) -> bool {
+    let b = p.as_bytes();
+    let n = b.iter().take_while(|c| c.is_ascii_alphanumeric() || matches!(c, b'+' | b'-' | b'.')).count();
+    n >= 2 && b[0].is_ascii_alphabetic() && b.get(n) == Some(&b':')
+}
+
+pub fn local_input(p: &str, what: &str) -> Result<(), String> {
+    if has_scheme(p) {
+        return Err(format!("{what} {p} is not a file on this computer; formencoder reads local files only (start a relative path with ./ if the name really has a colon)"));
+    }
+    Ok(())
+}
+
+pub fn absolute_or_same(p: &str) -> String {
+    if has_scheme(p) {
+        return p.to_string();
+    }
+    std::path::absolute(p).map(|a| a.to_string_lossy().into_owned()).unwrap_or_else(|_| p.to_string())
+}
+
+pub fn local_output(p: &str, what: &str) -> Result<String, String> {
+    let e = expand(p);
+    if e.is_empty() || e.contains('\0') {
+        return Err(format!("{what} is not a usable file path"));
+    }
+    if has_scheme(&e) {
+        return Err(format!("{what} {e} is not a file path on this computer; formencoder writes local files only (start a relative path with ./ if the name really has a colon)"));
+    }
+    std::path::absolute(&e).map(|a| a.to_string_lossy().into_owned()).map_err(|x| format!("{what} {e}: {x}"))
+}
+
 pub fn platform_data(app: &str) -> PathBuf {
     if cfg!(target_os = "macos") {
         home().join("Library").join("Application Support").join(app)

@@ -370,6 +370,10 @@ pub fn probe(path: &str, frame_rate: Option<f64>) -> Value {
         "size": fs::metadata(p).map(|m| m.len()).unwrap_or(0), "kind": kind_of(path), "duration": 0.0, "bitrate": 0,
         "container": "", "video": null, "audio": [], "subtitles": [], "timecode": null, "tags": {},
     });
+    if paths::has_scheme(path) {
+        info["error"] = json!("not a file on this computer; formencoder reads local files only");
+        return info;
+    }
     let mut pre: Vec<String> = Vec::new();
     let mut target = path.to_string();
     if let Some(sq) = &seq {
