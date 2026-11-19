@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import time
 from dataclasses import dataclass, field
 
 
@@ -65,18 +66,23 @@ class Bus:
         rid = next(self._ids)
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self._replies[rid] = fut
-        payload = {**message, "requestId": rid}
+        payload = {"id": str(rid), **message, "requestId": rid, "expiresIn": timeout, "expiresAt": time.time() + timeout}
         for w in windows:
             try:
                 w.queue.put_nowait(payload)
             except asyncio.QueueFull:
                 pass
+        reason = "cancelled"
         try:
-            return await asyncio.wait_for(fut, timeout)
+            reply = await asyncio.wait_for(fut, timeout)
+            reason = "answered"
+            return reply
         except asyncio.TimeoutError:
+            reason = "expired"
             return None
         finally:
             self._replies.pop(rid, None)
+            self._deliver({"type": "withdrawn", "requestId": rid, "id": str(rid), "of": message.get("type"), "reason": reason}, ("ui",))
 
     def answer(self, rid: int, value: dict) -> bool:
         fut = self._replies.get(rid)

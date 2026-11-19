@@ -134,9 +134,11 @@ def test_inapp_token_skips_the_ask(client):
     assert not reply["result"].get("isError")
 
 
-def test_inapp_token_skips_a_blocked_policy(client):
+def test_blocked_policy_stops_an_inapp_token_too_and_still_lets_it_read(client):
     set_policy("blocked")
-    assert not refused(call(client, CHANGING_TOOL, {INAPP_HEADER: inapp_token()}), "blocked")
+    token = inapp_token()
+    assert refused(call(client, CHANGING_TOOL, {INAPP_HEADER: token}), "blocked")
+    assert not call(client, READ_TOOL, {INAPP_HEADER: token})["result"].get("isError")
 
 
 @pytest.mark.parametrize("token", ["", "wrong-token", "x" * 64])
@@ -167,3 +169,23 @@ def test_decline_of_one_agent_does_not_block_another(client, monkeypatch):
     assert call(client, CHANGING_TOOL, agent="agent-one")["result"].get("isError")
     with_window(monkeypatch, {"allow": True})
     assert not call(client, CHANGING_TOOL, agent="agent-two")["result"].get("isError")
+
+
+@pytest.mark.parametrize("answer", [{"allow": True, "remember": "once"}, {"allow": True, "once": True}])
+def test_allow_once_runs_this_call_and_the_next_one_asks_again(client, monkeypatch, answer):
+    from app.agent import consent
+
+    asked = with_window(monkeypatch, answer)
+    first = call(client, CHANGING_TOOL)
+    second = call(client, CHANGING_TOOL)
+    assert not first["result"].get("isError") and not second["result"].get("isError")
+    assert len(asked) == 2
+    assert consent.state()["session"] == [] and consent.state()["always"] == []
+
+
+def test_the_question_says_who_asks_for_what_and_which_answers_there_are(client, monkeypatch):
+    asked = with_window(monkeypatch, {"allow": False})
+    call(client, CHANGING_TOOL, agent="Some-Agent")
+    name, _ = CHANGING_TOOL
+    assert asked[0] == asked[0] | {"type": "consent", "client": "mcp:Some-Agent", "detail": name, "agent": "Some-Agent", "what": f"use the {name} tool",
+                                   "answers": ["deny", "once", "session", "always"], "alwaysScope": "agent"}

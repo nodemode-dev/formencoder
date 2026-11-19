@@ -10,6 +10,11 @@ from ..engine.host import host
 TOKENS: set[str] = set()
 _session: set[str] = set()
 _declined: dict[str, float] = {}
+ANSWERS = ("deny", "once", "session", "always")
+ALWAYS_SCOPE = "agent"
+ASK_SECONDS = 180.0
+BLOCKED = ("Outside agents are turned off (FORMENCODER_AGENTS=deny), and so are agents started inside formencoder. "
+           "Only the person can change this, by starting formencoder without that setting.")
 _READ_RPC = {"command.list", "command.describe", "ui.state", "menu.bar", "frame.png", "encode.wait", "engine.info", "activity.list", "family.discover", "family.sources", "publish.destinations", "agents.approvals", "extensions.list"}
 
 
@@ -89,21 +94,26 @@ def client_key(source: str) -> str:
     return source.split(":", 1)[-1].strip().lower() or "agent"
 
 
+def agent_name(source: str) -> str:
+    return source.split(":", 1)[-1].strip()[:60] or "agent"
+
+
 def state() -> dict:
     from . import approvals
 
     seals = seal.summary([seal_state(), approvals.seal_state()])
-    return {"policy": config.agents_policy(), "session": sorted(_session), "always": sorted(_always()), "seal": seals, "sealBroken": seals == "broken"}
+    return {"policy": config.agents_policy(), "session": sorted(_session), "always": sorted(_always()), "seal": seals, "sealBroken": seals == "broken",
+            "answers": list(ANSWERS), "alwaysScope": ALWAYS_SCOPE, "askSeconds": ASK_SECONDS, "blockedStopsTabs": True}
 
 
-async def gate(source: str, token: str | None, mutating: bool, detail: str = "") -> str | None:
-    if inapp(token):
-        return None
-    policy = config.agents_policy()
+async def gate(source: str, token: str | None, mutating: bool, detail: str = "", what: str = "") -> str | None:
     if not mutating:
         return None
+    policy = config.agents_policy()
     if policy == "deny":
-        return "Outside agents are turned off (FORMENCODER_AGENTS=deny). Start the agent from formencoder's Terminal panel instead."
+        return BLOCKED
+    if inapp(token):
+        return None
     key = client_key(source)
     if key in _session or key in _always():
         return None
@@ -112,13 +122,17 @@ async def gate(source: str, token: str | None, mutating: bool, detail: str = "")
     if not host.bus.windows():
         return ("No formencoder window is open to ask the person for permission. Open formencoder (./formencoder boot, then http://localhost:5270, "
                 "or the desktop app) and allow this agent, or start the agent from formencoder's Terminal panel.")
-    reply = await host.bus.ask_window({"type": "consent", "client": source, "detail": detail}, timeout=180)
+    asked = what or (f"use the {detail} tool" if detail else "make changes")
+    question = {"type": "consent", "client": source, "detail": detail, "agent": agent_name(source), "what": asked, "answers": list(ANSWERS), "alwaysScope": ALWAYS_SCOPE}
+    reply = await host.bus.ask_window(question, timeout=ASK_SECONDS)
     if not reply:
         return "Nobody answered the permission request in the formencoder window. Ask the person to allow the agent there, then retry."
     if reply.get("allow"):
-        if reply.get("remember") == "always":
+        remember = "once" if reply.get("once") else reply.get("remember")
+        if remember == "always":
             _remember(key)
-        _session.add(key)
+        if remember != "once":
+            _session.add(key)
         return None
     _declined[key] = time.monotonic() + 600
     return "The person declined changes from this agent. Ask them in chat what they want instead."
