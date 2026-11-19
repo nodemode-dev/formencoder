@@ -1,6 +1,11 @@
 import { Emitter } from './events';
+import { loadWindowKey, WINDOW_KEY_HEADER } from './window-key';
 
 export const LOCAL_HEADERS: Record<string, string> = { 'x-formencoder-local': '1', 'x-formencoder-source': 'ui' };
+
+const keyReady: Promise<void> = loadWindowKey().then((key) => {
+  if (key) LOCAL_HEADERS[WINDOW_KEY_HEADER] = key;
+});
 
 export interface ServerEvent {
   type: string;
@@ -44,7 +49,17 @@ export function wsUrl(path: string): string {
   return `${proto}//${location.host}${path}`;
 }
 
+export async function windowTicket(): Promise<string> {
+  try {
+    const body = await api<{ ticket?: unknown }>('/api/window/ticket', { method: 'POST', body: '{}' });
+    return typeof body.ticket === 'string' ? body.ticket : '';
+  } catch {
+    return '';
+  }
+}
+
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  await keyReady;
   const headers = new Headers(init.headers);
   for (const [k, v] of Object.entries(LOCAL_HEADERS)) headers.set(k, v);
   if (init.body && typeof init.body === 'string' && !headers.has('content-type')) headers.set('content-type', 'application/json');
@@ -63,8 +78,9 @@ export class Client {
   private retry = 250;
   connected = false;
 
-  connect(): void {
-    const ws = new WebSocket(wsUrl('/api/live?kind=ui'));
+  async connect(): Promise<void> {
+    const ticket = await windowTicket();
+    const ws = new WebSocket(wsUrl(`/api/live?kind=ui&ticket=${encodeURIComponent(ticket)}`));
     this.ws = ws;
     ws.onopen = () => {
       this.retry = 250;
@@ -76,7 +92,7 @@ export class Client {
       for (const p of this.pending.values()) p.reject(new RpcFailure('the engine connection closed', -1));
       this.pending.clear();
       if (was) this.events.emit('close', undefined);
-      window.setTimeout(() => this.connect(), this.retry);
+      window.setTimeout(() => void this.connect(), this.retry);
       this.retry = Math.min(4000, this.retry * 2);
     };
   }

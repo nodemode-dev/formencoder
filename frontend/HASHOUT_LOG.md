@@ -212,3 +212,12 @@ Refers to `ui/demos.ts` `stage`, `backend/app/routers/files.py` `upload` · kind
 Refers to `ui/file-dialog.ts` the Save button · kind: fix · logged: v0.8.2 · 2026-11-10
 
 - Save joined the folder and name and then collapsed every run of slashes to one separator, which turned `\\server\share\out` into `\server\share\out`, a folder on the current drive. The name is now joined to the folder with one separator, added only when the folder does not already end with it, and nothing else is rewritten. Checked with `tsc --noEmit`; not run on Windows.
+
+## The page holds the window key (unreleased, after 0.8.4)
+
+Refers to `engine/window-key.ts`, `engine/client.ts` `LOCAL_HEADERS`, `api`, `windowTicket`, `Client.connect`, `panels/terminal.ts` `connect` · kind: fix · logged: unreleased · 2026-11-19
+
+- The engine now refuses changes that do not carry `x-formencoder-window-key` (see `backend/HASHOUT_LOG.md`, "The window key"). `loadWindowKey` takes the key once when `engine/client.ts` loads: the global `__FORMENCODER_WINDOW_KEY` that the desktop shell sets (read, then deleted), else `POST /api/window/key` (development; kept in `sessionStorage` so a reload of the same tab keeps working when the engine answers 409 the second time). The key is written into `LOCAL_HEADERS`, so `api()` and the three raw `fetch` calls in `ext/extensions.ts` that spread `LOCAL_HEADERS` all send it; `api()` waits for it first.
+- Sockets take a one-time ticket: `windowTicket()` asks `POST /api/window/ticket` before each live socket (re)connect and each terminal socket. `Client.connect` and the terminal panel's `connect` became async for that one await; nothing in the DOM changes.
+- Other network calls in `src`: the demo file reads in `ui/demos.ts` are GETs of static files and need nothing.
+- Checked against the Vite dev server (on a spare port, with the engine's CORS origins set to it) in headless Chrome: the page booted to "Engine ready", took the key (in `sessionStorage`, no global left), the engine counted 1 window, the live and terminal sockets opened with tickets (the terminal showed a prompt), `POST /api/fs/mkdir` from the page and `api('/api/agents/workspace')` answered 200, a command and `agents.approvals` over the live socket answered, and every non-GET request but the bootstrap carried the key. After a reload the bootstrap answered 409, the page reused the stored key and the engine again counted 1 window. Not run: the desktop shell (it cannot be built here).

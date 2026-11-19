@@ -170,10 +170,10 @@ async def dispatch(method: str, params: Any, source: str = "ui") -> Any:
         if method in ("agents.approvals", "agents.decide", "agents.fullFaith"):
             from ..agent import approvals
 
-            if method == "agents.approvals":
-                return approvals.state()
             if source != "ui":
                 raise RpcError("Only the person, in the formencoder window, can approve agents' actions or change full faith.", -32003)
+            if method == "agents.approvals":
+                return approvals.state()
             if method == "agents.decide":
                 try:
                     return await approvals.decide(int(p.get("id") or 0), bool(p.get("allow")))

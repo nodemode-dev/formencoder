@@ -1,5 +1,5 @@
 import type { Ctx } from '../app/ctx';
-import { api, wsUrl } from '../engine/client';
+import { api, windowTicket, wsUrl } from '../engine/client';
 import type { Panel } from '../ui/dock';
 import { el, q, setClass, setText } from '../ui/dom';
 import { icon } from '../ui/icons';
@@ -114,10 +114,11 @@ export class TerminalPanel implements Panel {
     this.connect();
   }
 
-  private connect(launch?: string): void {
+  private async connect(launch?: string): Promise<void> {
     const t = this.term;
     if (!t) return;
-    const ws = new WebSocket(wsUrl(`/api/terminal/ws?cols=${t.cols}&rows=${t.rows}${launch ? `&launch=${launch}` : ''}`));
+    const ticket = await windowTicket();
+    const ws = new WebSocket(wsUrl(`/api/terminal/ws?cols=${t.cols}&rows=${t.rows}&ticket=${encodeURIComponent(ticket)}${launch ? `&launch=${launch}` : ''}`));
     this.ws = ws;
     ws.onmessage = (ev) => {
       const s = String(ev.data);

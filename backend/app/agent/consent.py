@@ -4,29 +4,58 @@ import json
 import secrets
 import time
 
-from ..core import config
+from ..core import config, seal
 from ..engine.host import host
 
-TOKEN = secrets.token_urlsafe(24)
+TOKENS: set[str] = set()
 _session: set[str] = set()
 _declined: dict[str, float] = {}
 _READ_RPC = {"command.list", "command.describe", "ui.state", "menu.bar", "frame.png", "encode.wait", "engine.info", "activity.list", "family.discover", "family.sources", "publish.destinations", "agents.approvals", "extensions.list"}
+
+
+def issue() -> str:
+    token = secrets.token_urlsafe(32)
+    TOKENS.add(token)
+    return token
+
+
+def revoke(token: str | None) -> None:
+    if token:
+        TOKENS.discard(token)
+
+
+def inapp(token: str | None) -> bool:
+    return bool(token) and any(secrets.compare_digest(token, t) for t in list(TOKENS))
 
 
 def _store():
     return config.data_dir() / "agents.json"
 
 
-def _always() -> set[str]:
+def _stored() -> dict:
     try:
-        return set(json.loads(_store().read_text(encoding="utf-8")).get("allowed", []))
+        found = json.loads(_store().read_text(encoding="utf-8"))
     except (OSError, ValueError):
+        return {}
+    return found if isinstance(found, dict) else {}
+
+
+def seal_state() -> str:
+    stored = _stored()
+    return seal.read("agents", stored, bool(stored.get("allowed")))
+
+
+def _always() -> set[str]:
+    stored = _stored()
+    if seal.read("agents", stored, bool(stored.get("allowed"))) == "broken":
         return set()
+    allowed = stored.get("allowed", [])
+    return {str(a) for a in allowed} if isinstance(allowed, list) else set()
 
 
 def _remember(client: str) -> None:
     allowed = _always() | {client}
-    _store().write_text(json.dumps({"allowed": sorted(allowed)}, indent=2), encoding="utf-8")
+    _store().write_text(json.dumps(seal.sign("agents", {"allowed": sorted(allowed)}), indent=2), encoding="utf-8")
 
 
 def forget_all() -> None:
@@ -61,11 +90,14 @@ def client_key(source: str) -> str:
 
 
 def state() -> dict:
-    return {"policy": config.agents_policy(), "session": sorted(_session), "always": sorted(_always())}
+    from . import approvals
+
+    seals = seal.summary([seal_state(), approvals.seal_state()])
+    return {"policy": config.agents_policy(), "session": sorted(_session), "always": sorted(_always()), "seal": seals, "sealBroken": seals == "broken"}
 
 
 async def gate(source: str, token: str | None, mutating: bool, detail: str = "") -> str | None:
-    if token and secrets.compare_digest(token, TOKEN):
+    if inapp(token):
         return None
     policy = config.agents_policy()
     if policy == "allow" or not mutating:

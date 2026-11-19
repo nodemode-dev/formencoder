@@ -11,6 +11,7 @@ from . import __version__
 from .agent import workspace
 from .core import config, discovery
 from .core.security import LocalOnly
+from .core.window_key import WindowKeyGuard
 from .engine import rpc as engine_rpc
 from .engine.host import host
 from .routers import agents, extensions, files, hooks, live, mcp, rpc, system, terminal
@@ -64,6 +65,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="formencoder engine", version=__version__, lifespan=lifespan)
+app.add_middleware(WindowKeyGuard)
 app.add_middleware(CORSMiddleware, allow_origins=config.cors_origins(), allow_credentials=False, allow_methods=["*"], allow_headers=["*"], expose_headers=["x-formencoder-preview"])
 app.add_middleware(LocalOnly)
 for r in ROUTERS:

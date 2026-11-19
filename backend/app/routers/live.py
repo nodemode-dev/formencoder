@@ -5,6 +5,7 @@ import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .. import __version__
+from ..core import window_key
 from ..engine import rpc
 from ..engine.host import host
 
@@ -15,8 +16,8 @@ _SLOW = {"frame.png", "engine.info", "encode.wait", "family.discover", "family.s
 @router.websocket("/api/live")
 async def live(socket: WebSocket) -> None:
     await socket.accept()
-    kind = socket.query_params.get("kind", "ui")
-    client = host.bus.join("ui" if kind == "ui" else "watch", socket.query_params.get("name", ""))
+    window = socket.query_params.get("kind", "ui") == "ui" and window_key.spend(socket.query_params.get("ticket"))
+    client = host.bus.join("ui" if window else "watch", socket.query_params.get("name", ""))
 
     async def pump() -> None:
         while True:
@@ -43,6 +44,10 @@ async def live(socket: WebSocket) -> None:
             except ValueError:
                 continue
             if not isinstance(message, dict):
+                continue
+            if not window:
+                if message.get("id") is not None:
+                    put({"jsonrpc": "2.0", "id": message.get("id"), "error": {"code": -32003, "message": window_key.REFUSED}})
                 continue
             if message.get("method") == "reply":
                 params = message.get("params") or {}

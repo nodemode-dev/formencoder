@@ -12,18 +12,20 @@ import time
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from ..agent import consent, workspace
-from ..core import config
+from ..core import config, window_key
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
 AGENTS = {"claude": "claude", "codex": "codex", "cursor": "cursor-agent"}
 
 
-def _environment(base_url: str) -> dict:
+def _environment(base_url: str, token: str | None) -> dict:
     ws = workspace.ensure()
     env = dict(os.environ)
     env["FORMENCODER_URL"] = base_url
-    env["FORMENCODER_AGENT_TOKEN"] = consent.TOKEN
+    env.pop("FORMENCODER_AGENT_TOKEN", None)
+    if token:
+        env["FORMENCODER_AGENT_TOKEN"] = token
     env["FORMENCODER_AGENT_NAME"] = "terminal"
     env["FORMENCODER_WORKSPACE"] = str(ws)
     env["PATH"] = str(ws / "bin") + os.pathsep + env.get("PATH", "")
@@ -153,8 +155,10 @@ KEEP = 256_000
 
 
 class Term:
-    def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool) -> None:
+    def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool, trusted: bool = False) -> None:
         self.id, self.title, self.cwd, self.base, self.owned = tid, title, cwd, base, owned
+        self.trusted = trusted
+        self.token: str | None = None
         self.opener = "ui"
         self.created = time.time()
         self.buffer = ""
@@ -167,7 +171,9 @@ class Term:
 
     def _start(self, cols: int, rows: int) -> None:
         self.exited = False
-        self.session = Session(cols, rows, _environment(self.base), self.cwd)
+        consent.revoke(self.token)
+        self.token = consent.issue() if self.trusted else None
+        self.session = Session(cols, rows, _environment(self.base, self.token), self.cwd)
         session = self.session
 
         def pump() -> None:
@@ -223,6 +229,8 @@ class Term:
         if self.session:
             self.session.close()
         self.exited = True
+        consent.revoke(self.token)
+        self.token = None
 
     def row(self) -> dict:
         return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener}
@@ -241,11 +249,11 @@ class Hub:
     def listing(self) -> list[dict]:
         return [t.row() for t in self.terms.values() if not t.owned]
 
-    def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None) -> Term:
+    def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None, trusted: bool = False) -> Term:
         self._n += 1
         tid = f"t{self._n}"
         place = cwd or str(workspace.ensure())
-        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned)
+        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted)
         self.terms[tid] = term
         if run:
             term.write(run + "\r")
@@ -287,7 +295,7 @@ async def open_session(request: Request) -> dict:
     body = await request.json() if (await request.body()) else {}
     launch = body.get("launch")
     run = AGENTS.get(launch) if launch in AGENTS else None
-    term = hub.open(body.get("title"), body.get("cwd"), int(body.get("cols") or 100), int(body.get("rows") or 30), _base(request.headers.get("host")), run=run)
+    term = hub.open(body.get("title"), body.get("cwd"), int(body.get("cols") or 100), int(body.get("rows") or 30), _base(request.headers.get("host")), run=run, trusted=True)
     return term.row()
 
 
@@ -303,7 +311,8 @@ async def session_input(tid: str, request: Request) -> dict:
 
 
 @router.get("/sessions/{tid}/output")
-def session_output(tid: str, since: int | None = None) -> dict:
+def session_output(tid: str, request: Request, since: int | None = None) -> dict:
+    window_key.require(request)
     try:
         text, offset = hub.get(tid).read(since)
     except KeyError as exc:
@@ -342,6 +351,9 @@ def session_close(tid: str) -> dict:
 
 @router.websocket("/ws")
 async def terminal(socket: WebSocket) -> None:
+    if not window_key.spend(socket.query_params.get("ticket")):
+        await socket.close(code=4403)
+        return
     await socket.accept()
     try:
         cols = int(socket.query_params.get("cols", "100"))
@@ -355,7 +367,7 @@ async def terminal(socket: WebSocket) -> None:
             term.session.resize(cols, rows)
     else:
         base = _base(socket.headers.get("host"), socket.query_params.get("engine"))
-        term = hub.open(None, socket.query_params.get("cwd"), cols, rows, base, owned=True)
+        term = hub.open(None, socket.query_params.get("cwd"), cols, rows, base, owned=True, trusted=True)
     queue: asyncio.Queue = asyncio.Queue(maxsize=4000)
     replay, _ = term.read(None)
     if replay and attach:

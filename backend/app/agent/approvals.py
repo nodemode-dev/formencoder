@@ -9,7 +9,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
-from ..core import config
+from ..core import config, seal
 from ..engine.host import host
 
 UPLOADS = {"ftp", "s3", "webhook", "youtube", "vimeo", "facebook", "plugin"}
@@ -35,15 +35,25 @@ def _store() -> Path:
     return config.data_dir() / "approvals.json"
 
 
-def full_faith() -> bool:
+def _stored() -> dict:
     try:
-        return bool(json.loads(_store().read_text(encoding="utf-8")).get("fullFaith"))
+        found = json.loads(_store().read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return False
+        return {}
+    return found if isinstance(found, dict) else {}
+
+
+def seal_state() -> str:
+    stored = _stored()
+    return seal.read("approvals", stored, bool(stored.get("fullFaith")))
+
+
+def full_faith() -> bool:
+    return bool(_stored().get("fullFaith")) and seal_state() != "broken"
 
 
 def set_full_faith(on: bool) -> dict:
-    _store().write_text(json.dumps({"fullFaith": bool(on)}, indent=2), encoding="utf-8")
+    _store().write_text(json.dumps(seal.sign("approvals", {"fullFaith": bool(on)}), indent=2), encoding="utf-8")
     note("ui", "agents.fullFaith", {"on": bool(on)}, True, 0)
     _changed()
     return state()
