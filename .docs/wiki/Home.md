@@ -13,4 +13,4 @@ Every action in formencoder is a command with an id, so people and agents use th
 - [Architecture](Architecture) · the Rust encoding engine, the engine service, the interface
 - [Desktop](Desktop) · the Tauri app, the frozen engine, the bundled FFmpeg
 - [Releasing](Releasing) · versions, tags, CI
-- [Parity](Parity) · formencoder against Media Encoder, row by row
+- [Parity](https://github.com/nodemode-dev/formencoder/blob/main/docs/PARITY.md) · formencoder against Media Encoder, row by row

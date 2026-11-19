@@ -7,4 +7,4 @@
 - [Architecture](Architecture)
 - [Desktop](Desktop)
 - [Releasing](Releasing)
-- [Parity](Parity)
+- [Parity](https://github.com/nodemode-dev/formencoder/blob/main/docs/PARITY.md)
