@@ -33,7 +33,7 @@ A change to settings, formats, presets, effects or the pipeline is verified by e
 
 ## Agent paths
 
-Replay tool sequences through `setup/mcp_stdio.py` against a running engine (`FORMENCODER_AGENTS=allow` for unattended runs, `ask` to test the consent dialog with a browser open). Save the images `preview_frame` and `contact_sheet` return and look at them.
+Replay tool sequences through `setup/mcp_stdio.py` against a running engine (no variable skips the consent dialog: for an unattended run call read-only tools, or answer the dialog the way CI does, from a from-source run that claims the window key at `/api/window/key` and replies to the `consent` message on the `/api/live` socket; `FORMENCODER_AGENTS=deny` tests the refusal). Save the images `preview_frame` and `contact_sheet` return and look at them.
 
 ## Report
 

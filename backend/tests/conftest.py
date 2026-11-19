@@ -62,7 +62,7 @@ def consent_refusals():
 
 
 def set_policy(mode):
-    os.environ["FORMENCODER_AGENTS"] = {"ask": "ask", "blocked": "deny", "allowed": "allow"}[mode]
+    os.environ["FORMENCODER_AGENTS"] = {"ask": "ask", "blocked": "deny"}[mode]
 
 
 def inapp_token():

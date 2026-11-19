@@ -75,12 +75,57 @@ def test_blocked_policy_still_refuses_with_a_wrong_token(client):
     assert call(client, CHANGING_TOOL, {INAPP_HEADER: "wrong-token"})["result"].get("isError")
 
 
-def test_allowed_policy_lets_a_changing_tool_through(client):
-    set_policy("allowed")
+@pytest.mark.parametrize("value", ["allow", "ALLOW", " allow ", "1", "true", "yes", "", "ask", "nonsense"])
+def test_only_deny_changes_the_policy_and_everything_else_asks(client, monkeypatch, value):
+    monkeypatch.setenv("FORMENCODER_AGENTS", value)
     reply = call(client, CHANGING_TOOL)
-    assert not refused(reply, "no_window")
-    assert not refused(reply, "blocked")
-    assert not reply["result"].get("isError")
+    assert refused(reply, "no_window")
+    assert reply["result"].get("isError")
+
+
+def test_unset_variable_asks(client, monkeypatch):
+    monkeypatch.delenv("FORMENCODER_AGENTS", raising=False)
+    assert refused(call(client, CHANGING_TOOL), "no_window")
+
+
+@pytest.mark.parametrize("value", ["deny", "DENY", " deny "])
+def test_deny_in_any_spelling_blocks(client, monkeypatch, value):
+    monkeypatch.setenv("FORMENCODER_AGENTS", value)
+    assert refused(call(client, CHANGING_TOOL), "blocked")
+
+
+def test_deny_blocks_an_agent_the_person_allowed_always(client, monkeypatch):
+    from app.agent import consent
+
+    monkeypatch.setattr(consent, "_session", {"family-test-agent"})
+    monkeypatch.setattr(consent, "_always", lambda: {"family-test-agent"})
+    assert not call(client, CHANGING_TOOL)["result"].get("isError")
+    set_policy("blocked")
+    reply = call(client, CHANGING_TOOL)
+    assert refused(reply, "blocked") and reply["result"].get("isError")
+
+
+def test_allow_value_does_not_override_the_stored_choice_or_the_window(client, monkeypatch):
+    monkeypatch.setenv("FORMENCODER_AGENTS", "allow")
+    asked = with_window(monkeypatch, {"allow": False})
+    reply = call(client, CHANGING_TOOL)
+    assert len(asked) == 1 and "declined" in text_of(reply)
+
+
+def test_allow_value_still_honours_a_stored_allow(client, monkeypatch):
+    from app.agent import consent
+
+    monkeypatch.setenv("FORMENCODER_AGENTS", "allow")
+    monkeypatch.setattr(consent, "_always", lambda: {"family-test-agent"})
+    assert not call(client, CHANGING_TOOL)["result"].get("isError")
+
+
+def test_policy_function_reports_only_ask_or_deny(monkeypatch):
+    from app.core import config
+
+    for value, expected in [("allow", "ask"), ("deny", "deny"), ("", "ask"), ("Deny", "deny"), ("x", "ask")]:
+        monkeypatch.setenv("FORMENCODER_AGENTS", value)
+        assert config.agents_policy() == expected
 
 
 def test_inapp_token_skips_the_ask(client):

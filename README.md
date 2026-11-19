@@ -145,7 +145,7 @@ cd formencoder
 
 `./formencoder desktop dev` opens the desktop window instead (run `./formencoder install-desktop` first). On Windows use `formencoder.bat install`, then `formencoder.bat`.
 
-Ports: interface 5270, engine 8270 (`FORMENCODER_PORT`). `FORMENCODER_AGENTS=allow` skips the agent permission prompt.
+Ports: interface 5270, engine 8270 (`FORMENCODER_PORT`). `FORMENCODER_AGENTS=deny` refuses every outside agent; no value of it skips the agent permission prompt, which only the person can answer in the formencoder window.
 
 > [!IMPORTANT]
 > **Status:** pre-release. AVC-Intra and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) are Partial, see [`docs/PARITY.md`](docs/PARITY.md).

@@ -91,7 +91,6 @@ jobs:
         run: ./formencoder agents sync --check
       - name: Boot the engine, encode over MCP and verify
         env:
-          FORMENCODER_AGENTS: allow
           FORMENCODER_FFMPEG_AUTO: '0'
           FORMENCODER_DATA_DIR: ${{ runner.temp }}/fedata
         run: |
@@ -100,6 +99,39 @@ jobs:
           ffmpeg -loglevel error -y -f lavfi -i testsrc2=size=1280x720:rate=25:duration=3 -f lavfi -i sine=frequency=440:duration=3 -c:v mpeg4 -c:a aac -shortest "$clip"
           (cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8270 &)
           for i in $(seq 1 60); do curl -sf -H 'x-formencoder-local: 1' http://127.0.0.1:8270/api/health && break; sleep 1; done
+          python - <<'PY' &
+          import asyncio
+          import json
+          import urllib.request
+
+          import websockets
+
+          base = 'http://127.0.0.1:8270'
+
+
+          def post(path, headers=None):
+              req = urllib.request.Request(base + path, method='POST', data=b'', headers={'x-formencoder-local': '1', **(headers or {})})
+              return json.load(urllib.request.urlopen(req))
+
+
+          key = post('/api/window/key')['key']
+          ticket = post('/api/window/ticket', {'x-formencoder-window-key': key})['ticket']
+
+
+          async def main():
+              async with websockets.connect('ws://127.0.0.1:8270/api/live?ticket=' + ticket) as ws:
+                  async for text in ws:
+                      m = json.loads(text)
+                      if m.get('type') == 'hello':
+                          open('window.ready', 'w').close()
+                      if m.get('type') == 'consent':
+                          await ws.send(json.dumps({'method': 'reply', 'params': {'requestId': m['requestId'], 'value': {'allow': True}}}))
+                          open('window.asked', 'w').write(m['client'])
+
+
+          asyncio.run(main())
+          PY
+          for i in $(seq 1 30); do [ -f window.ready ] && break; sleep 1; done
           printf '%s\n' \
             '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"ci"},"capabilities":{}}}' \
             '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
@@ -116,7 +148,8 @@ jobs:
           assert not enc.get('isError'), enc
           text = enc['content'][0]['text']
           assert '"done"' in text and '"passed": true' in text, text[:2000]
-          print('mcp ok:', len(tools), 'tools, preview and a verified encode')
+          assert open('window.asked').read() == 'mcp:ci', 'the window was not asked'
+          print('mcp ok:', len(tools), 'tools, preview and a verified encode the window allowed')
           PY
 
   test:

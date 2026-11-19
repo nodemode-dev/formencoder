@@ -100,7 +100,7 @@ async def gate(source: str, token: str | None, mutating: bool, detail: str = "")
     if inapp(token):
         return None
     policy = config.agents_policy()
-    if policy == "allow" or not mutating:
+    if not mutating:
         return None
     if policy == "deny":
         return "Outside agents are turned off (FORMENCODER_AGENTS=deny). Start the agent from formencoder's Terminal panel instead."
@@ -111,7 +111,7 @@ async def gate(source: str, token: str | None, mutating: bool, detail: str = "")
         return "The person declined changes from this agent a moment ago. Ask them in chat before trying again."
     if not host.bus.windows():
         return ("No formencoder window is open to ask the person for permission. Open formencoder (./formencoder boot, then http://localhost:5270, "
-                "or the desktop app) and allow this agent, start the agent from formencoder's Terminal panel, or set FORMENCODER_AGENTS=allow.")
+                "or the desktop app) and allow this agent, or start the agent from formencoder's Terminal panel.")
     reply = await host.bus.ask_window({"type": "consent", "client": source, "detail": detail}, timeout=180)
     if not reply:
         return "Nobody answered the permission request in the formencoder window. Ask the person to allow the agent there, then retry."

@@ -8,7 +8,7 @@ formencoder's engine exposes every command to agents through MCP, the same comma
 - **From the repository**: `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` run `./formencoder mcp`, which starts the engine when it is not running. The first change asks once in the formencoder window: Allow, Allow Always or Don't Allow.
 - **From anywhere**: `./formencoder agents install` (or the Agents panel) adds the MCP server and the skill to your Claude Code, Codex and Cursor setup.
 
-`FORMENCODER_AGENTS` sets the policy for outside agents: `ask` (default), `allow` or `deny`.
+`FORMENCODER_AGENTS=deny` refuses every outside agent, whatever was allowed before; Terminal agents still work. Any other value, `allow` included, means the stored choice decides (ask by default). Only the person, in the formencoder window, can allow an outside agent, so an unattended outside agent with no window open is refused its changes; start it from the Terminal panel instead.
 
 ## The tools
 

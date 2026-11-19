@@ -23,7 +23,7 @@ description: How an agent reaches formencoder. Use when the formencoder MCP serv
 
 - Reads (`status`, `probe`, `preview_frame`, `contact_sheet`, `verify`, `wait`, `log`, `formats`, `list_commands` and every query command) never ask.
 - The first change from an outside agent opens a dialog in the formencoder window: **Allow** (this session), **Allow Always** (remembered), **Don't Allow**. Tell the person a prompt is waiting in formencoder when you make the first change.
-- `FORMENCODER_AGENTS` on the engine sets the policy: `ask` (default), `allow` (never ask) or `deny` (refuse outside agents; Terminal agents still work).
+- `FORMENCODER_AGENTS=deny` on the engine refuses every outside agent (Terminal agents still work). Any other value, `allow` included, leaves the person's stored choice in charge: the engine asks, and only the person can answer in the window.
 - The Agents panel shows who is allowed and can forget them.
 
 ## FFmpeg

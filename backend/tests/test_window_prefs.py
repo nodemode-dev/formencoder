@@ -6,8 +6,11 @@ MESSAGE = "Only the person, in the formencoder window (Preferences), can change"
 
 
 @pytest.fixture
-def allowed():
-    set_policy("allowed")
+def allowed(monkeypatch):
+    from app.agent import consent
+
+    set_policy("ask")
+    monkeypatch.setattr(consent, "_session", {"cli", "ui"})
     yield
     set_policy("ask")
 
