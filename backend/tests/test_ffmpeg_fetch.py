@@ -90,8 +90,9 @@ def test_nothing_is_installed_when_no_address_matches(served):
 
     served["routes"]["/formai" + served["name"]] = archive(b"x\n")
     served["routes"]["/formcut" + served["name"]] = archive(b"y\n")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as caught:
         ffmpeg_fetch.fetch(lambda p, m: None)
+    assert (served["base"] + "/formai") in str(caught.value) and (served["base"] + "/formcut") in str(caught.value)
     assert not (served["folder"] / "ffmpeg").exists()
 
 
