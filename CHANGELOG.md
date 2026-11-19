@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.9.0 · 2026-11-19
+
+The family update. Only the FormEncoder window can change things or answer for the person, an agent's permission is asked for in clearer words, encodes write to local files only, and there is a true-black theme. FormEncoder keeps its own Terminal panel in this release.
+
+- Only the FormEncoder window can change things through the engine, answer a permission or approval question, or drive its terminal. Changes from outside the app's window are refused. Outside agents still come in through MCP or the command line and are asked about in the window, as before.
+- The permission question names the agent and says what it asked to do, lists the answers on offer and says when it expires. It can be answered "once", for that call only. Every open window is told when a question has ended, whether it was answered, ran out of time or was withdrawn.
+- Allow Always and Full faith are protected. A change made to the saved agent permission outside the app is ignored, the permission goes back to Ask, and the Agents panel says so. After updating, an agent that was allowed before is asked once more. The protection keeps its secret in the system keychain (new dependency: keyring, MIT); on a computer without a keychain the saved choices stand as before.
+- `FORMENCODER_AGENTS` can no longer switch the agent question off. `deny` still refuses every change from every agent, now including agents started in the Terminal panel, and reading still works. Any other value, `allow` included, leaves the person's own choice in charge, so an outside agent is asked about in the window. If a script of yours sets `FORMENCODER_AGENTS=allow`, remove it: it no longer does anything. An unattended run can still call the read-only tools.
+- Agents can no longer change the FFmpeg folder, the camera raw decoders or the media cache folder, or turn off the numbering of output names. Those stay in Preferences in the window.
+- The agent token a Terminal panel shell carries is now its own: it is replaced when the shell restarts and dropped when it closes. Terminals that agents open do not get one.
+- The engine can start Claude Code, Codex and Cursor as tabs of their own, each with its own access that ends with the tab, and one call reports which of the three are installed, their versions and how to install a missing one. The Terminal panel itself looks and works as it did.
+- Encode outputs are local files only. An output path or folder that is a network address or a stream (`tcp:`, `udp:`, `http:`, `rtmp:`, `ftp:`, `pipe:`, `file:` and the like) is refused when it is set and again when the job starts. Every other output path is made absolute before FFmpeg is called, so the queue shows the full path of an output that was given as a relative one. Inputs that are addresses are refused as well: FormEncoder reads local files.
+- FFmpeg is downloaded from the formai-binaries release, with the earlier formcut-binaries address as the fallback, and every file is still checked against the record. When both fail, the error names both addresses. `FORMENCODER_FFMPEG_RELEASE` (a release folder URL) is documented and, when set, is the only address asked.
+- New theme, AMOLED Black: a true-black window for OLED screens, with panes told apart by thin outlines. That makes sixteen themes.
+- At start the desktop app waits at most 10 seconds, once the engine has given its address, for the engine to recognise the window as the app's own. If that does not happen, the app shows "The formencoder engine failed to start" and opens no window. How long the engine may take to start is unchanged.
+- Running from source, reloading the page no longer makes the engine report a second window that never opened.
+- `agents/manifest.json` lists what FormEncoder offers agents: 125 MCP tools (54 of them read-only, 71 that ask the person first) and 2 skills with 18 sub-skills. `./formencoder agents sync` writes it and `--check` fails when it is out of date.
+- Encode as a Form function, merged after 0.8.4: `form-functions.json` lets a graph in NodeMode's hub run a FormEncoder preset on one file with no window open, and fail when the result does not verify. Its settings accept only listed values and bounded numbers, and name no file. `form-functions.json` is written again for this release and states 0.9.0.
+- Documents brought in line with the app: AGENTS.md, the Agents wiki page and the skillset state the real tool counts (29 curated tools, 125 in the full profile), the demo pages say sixteen themes, formcompiler is named under nodemode-dev, and the wiki's Parity links open `docs/PARITY.md`.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.9.0 by hand, without a rebuild.
+
 ## v0.8.4 · 2026-11-13
 
 A start-up fix found by running the Linux AppImage.
