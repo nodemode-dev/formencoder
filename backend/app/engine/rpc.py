@@ -19,6 +19,8 @@ class RpcError(Exception):
 
 _query_ids: set[str] | None = None
 _QUEUE_KEYS = ("preset", "format", "settings", "folder", "outputs", "start")
+WINDOW_PREFS = ("ffmpegDir", "incrementNames", "rawDecoders", "cacheFolder")
+WINDOW_SOURCES = ("ui", "engine", "desktop")
 
 
 def _dumps(params: Any) -> str:
@@ -36,9 +38,18 @@ def query_ids() -> set[str]:
     return _query_ids
 
 
+def window_only(command: Any, params: Any, source: str) -> None:
+    if source in WINDOW_SOURCES or command != "prefs.set" or not isinstance(params, dict) or not isinstance(params.get("values"), dict):
+        return
+    touched = [k for k in WINDOW_PREFS if k in params["values"]]
+    if touched:
+        raise RpcError(f"Only the person, in the formencoder window (Preferences), can change {', '.join(touched)}: it decides which program runs or whether an existing file is replaced or removed.", -32003)
+
+
 async def execute(command: str, params: Any = None, source: str = "ui") -> Any:
     if not isinstance(command, str) or not command:
         raise RpcError("missing `command`", -32602)
+    window_only(command, params, source)
     try:
         raw = await host.call(lambda e: e.execute(command, _dumps(params), source))
     except ValueError as exc:
@@ -49,6 +60,9 @@ async def execute(command: str, params: Any = None, source: str = "ui") -> Any:
 
 
 async def batch(steps: list, label: str | None, atomic: bool, source: str) -> Any:
+    for step in steps if isinstance(steps, list) else []:
+        if isinstance(step, dict):
+            window_only(step.get("command"), step.get("params"), source)
     try:
         raw = await host.call(lambda e: e.batch(json.dumps(steps), label, atomic, source))
     except ValueError as exc:
