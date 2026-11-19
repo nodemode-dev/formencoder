@@ -12,7 +12,10 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-RELEASE = "https://github.com/nodemode-dev/formcut-binaries/releases/download"
+SOURCES = (
+    "https://github.com/nodemode-dev/formai-binaries/releases/download",
+    "https://github.com/nodemode-dev/formcut-binaries/releases/download",
+)
 DOCUMENTS = ("LGPL-2.1.txt", "THIRD-PARTY-NOTICES.txt", "README.md")
 
 
@@ -55,10 +58,11 @@ def release(data: dict) -> str:
     return data.get("release") or ((data.get("source") or {}).get("ffmpeg") or {}).get("version", "")
 
 
-def source(data: dict, triple: str) -> str:
+def sources(data: dict, triple: str) -> list[str]:
     name = release(data)
-    base = os.environ.get("FORMENCODER_FFMPEG_RELEASE") or f"{RELEASE}/ffmpeg-{name}"
-    return f"{base.rstrip('/')}/ffmpeg-lgpl-{name}-{triple}.tar.gz"
+    override = os.environ.get("FORMENCODER_FFMPEG_RELEASE")
+    bases = [override] if override else [f"{base}/ffmpeg-{name}" for base in SOURCES]
+    return [f"{base.rstrip('/')}/ffmpeg-lgpl-{name}-{triple}.tar.gz" for base in bases]
 
 
 def _digest(path: Path) -> str:
@@ -111,20 +115,29 @@ def fetch(report: Callable[[float, str], None]) -> dict:
     files = pins(data, triple)
     if not files:
         raise ValueError(f"no FFmpeg build is recorded for {triple}; install FFmpeg and set its folder in Preferences")
-    url, folder = source(data, triple), user_folder()
-    with tempfile.TemporaryDirectory() as scratch:
-        archive = Path(scratch) / "ffmpeg.tar.gz"
-        report(0.02, "downloading FFmpeg")
-        with urllib.request.urlopen(url, timeout=120) as r, archive.open("wb") as out:
-            total = int(r.headers.get("content-length") or 0)
-            done = 0
-            for chunk in iter(lambda: r.read(1 << 20), b""):
-                out.write(chunk)
-                done += len(chunk)
-                if total:
-                    report(0.85 * done / total, "downloading FFmpeg")
-        report(0.9, "checking every file against the record")
-        count = install(archive, files, folder)
+    folder = user_folder()
+    failures: list[str] = []
+    for url in sources(data, triple):
+        try:
+            with tempfile.TemporaryDirectory() as scratch:
+                archive = Path(scratch) / "ffmpeg.tar.gz"
+                report(0.02, "downloading FFmpeg")
+                with urllib.request.urlopen(url, timeout=120) as r, archive.open("wb") as out:
+                    total = int(r.headers.get("content-length") or 0)
+                    done = 0
+                    for chunk in iter(lambda: r.read(1 << 20), b""):
+                        out.write(chunk)
+                        done += len(chunk)
+                        if total:
+                            report(0.85 * done / total, "downloading FFmpeg")
+                report(0.9, "checking every file against the record")
+                count = install(archive, files, folder)
+        except (OSError, ValueError, tarfile.TarError) as error:
+            failures.append(f"{url}: {error}")
+            continue
+        break
+    else:
+        raise ValueError("FFmpeg could not be installed; " + "; ".join(failures))
     (folder / "ffmpeg-licence.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
     report(1.0, "FFmpeg installed")
     return {"folder": str(folder), "files": count, "source": url}
