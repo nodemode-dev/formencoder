@@ -31,11 +31,12 @@ export class AgentsPanel implements Panel {
     this.el = el(`<div class="fx-agents">
       <section class="fx-agents-sec">
         <div class="fx-agents-h">${icon('agent', 14)}<span>Drive formencoder with an agent</span></div>
-        <p class="fx-note">Start Claude Code, Codex or Cursor in the Terminal panel: they open in formencoder's agent workspace and already know the queue, presets, export settings and the form family. From any other folder, set your account up once:</p>
+        <p class="fx-note">Start Claude Code, Codex, Cursor or Antigravity in the Terminal panel: they open in formencoder's agent workspace and already know the queue, presets, export settings and the form family. From any other folder, set your account up once:</p>
         <div class="fx-agents-row">
           <button class="cv-btn" type="button" data-install="claude">Set up Claude Code</button>
           <button class="cv-btn" type="button" data-install="codex">Set up Codex</button>
           <button class="cv-btn" type="button" data-install="cursor">Set up Cursor</button>
+          <button class="cv-btn" type="button" data-install="antigravity">Set up Antigravity</button>
         </div>
         <div class="fx-agents-kv"><span>MCP (stdio)</span><code class="fx-agents-mcp"></code></div>
         <div class="fx-agents-kv"><span>MCP (HTTP)</span><code>${location.origin}/mcp</code></div>

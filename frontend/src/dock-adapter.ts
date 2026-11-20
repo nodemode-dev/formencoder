@@ -6,9 +6,10 @@ import type { Panel } from './ui/dock';
 import './dock/dock.css';
 import './styles/dock-tokens.css';
 
-type Kind = Exclude<PtyKind, 'agent'>;
+type Agy = 'antigravity';
+type Kind = Exclude<PtyKind, 'agent'> | Agy;
 interface Row { id: string; title: string; cwd?: string; kind?: string; alive?: boolean; exited?: boolean }
-interface Program { installed: boolean; version: string | null; signedIn: boolean | null; install: string }
+interface Program { installed: boolean; version: string | null; signedIn: boolean | null; install: string; finding?: string; said?: string }
 interface Refusal { code?: string; message?: string }
 
 export interface PanelHost {
@@ -17,9 +18,9 @@ export interface PanelHost {
   settings(): void;
 }
 
-const KINDS: PtyKind[] = ['shell', 'claude', 'codex', 'cursor', 'agent'];
-const PROGRAMS: DockProgram[] = ['claude', 'codex', 'cursor'];
-const NOTES = ['Changes to the queue can be undone.', 'Claude Code, Codex and Cursor tabs you start in the Terminal panel do not ask.'];
+const KINDS: (PtyKind | Agy)[] = ['shell', 'claude', 'codex', 'cursor', 'antigravity', 'agent'];
+const PROGRAMS: (DockProgram | Agy)[] = ['claude', 'codex', 'cursor', 'antigravity'];
+const NOTES = ['Changes to the queue can be undone.', 'Claude Code, Codex, Cursor and Antigravity tabs you start in the Terminal panel do not ask.'];
 
 function detail(err: unknown): Refusal | string | null {
   if (!(err instanceof RpcFailure)) return null;
@@ -44,8 +45,8 @@ function errorKind(err: unknown): DockErrorKind | null {
   return null;
 }
 
-function record(row: Row): DockTerminal {
-  const kind = KINDS.includes(row.kind as PtyKind) ? row.kind as PtyKind : 'shell';
+function record(row: Row): DockTerminal<Agy> {
+  const kind = KINDS.includes(row.kind as PtyKind | Agy) ? row.kind as PtyKind | Agy : 'shell';
   const alive = row.alive ?? row.exited !== true;
   return row.cwd ? { id: row.id, title: row.title, alive, kind, tip: row.cwd } : { id: row.id, title: row.title, alive, kind };
 }
@@ -105,8 +106,11 @@ function channel(id: string): DockChannel {
   };
 }
 
-function program(value: Program | undefined): DockProgramStatus | undefined {
-  return value ? { installed: value.installed, version: value.version, install: value.install, signedIn: value.signedIn } : undefined;
+function program(value: Program | undefined, own: boolean): DockProgramStatus | undefined {
+  if (!value) return undefined;
+  const status: DockProgramStatus = { installed: value.installed, version: value.version, install: value.install, signedIn: value.signedIn };
+  if (own && value.finding !== 'runs' && typeof value.said === 'string') status.note = value.said;
+  return status;
 }
 
 function question(ev: ServerEvent): ConsentRequest {
@@ -125,7 +129,7 @@ function question(ev: ServerEvent): ConsentRequest {
   return request;
 }
 
-function adapterFor(ctx: Ctx, host: PanelHost): DockAdapter {
+function adapterFor(ctx: Ctx, host: PanelHost): DockAdapter<Agy> {
   return {
     words: {
       app: 'formencoder',
@@ -144,7 +148,7 @@ function adapterFor(ctx: Ctx, host: PanelHost): DockAdapter {
     placement: { mode: 'hosted', request: (open) => { if (open) host.show(); else host.close(); } },
     isDockChord: () => false,
     chordLabel: () => '',
-    tabs: () => ({ builtin: ['shell', 'claude', 'codex', 'cursor'] }),
+    tabs: () => ({ builtin: ['shell', 'claude', 'codex', 'cursor', 'antigravity'] }),
     classes: { iconButton: 'cv-icon-btn', button: 'cv-btn', primaryButton: 'cv-btn-primary', input: 'cv-input', select: 'fx-select', note: 'cv-note' },
     t: (_key, english) => english,
     onTheme: (handler) => { document.addEventListener('nm:ui-settings-changed', handler); },
@@ -176,11 +180,11 @@ function adapterFor(ctx: Ctx, host: PanelHost): DockAdapter {
       channel,
       scrollback: 8000,
     },
-    agentStatus: async (): Promise<DockAgentStatus | null> => {
-      const status = await api<{ agents: Partial<Record<DockProgram, Program>> }>('/api/terminal/agents');
-      const out: DockAgentStatus = {};
+    agentStatus: async (): Promise<DockAgentStatus<Agy> | null> => {
+      const status = await api<{ agents: Partial<Record<DockProgram | Agy, Program>> }>('/api/terminal/agents');
+      const out: DockAgentStatus<Agy> = {};
       for (const kind of PROGRAMS) {
-        const found = program(status.agents[kind]);
+        const found = program(status.agents[kind], kind === 'antigravity');
         if (found) out[kind] = found;
       }
       return out;
@@ -211,7 +215,7 @@ export class TerminalPanel implements Panel {
   readonly id = 'terminal';
   readonly title = 'Terminal';
   readonly el: HTMLElement;
-  readonly dock: Dock;
+  readonly dock: Dock<Agy>;
 
   constructor(ctx: Ctx, private readonly host: PanelHost) {
     this.el = document.createElement('div');
@@ -231,7 +235,7 @@ export class TerminalPanel implements Panel {
     this.dock.hidden();
   }
 
-  launch(kind: 'shell' | DockProgram): void {
+  launch(kind: 'shell' | DockProgram | Agy): void {
     this.host.show();
     void this.dock.show(kind);
   }

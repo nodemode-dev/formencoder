@@ -191,6 +191,7 @@ class App {
             { label: 'Start Claude Code', run: () => this.terminal.launch('claude') },
             { label: 'Start Codex', run: () => this.terminal.launch('codex') },
             { label: 'Start Cursor', run: () => this.terminal.launch('cursor') },
+            { label: 'Start Antigravity', run: () => this.terminal.launch('antigravity') },
             '-',
             { label: 'Agent Workspace Layout', run: () => this.dock.switchTo('Agent') },
             { label: 'Agent Activity and Setup', run: () => this.dock.show('agents') },

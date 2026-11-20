@@ -10,7 +10,7 @@ from pathlib import Path
 from .. import __version__
 from ..core import config
 
-CLIENT_PROFILES = {"claude": "full", "codex": "full", "cursor": "core"}
+CLIENT_PROFILES = {"claude": "full", "codex": "full", "cursor": "core", "antigravity": "core"}
 
 
 def client_args(client: str) -> list[str]:

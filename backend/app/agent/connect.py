@@ -105,7 +105,38 @@ def install_cursor(home: Path, dry: bool, said: list) -> None:
     _copy_skill(home / ".agents" / "skills" / SKILL, dry, said)
 
 
-CLIENTS = {"claude": install_claude, "codex": install_codex, "cursor": install_cursor}
+def install_antigravity(home: Path, dry: bool, said: list) -> None:
+    said.append("Antigravity:")
+    cfg = home / ".gemini" / "config" / "mcp_config.json"
+    older = home / ".gemini" / "antigravity-cli" / "mcp_config.json"
+    if older.exists() and not cfg.exists():
+        said.append(f"  an older file was seen at {older} and left alone; the documented file is {cfg}")
+    try:
+        data = json.loads(cfg.read_text(encoding="utf-8") or "{}") if cfg.exists() else {}
+    except ValueError:
+        data = None
+    if not isinstance(data, dict) or not isinstance(data.get("mcpServers", {}), dict):
+        said.append(f"  {cfg} is not an MCP servers file formencoder can read; left alone")
+        return
+    entry = {"command": launch(), "args": workspace.client_args("antigravity")}
+    have = data.get("mcpServers", {}).get(NAME)
+    ours = isinstance(have, dict) and have.get("args") == entry["args"] and Path(str(have.get("command", ""))).name == Path(entry["command"]).name
+    if have == entry:
+        said.append(f"  MCP server {NAME} already in {cfg}")
+    elif have is not None and not ours:
+        said.append(f"  {cfg} has a server named {NAME} that formencoder did not write; left alone")
+    else:
+        said.append(f"  MCP server {NAME} -> {cfg}")
+        if not dry:
+            _backup(cfg, dry)
+            data.setdefault("mcpServers", {})[NAME] = entry
+            cfg.parent.mkdir(parents=True, exist_ok=True)
+            part = cfg.with_name(cfg.name + f".part-{os.getpid()}")
+            part.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            os.replace(part, cfg)
+
+
+CLIENTS = {"claude": install_claude, "codex": install_codex, "cursor": install_cursor, "antigravity": install_antigravity}
 
 
 def install(which: list[str] | None = None, dry: bool = False) -> list[str]:
@@ -116,7 +147,7 @@ def install(which: list[str] | None = None, dry: bool = False) -> list[str]:
         if w in CLIENTS:
             CLIENTS[w](home, dry, said)
         else:
-            said.append(f"unknown client {w} (claude, codex or cursor)")
+            said.append(f"unknown client {w} (claude, codex, cursor or antigravity)")
     return said
 
 

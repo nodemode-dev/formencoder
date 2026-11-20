@@ -37,7 +37,9 @@ def test_a_changed_missing_or_extra_dock_file_is_named(tmp_path):
 
 def test_the_agent_manifest_describes_the_dock():
     dock = json.loads((REPO / "agents" / "manifest.json").read_text(encoding="utf-8"))["dock"]
-    assert dock == {"present": True, "positions": ["left", "right", "bottom", "floating"], "tabs": ["shell", "claude", "codex", "cursor"]}
+    assert dock == {"present": True, "positions": ["left", "right", "bottom", "floating"], "tabs": ["shell", "claude", "codex", "cursor", "antigravity"]}
+    adapter = (FRONTEND / "src" / "dock-adapter.ts").read_text(encoding="utf-8")
+    assert "builtin: ['shell', 'claude', 'codex', 'cursor', 'antigravity']" in adapter and "DockAdapter<Agy>" in adapter
 
 
 def test_the_dialog_offers_only_what_the_engine_sends():

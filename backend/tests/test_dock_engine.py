@@ -16,7 +16,7 @@ REFUSED = {"detail": "Only the formencoder window can do this"}
 def stand_ins(tmp_path, monkeypatch):
     folder = tmp_path / "bin"
     folder.mkdir()
-    for name in ("claude", "codex", "cursor-agent"):
+    for name in ("claude", "codex", "cursor-agent", "agy"):
         script = folder / name
         script.write_text(f'#!/bin/sh\nif [ "$1" = "--version" ]; then echo "{name} 9.9.9"; exit 0; fi\n'
                           'echo "stand-in args=$*"\necho "token-present=${FORMENCODER_AGENT_TOKEN:+yes}"\nread line\n')
@@ -136,7 +136,7 @@ def test_a_program_outside_the_engine_path_is_found_in_a_known_folder_and_throug
 
 
 @POSIX_ONLY
-@pytest.mark.parametrize("kind,title", [("claude", "Claude Code"), ("codex", "Codex"), ("cursor", "Cursor")])
+@pytest.mark.parametrize("kind,title", [("claude", "Claude Code"), ("codex", "Codex"), ("cursor", "Cursor"), ("antigravity", "Antigravity")])
 def test_an_agent_tab_runs_the_program_with_its_own_token_which_dies_with_the_tab(client, stand_ins, kind, title):
     from app.agent import consent
     from app.routers.terminal import hub
@@ -155,6 +155,57 @@ def test_an_agent_tab_runs_the_program_with_its_own_token_which_dies_with_the_ta
     assert client.delete(f"/api/terminal/sessions/{row['id']}", headers=LOCAL).json() == {"closed": row["id"]}
     assert not consent.inapp(token)
     assert client.get("/api/terminal/tabs").json()["tabs"] == []
+
+
+@POSIX_ONLY
+def test_an_antigravity_tab_has_its_entry_in_the_workspace_file_until_it_closes(client, stand_ins):
+    from app.agent import consent, workspace
+    from app.routers.terminal import hub
+
+    path = workspace.ensure() / ".agents" / "mcp_config.json"
+    seed = json.dumps({"mcpServers": {"other": {"command": "/bin/true", "args": []}}, "theme": "kept"}, indent=2) + "\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(seed, encoding="utf-8")
+    row = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "antigravity", "cwd": "/tmp"}).json()
+    term = hub.terms[row["id"]]
+    assert row["kind"] == "antigravity" and term.cwd == str(workspace.root())
+    held = json.loads(path.read_text(encoding="utf-8"))
+    assert list(held["mcpServers"]) == ["other", "formencoder_tab"] and held["theme"] == "kept" and held["mcpServers"]["other"] == {"command": "/bin/true", "args": []}
+    entry = held["mcpServers"]["formencoder_tab"]
+    assert entry["command"] == workspace.mcp_command()[0] and entry["args"] == ["mcp", "--profile", "core"]
+    assert entry["env"]["FORMENCODER_AGENT_TOKEN"] == term.token and consent.inapp(term.token)
+    assert path.stat().st_mode & 0o777 == 0o600
+    token = term.token
+    client.delete(f"/api/terminal/sessions/{row['id']}", headers=LOCAL)
+    assert path.read_text(encoding="utf-8") == seed and not consent.inapp(token)
+
+
+def test_agents_install_adds_formencoder_to_antigravity_and_leaves_a_foreign_entry_alone(tmp_path):
+    from app.agent import connect
+
+    cfg = tmp_path / ".gemini" / "config" / "mcp_config.json"
+    older = tmp_path / ".gemini" / "antigravity-cli" / "mcp_config.json"
+    older.parent.mkdir(parents=True)
+    older.write_text("{}", encoding="utf-8")
+    said: list = []
+    connect.install_antigravity(tmp_path, True, said)
+    assert not cfg.exists() and "an older file was seen" in said[1]
+    connect.install_antigravity(tmp_path, False, said)
+    entry = {"command": connect.launch(), "args": ["mcp", "--profile", "core"]}
+    assert json.loads(cfg.read_text(encoding="utf-8")) == {"mcpServers": {"formencoder": entry}} and older.read_text(encoding="utf-8") == "{}"
+    again: list = []
+    connect.install_antigravity(tmp_path, False, again)
+    assert again == ["Antigravity:", f"  MCP server formencoder already in {cfg}"] and sorted(p.name for p in cfg.parent.iterdir()) == ["mcp_config.json"]
+    foreign = json.dumps({"mcpServers": {"formencoder": {"command": "/somewhere/else", "args": ["x"]}, "kept": {"command": "k"}}, "top": 1})
+    cfg.write_text(foreign, encoding="utf-8")
+    left: list = []
+    connect.install_antigravity(tmp_path, False, left)
+    assert cfg.read_text(encoding="utf-8") == foreign and "did not write; left alone" in left[1]
+    cfg.write_text("[1]", encoding="utf-8")
+    unread: list = []
+    connect.install_antigravity(tmp_path, False, unread)
+    assert cfg.read_text(encoding="utf-8") == "[1]" and "is not an MCP servers file" in unread[1]
+    assert list(connect.CLIENTS) == ["claude", "codex", "cursor", "antigravity"] and connect.install(["vim"], True) == ["unknown client vim (claude, codex, cursor or antigravity)"]
 
 
 @POSIX_ONLY

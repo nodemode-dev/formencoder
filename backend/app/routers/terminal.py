@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
 AGENTS = {kind: spec["bin"] for kind, spec in finder.PROGRAMS.items()}
 PROGRAMS = {kind: {"title": spec["title"], "install": finder.install(kind)} for kind, spec in finder.PROGRAMS.items()}
-TABS = ("claude", "codex", "cursor")
+TABS = ("claude", "codex", "cursor", "antigravity")
 RESUME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{7,79}")
 PROMPT_MAX = 20000
 
@@ -36,6 +36,12 @@ def _typed(kind: str) -> str:
     if not path:
         return AGENTS[kind]
     return shlex.quote(path) if POSIX else (f'"{path}"' if " " in path else path)
+
+
+def _tab_entry(base_url: str, token: str) -> dict:
+    command, _ = workspace.mcp_command()
+    return {"command": command, "args": workspace.client_args("antigravity"),
+            "env": {"FORMENCODER_URL": base_url, finder.TOKEN_VAR: token, "FORMENCODER_AGENT_NAME": "terminal"}}
 
 
 def _environment(base_url: str, token: str | None, program: str | None = None) -> dict:
@@ -202,6 +208,13 @@ class Term:
         self.exited = False
         consent.revoke(self.token)
         self.token = consent.issue() if self.trusted else None
+        if self.kind == "antigravity" and self.token:
+            try:
+                finder.write_tab_entry(self.cwd, _tab_entry(self.base, self.token))
+            except OSError:
+                consent.revoke(self.token)
+                self.token = None
+                raise
         self.session = Session(cols, rows, _environment(self.base, self.token, self.program), self.cwd, self.argv)
         session = self.session
 
@@ -233,6 +246,7 @@ class Term:
             return
         self.exited = True
         if self.window:
+            self._forget()
             consent.revoke(self.token)
             self.token = None
         for q in list(self.listeners):
@@ -264,11 +278,16 @@ class Term:
         if self.session:
             self.session.close()
         self.exited = True
+        self._forget()
         consent.revoke(self.token)
         self.token = None
         for q in list(self.listeners):
             with contextlib.suppress(asyncio.QueueFull):
                 q.put_nowait({"type": "closed"})
+
+    def _forget(self) -> None:
+        if self.kind == "antigravity":
+            finder.remove_tab_entry(self.cwd, self.token)
 
     def row(self) -> dict:
         return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener,
@@ -371,7 +390,7 @@ async def open_tab(request: Request) -> dict:
         path = found.path
         argv = agent_lookup.start_argv([path, *(["--resume", resume] if resume else []), *((["--", prompt] if prompt.startswith("-") else [prompt]) if prompt else [])])
     title = body.get("title") if isinstance(body.get("title"), str) else None
-    cwd = body.get("cwd") if isinstance(body.get("cwd"), str) else None
+    cwd = body.get("cwd") if isinstance(body.get("cwd"), str) and kind != "antigravity" else None
     try:
         term = hub.open(title or (PROGRAMS[kind]["title"] if argv else None), cwd, cols, rows, _base(request.headers.get("host")), trusted=argv is not None, kind=kind, window=True, argv=argv, program=path)
     except OSError as exc:
