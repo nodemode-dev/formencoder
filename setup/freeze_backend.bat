@@ -9,10 +9,12 @@ python -c "import fe_core" >nul 2>nul || ( echo [formencoder] the encoding engin
 if defined FORMENCODER_TARGET ( set "TRIPLE=%FORMENCODER_TARGET%" ) else ( for /f "tokens=2" %%t in ('rustc -vV ^| findstr /b "host:"') do set "TRIPLE=%%t" )
 if not defined TRIPLE ( echo [formencoder] rustc not found, install Rust or set FORMENCODER_TARGET & exit /b 1 )
 if not exist frontend\dist\index.html call setup\build_frontend.bat
+set "CONSOLE="
+if not "%FORMENCODER_ENGINE_WINDOWED%"=="0" set "CONSOLE=--noconsole"
 cd backend
 if exist build\pyinstaller rmdir /s /q build\pyinstaller
 if exist dist-engine rmdir /s /q dist-engine
-pyinstaller --noconfirm --clean --onefile --name formencoder-engine --distpath dist-engine --workpath build\pyinstaller --specpath build\pyinstaller --add-data "%ROOT%\frontend\dist;frontend_dist" --add-data "%ROOT%\backend\app\agent\templates;agent_templates" --add-data "%ROOT%\.claude\skills;skills" --add-data "%ROOT%\backend\app\resources;resources" --add-data "%ROOT%\src-tauri\binaries\ffmpeg-licence.json;." --collect-all fe_core --collect-submodules app --collect-submodules uvicorn --collect-submodules keyring --collect-submodules winpty "%ROOT%\backend\formencoder_engine.py" || exit /b 1
+pyinstaller --noconfirm --clean --onefile %CONSOLE% --name formencoder-engine--distpath dist-engine --workpath build\pyinstaller --specpath build\pyinstaller --add-data "%ROOT%\frontend\dist;frontend_dist" --add-data "%ROOT%\backend\app\agent\templates;agent_templates" --add-data "%ROOT%\.claude\skills;skills" --add-data "%ROOT%\backend\app\resources;resources" --add-data "%ROOT%\src-tauri\binaries\ffmpeg-licence.json;." --collect-all fe_core --collect-submodules app --collect-submodules uvicorn --collect-submodules keyring --collect-submodules winpty "%ROOT%\backend\formencoder_engine.py" || exit /b 1
 if not exist "%ROOT%\src-tauri\binaries" mkdir "%ROOT%\src-tauri\binaries"
 copy /y dist-engine\formencoder-engine.exe "%ROOT%\src-tauri\binaries\formencoder-engine-%TRIPLE%.exe" >nul
 "%ROOT%\src-tauri\binaries\formencoder-engine-%TRIPLE%.exe" --selfcheck

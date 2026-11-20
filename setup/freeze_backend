@@ -10,8 +10,10 @@ cd "$FORMENCODER_ROOT/backend"
 sep=":"
 [ "$(fe_os)" = windows ] && sep=";"
 ext="$(fe_exe)"
+console=()
+if [ "$(fe_os)" = windows ] && [ "${FORMENCODER_ENGINE_WINDOWED:-1}" != 0 ]; then console=(--noconsole); fi
 rm -rf build/pyinstaller dist-engine
-pyinstaller --noconfirm --clean --onefile --name formencoder-engine \
+pyinstaller --noconfirm --clean --onefile "${console[@]}" --name formencoder-engine \
   --distpath dist-engine --workpath build/pyinstaller --specpath build/pyinstaller \
   --add-data "$FORMENCODER_ROOT/frontend/dist${sep}frontend_dist" \
   --add-data "$FORMENCODER_ROOT/backend/app/agent/templates${sep}agent_templates" \

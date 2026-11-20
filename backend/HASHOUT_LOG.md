@@ -417,3 +417,11 @@ Refers to `backend/app/services/agent_programs.py` (`TAB_FOLDERS`, `TAB_GUIDE`, 
 - The workspace's own `.agents/mcp_config.json`, if a person has one, is no longer read or written by a tab.
 - Seen with the stand-in `agy` of the test folder: one tab has its entry at mode 0600 and the guide in its own folder, the stand-in prints with the token present, and after close the folder is gone and a seeded file in the workspace is byte for byte the seed; two tabs open at once hold a token each in a file each, closing the second leaves the first one's entry and its token still runs a changing call unasked, closing the first removes its folder. `test_dock_engine.py` and `test_dock_module.py`: 28 passed.
 - Not run: a real `agy`, Windows (a folder that is still a running program's working folder cannot be removed there, so an empty folder may stay behind), macOS.
+
+## A Windows engine is packaged with no console window (unreleased, after 0.11.0)
+
+Refers to `setup/freeze_backend`, `setup/freeze_backend.bat` · kind: change · logged: unreleased · 2026-11-20
+
+- Why: the owner's decision for the family (D3): a Windows engine is built with no console window, as FormWeb's is. FormEncoder's freeze scripts had no switch, so the switch is added with its default turned round: on Windows PyInstaller gets `--noconsole` unless `FORMENCODER_ENGINE_WINDOWED=0`. The bash script adds it only where `fe_os` says windows; macOS and Linux builds are unchanged.
+- The shell reads the engine's output through pipes, which a program with no console still gets. Where it has none at all, `formencoder_engine.py` already puts `os.devnull` in place of a missing stdin, stdout or stderr before anything else runs.
+- Seen: `--selfcheck` run from the source with `sys.stdout`, `sys.stderr` and `sys.stdin` set to None exits 0. `bash -n setup/freeze_backend` clean; the `.bat` was read, not run. Not run: no Windows build has shown the windowed engine.
