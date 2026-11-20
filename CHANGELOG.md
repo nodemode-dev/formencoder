@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.13.0 · 2026-11-20
+
+The family's design names, and a released status.
+
+- Every colour, size and layer name of the Form family's design now exists in FormEncoder, so the family's shared panels and stylesheets find each one here. The look does not change: the accent stays FormEncoder's coral, and the window looks as before in Studio Dark and Light.
+- In AMOLED Black the panels sit on pure black, as in the other Form apps, where they were a shade lighter.
+- The README now says FormEncoder is released, built and bundled for macOS, Windows and Linux and tested on all three.
+- The three browser demos are rebuilt from this version and say 0.13.0.
+
 ## v0.12.0 · 2026-11-20
 
 The app's side of starting and stopping cleanly, and two fixes to agent tabs and to start-up on macOS.

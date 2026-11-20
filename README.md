@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  <img alt="version 0.12.0" src="https://img.shields.io/badge/version-0.12.0-eef0f4?style=flat-square">
+  <img alt="version 0.13.0" src="https://img.shields.io/badge/version-0.13.0-eef0f4?style=flat-square">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?style=flat-square&logo=rust&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-interface-3178c6?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
   <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
-  <img alt="Status: pre-release" src="https://img.shields.io/badge/status-pre--release-d69e2e?style=flat-square">
+  <img alt="Status: released" src="https://img.shields.io/badge/status-released-d69e2e?style=flat-square">
 </p>
 
 <p align="center">
@@ -102,7 +102,7 @@ FormEncoder loads extensions made to the Form Extension Contract (API 1): FormPo
 
 ## Under the hood
 
-Version 0.12.0 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
+Version 0.13.0 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
 
 - **Engine:** seven `fencoder` Rust crates in `native/`, loaded by the Python service as the `fe_core` extension.
 - **FFmpeg:** a pinned LGPL build, run as a separate program and never linked.
@@ -148,7 +148,7 @@ cd formencoder
 Ports: interface 5270, engine 8270 (`FORMENCODER_PORT`). `FORMENCODER_AGENTS=deny` refuses every change from every agent, the Terminal panel's included; no value of it skips the agent permission prompt, which only the person can answer in the formencoder window.
 
 > [!IMPORTANT]
-> **Status:** pre-release. AVC-Intra and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) are Partial, see [`docs/PARITY.md`](docs/PARITY.md).
+> **Status:** released. FormEncoder is built and bundled for macOS, Windows and Linux and has been tested on all three. AVC-Intra and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) are Partial, see [`docs/PARITY.md`](docs/PARITY.md).
 
 **Contributing:** branch from `main`, keep changes to source here, and leave packaging and releases to FormCompiler. See [`.docs/BRANCHING.md`](.docs/BRANCHING.md) and [`AGENTS.md`](AGENTS.md).
 
