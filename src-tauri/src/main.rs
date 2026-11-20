@@ -177,11 +177,11 @@ fn main() {
                         check_for_updates(handle.clone());
                     }
                     None => {
-                        close_splash(&handle);
                         handle
                             .dialog()
-                            .message("The formencoder engine failed to start. Please relaunch the app.")
+                            .message("FormEncoder could not start its engine. If FormEncoder is already open, use that window: only one copy can use its data folder at a time. Otherwise open FormEncoder again. The engine's log is logs/formencoder-engine.log in the FormEncoder data folder.")
                             .blocking_show();
+                        close_splash(&handle);
                         kill_backend(&handle);
                         std::process::exit(1);
                     }
