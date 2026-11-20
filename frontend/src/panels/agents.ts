@@ -15,7 +15,7 @@ interface Activity {
 
 interface AgentStatus {
   workspace: { path: string; mcp: { command: string; args: string[] } };
-  consent: { policy: string; session: string[]; always: string[] };
+  consent: { policy: string; session: string[]; always: string[]; sealBroken?: boolean };
   clients: Record<string, boolean>;
   windows: number;
   activity: Activity[];
@@ -31,11 +31,12 @@ export class AgentsPanel implements Panel {
     this.el = el(`<div class="fx-agents">
       <section class="fx-agents-sec">
         <div class="fx-agents-h">${icon('agent', 14)}<span>Drive formencoder with an agent</span></div>
-        <p class="fx-note">Start Claude Code, Codex or Cursor in the Terminal panel: they open in formencoder's agent workspace and already know the queue, presets, export settings and the form family. From any other folder, set your account up once:</p>
+        <p class="fx-note">Start Claude Code, Codex, Cursor or Antigravity in the Terminal panel: they open in formencoder's agent workspace and already know the queue, presets, export settings and the form family. From any other folder, set your account up once:</p>
         <div class="fx-agents-row">
           <button class="cv-btn" type="button" data-install="claude">Set up Claude Code</button>
           <button class="cv-btn" type="button" data-install="codex">Set up Codex</button>
           <button class="cv-btn" type="button" data-install="cursor">Set up Cursor</button>
+          <button class="cv-btn" type="button" data-install="antigravity">Set up Antigravity</button>
         </div>
         <div class="fx-agents-kv"><span>MCP (stdio)</span><code class="fx-agents-mcp"></code></div>
         <div class="fx-agents-kv"><span>MCP (HTTP)</span><code>${location.origin}/mcp</code></div>
@@ -44,6 +45,7 @@ export class AgentsPanel implements Panel {
       <section class="fx-agents-sec">
         <div class="fx-agents-h">${icon('lock', 14)}<span>Permissions</span><span class="fx-flex"></span><button class="fx-link" type="button" data-act="forget">Forget all</button></div>
         <div class="fx-agents-allowed"></div>
+        <div class="fx-agents-seal" data-automation-id="agents.sealBroken" role="status">The saved agent permission was changed outside FormEncoder, so it is back to Ask.</div>
         <label class="fe-faith"><input type="checkbox" class="fx-check" data-automation-id="agents.fullFaith"><span><strong>Full faith</strong> · agents may delete, clear or reset, publish to outside services, overwrite files, change where watch folders write and type into terminals without asking you first. Off, each of those waits for your approval.</span></label>
       </section>
       <section class="fx-agents-sec fx-agents-grow">
@@ -100,7 +102,8 @@ export class AgentsPanel implements Panel {
       setText(q(this.el, '.fx-agents-ws'), s.workspace.path);
       for (const b of Array.from(this.el.querySelectorAll<HTMLElement>('[data-install]'))) setClass(b, 'is-missing', !s.clients[b.dataset.install as string]);
       const allowed = [...s.consent.always.map((c) => `${c} (always)`), ...s.consent.session.filter((c) => !s.consent.always.includes(c)).map((c) => `${c} (this session)`)];
-      setText(q(this.el, '.fx-agents-allowed'), allowed.length ? allowed.join(', ') : `Policy: ${s.consent.policy}. Agents from the Terminal panel are always trusted; others ask once.`);
+      setText(q(this.el, '.fx-agents-allowed'), allowed.length ? allowed.join(', ') : `Policy: ${s.consent.policy}. Claude Code, Codex, Cursor and Antigravity tabs started in the Terminal panel are trusted; every other agent asks.`);
+      setClass(q(this.el, '.fx-agents-seal'), 'is-shown', s.consent.sealBroken === true);
       if (!this.feed.length) this.feed = s.activity.filter((a) => a.source !== 'ui');
       this.renderFeed();
       const ap = await this.ctx.client.call<{ fullFaith: boolean }>('agents.approvals');

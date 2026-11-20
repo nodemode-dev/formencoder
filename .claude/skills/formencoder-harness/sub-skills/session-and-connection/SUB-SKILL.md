@@ -15,15 +15,15 @@ description: How an agent reaches formencoder. Use when the formencoder MCP serv
 
 | Started from | Trust | Configuration |
 | --- | --- | --- |
-| formencoder's Terminal panel (the Claude Code, Codex or Cursor buttons, or typed) | trusted: the shell carries the session token, nothing asks | the agent workspace: `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, `.codex/config.toml`, `.cursor/mcp.json` and this skill |
+| formencoder's Terminal panel, a Claude Code, Codex, Cursor or Antigravity tab (its buttons or the ask line; the MCP server is named `formencoder_tab` there) | trusted while the tab is open: the program carries the tab's token, nothing asks; a program typed into a plain shell tab asks like any other | the agent workspace: `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, `.codex/config.toml`, `.cursor/mcp.json` and this skill |
 | The formencoder repository | asks once per client in the window | `.mcp.json`, `.codex/config.toml`, `.cursor/mcp.json` at the repository root |
-| Any other folder | asks once per client in the window | `./formencoder agents install` (or the Agents panel) adds the MCP server and this skill to the user's Claude Code, Codex and Cursor setup |
+| Any other folder | asks once per client in the window | `./formencoder agents install` (or the Agents panel) adds the MCP server and this skill to the user's Claude Code, Codex and Cursor setup, and the MCP server to Antigravity's |
 
 ## Permission
 
 - Reads (`status`, `probe`, `preview_frame`, `contact_sheet`, `verify`, `wait`, `log`, `formats`, `list_commands` and every query command) never ask.
 - The first change from an outside agent opens a dialog in the formencoder window: **Allow** (this session), **Allow Always** (remembered), **Don't Allow**. Tell the person a prompt is waiting in formencoder when you make the first change.
-- `FORMENCODER_AGENTS` on the engine sets the policy: `ask` (default), `allow` (never ask) or `deny` (refuse outside agents; Terminal agents still work).
+- `FORMENCODER_AGENTS=deny` on the engine refuses every change from every agent, Terminal agents included (reads still work). Any other value, `allow` included, leaves the person's stored choice in charge: the engine asks, and only the person can answer in the window.
 - The Agents panel shows who is allowed and can forget them.
 
 ## FFmpeg
@@ -42,7 +42,7 @@ formencoder encodes with an LGPL FFmpeg build it pins (the same builds formcut s
 | `The formencoder engine is not running and could not be started` | Ask the person to run `./formencoder boot` in the formencoder folder or open the desktop app, then retry. |
 | `No formencoder window is open to ask the person for permission` | The policy is `ask` and no window is open. Ask the person to open formencoder (or start the agent from its Terminal panel), then retry. |
 | `Nobody answered the permission request` | The dialog timed out. Ask the person to answer it in the formencoder window. |
-| `Outside agents are turned off (FORMENCODER_AGENTS=deny)` | Only Terminal agents may change the queue. Suggest starting the agent from the Terminal panel. |
+| `Outside agents are turned off (FORMENCODER_AGENTS=deny)` | No agent may change the queue, Terminal agents included; reads still work. Only the person can change this, by starting formencoder without that setting. |
 | `The formencoder engine stopped answering` | The engine exited or is busy past the timeout. `status` again; if it fails, ask the person to restart formencoder. |
 
 ## Several windows

@@ -36,7 +36,7 @@ usage: ./formencoder [command] [options]
   extension ID COMMAND [--args JSON]  run a command an extension contributes, in the open window
 
   mcp                   formencoder over MCP's stdio transport (starts the engine when needed)
-  agents install|sync|status  set Claude Code, Codex and Cursor up (install), refresh the skill references (sync)
+  agents install|sync|status  set Claude Code, Codex, Cursor and Antigravity up (install), refresh the skill references (sync)
   counts [--write|--check]  lines of code by area (the README's Code size table)
   clean [--all]         remove build output (--all also venv and node_modules)
   help                  this text

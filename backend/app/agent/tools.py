@@ -483,7 +483,7 @@ async def _terminal(name: str, args: dict, source: str) -> dict:
         term = hub.open(args.get("title"), args.get("cwd"), 120, 32, f"http://127.0.0.1:{config.PORT}", run=args.get("command") or None)
         term.opener = source
         return text({**term.row(), "next": "terminal_send {session, text} to type, terminal_read {session} to read"})
-    term = hub.get(str(args["session"]))
+    term = hub.listed(str(args["session"]))
     if name == "terminal_send":
         before = term.offset
         term.write(str(args["text"]) + ("\r" if args.get("enter", True) else ""))

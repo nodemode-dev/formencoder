@@ -20,7 +20,7 @@ The media encoder of the form family beside formcut, formvfx, formwav and formvi
 
 ## After changing the MCP tools or the engine's commands, formats or presets
 
-Run `./formencoder agents sync` so `.claude/skills/formencoder-harness/references/` and the `.agents/skills` mirror follow; `./formencoder agents sync --check` fails while they drift.
+Run `./formencoder agents sync` so `.claude/skills/formencoder-harness/references/` and the `.agents/skills` mirror follow; `./formencoder agents sync --check` fails while they drift. The same sync writes `agents/manifest.json` (the tools, skills and dock the app offers agents; the family spec reads it); the dock part is the `DOCK` value in `setup/agents.py`, kept by hand.
 
 ## Trademarks, copyright and licences
 

@@ -308,6 +308,12 @@ impl Engine {
         if let Some(sv) = given {
             s = settings::apply_patch(&s, sv)?;
         }
+        if let Some(p) = path.filter(|p| !p.is_empty()) {
+            paths::local_output(p, "the output path")?;
+        }
+        if let Some(f) = folder.filter(|f| !f.is_empty()) {
+            paths::local_output(f, "the output folder")?;
+        }
         Ok(json!({"id": new_id("o"), "kind": kind, "settings": s, "folder": folder.map(|f| paths::expand(f)), "path": path.map(|p| paths::expand(p)), "skip": false}))
     }
 
@@ -318,6 +324,10 @@ impl Engine {
     }
 
     pub fn output_path(&self, item: &Value, output: &Value) -> String {
+        paths::absolute_or_same(&self.planned_output(item, output))
+    }
+
+    fn planned_output(&self, item: &Value, output: &Value) -> String {
         let s = &output["settings"];
         if let Some(p) = output["path"].as_str().filter(|p| !p.is_empty()) {
             let mut pb = PathBuf::from(p);

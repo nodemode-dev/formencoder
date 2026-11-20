@@ -47,7 +47,7 @@ export class Keys {
   private down(e: KeyboardEvent): void {
     const t = e.target as HTMLElement;
     if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t?.isContentEditable) return;
-    if (t?.closest?.('.fx-term-host, .xterm')) return;
+    if (t?.closest?.('.ft-dock, .ft-consent, .ft-tour')) return;
     if (anyDialogOpen() || document.querySelector('.cv-menu:not([hidden])') || document.querySelector('.fx-palette-scrim:not([hidden])')) return;
     const combo = comboOf(e);
     if (!combo) return;

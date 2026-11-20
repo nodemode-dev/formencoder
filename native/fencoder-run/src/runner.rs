@@ -170,7 +170,9 @@ pub fn start(item: Value, output: Value, out_path: String, prefs: Value) -> Job 
 fn run(ctx: Ctx, item: Value, output: Value, out_path: String) {
     let started = now();
     let kind = output["kind"].as_str().unwrap_or("encode").to_string();
+    let refused = if kind == "copy" || matches!(item["kind"].as_str(), Some("stitch" | "family")) { Ok(()) } else { paths::local_input(item["path"].as_str().unwrap_or(""), "the source") };
     let outcome: Res = match kind.as_str() {
+        _ if refused.is_err() => Err(refused.err().unwrap_or_default()),
         "copy" => copy(&ctx, &item, &output),
         "analysis" => {
             let c2 = &ctx;
@@ -287,6 +289,7 @@ fn source_for(ctx: &Ctx, item: &Value) -> Res<(Source, Option<String>)> {
 }
 
 fn encode(ctx: &Ctx, item: &Value, output: &Value, planned_path: &str) -> Res {
+    let planned_path = paths::local_output(planned_path, "the output path")?;
     let mut s = settings::normalize(&output["settings"])?;
     let (src, tmp) = source_for(ctx, item)?;
     let base = if item["kind"] == "family" || (item["kind"] == "file" && crate::raw::decoder_for(item["path"].as_str().unwrap_or("")).is_some()) { 0.3 } else { 0.0 };

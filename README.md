@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="version 0.8.4" src="https://img.shields.io/badge/version-0.8.4-eef0f4?style=flat-square">
+  <img alt="version 0.10.0" src="https://img.shields.io/badge/version-0.10.0-eef0f4?style=flat-square">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?style=flat-square&logo=rust&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-interface-3178c6?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
@@ -91,7 +91,7 @@ The window, the command line and the MCP server call the same 96 commands.
 ./formencoder encode clip.mov --preset system/youtube-1080p   # queue, encode and print results
 ./formencoder queue                                           # every output and its status
 ./formencoder probe clip.mov                                  # media information
-./formencoder mcp                                             # MCP server on stdio for Claude Code, Codex and Cursor
+./formencoder mcp                                             # MCP server on stdio for Claude Code, Codex, Cursor and Antigravity
 ```
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
@@ -102,7 +102,7 @@ FormEncoder loads extensions made to the Form Extension Contract (API 1): FormPo
 
 ## Under the hood
 
-Version 0.8.4 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
+Version 0.10.0 · Apache-2.0 · Rust encoding engine, Python service, TypeScript interface, Tauri 2 shell
 
 - **Engine:** seven `fencoder` Rust crates in `native/`, loaded by the Python service as the `fe_core` extension.
 - **FFmpeg:** a pinned LGPL build, run as a separate program and never linked.
@@ -145,7 +145,7 @@ cd formencoder
 
 `./formencoder desktop dev` opens the desktop window instead (run `./formencoder install-desktop` first). On Windows use `formencoder.bat install`, then `formencoder.bat`.
 
-Ports: interface 5270, engine 8270 (`FORMENCODER_PORT`). `FORMENCODER_AGENTS=allow` skips the agent permission prompt.
+Ports: interface 5270, engine 8270 (`FORMENCODER_PORT`). `FORMENCODER_AGENTS=deny` refuses every change from every agent, the Terminal panel's included; no value of it skips the agent permission prompt, which only the person can answer in the formencoder window.
 
 > [!IMPORTANT]
 > **Status:** pre-release. AVC-Intra and vendor camera raw (R3D, ARRIRAW, X-OCN, Canon RAW, BRAW) are Partial, see [`docs/PARITY.md`](docs/PARITY.md).

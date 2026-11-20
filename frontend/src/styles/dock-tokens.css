@@ -1,0 +1,61 @@
+:root {
+  --z-overlay: var(--z-modal);
+  --dock-bg: var(--bg-primary);
+  --dock-bar-bg: var(--surface-0);
+  --dock-raised: var(--surface-raised);
+  --dock-hover: var(--bg-hover);
+  --dock-input-bg: var(--bg-input);
+  --dock-border: var(--line-0);
+  --dock-edge: var(--line-0);
+  --dock-divider: var(--line-0);
+  --dock-tab-border: var(--line-2);
+  --dock-outline: var(--accent-line);
+  --dock-scrim: var(--bg-scrim);
+  --dock-text: var(--text-primary);
+  --dock-text-dim: var(--text-secondary);
+  --dock-text-muted: var(--text-muted);
+  --dock-tab-text: var(--text-secondary);
+  --dock-accent: var(--accent-color);
+  --dock-accent-line: var(--accent-line);
+  --dock-accent-ink: var(--accent-ink);
+  --dock-danger: var(--danger);
+  --dock-danger-text: var(--danger-text);
+  --dock-space-1: var(--space-1);
+  --dock-space-2: var(--space-2);
+  --dock-space-3: var(--space-3);
+  --dock-space-4: var(--space-4);
+  --dock-radius-xs: var(--radius-xs);
+  --dock-radius-sm: var(--radius-sm);
+  --dock-radius: var(--radius);
+  --dock-radius-md: var(--radius-md);
+  --dock-tab-radius: var(--radius);
+  --dock-head-h: 34px;
+  --dock-tab-h: 24px;
+  --dock-ibtn: 26px;
+  --dock-ask-h: 40px;
+  --dock-chat-bar-h: 28px;
+  --dock-ctl-h: var(--ctl-md);
+  --dock-icon: 14px;
+  --dock-icon-sm: 12px;
+  --dock-icon-xs: 10px;
+  --dock-icon-note: 12px;
+  --dock-icon-send: 14px;
+  --dock-stage-pad: 4px 0 0 8px;
+  --dock-ask-ctl-h: var(--ctl-md);
+  --dock-tab-accent: var(--accent-color);
+  --dock-fs-xs: var(--fs-11);
+  --dock-fs-sm: var(--fs-12);
+  --dock-fs-md: var(--fs-13);
+  --dock-font-mono: var(--font-mono);
+  --dock-term-bg: var(--bg-primary);
+  --dock-term-fg: var(--text-primary);
+  --dock-term-cursor: var(--accent-color);
+  --dock-term-selection: var(--accent-soft);
+  --dock-term-font-size: 12.5px;
+  --dock-term-line-height: 1.15;
+  --dock-term-contrast: 1;
+}
+
+.fe-dock-host { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--bg-primary); }
+.fe-dock-host[hidden] { display: none; }
+.fe-dock-host > .ft-dock { flex: 1; }

@@ -23,7 +23,7 @@ description: Building and releasing formencoder as a desktop app. Use for the Ta
 | Windows | `x86_64-pc-windows-msvc` | `.msi`, NSIS `.exe` |
 | Linux | `x86_64-unknown-linux-gnu` | `.deb`, `.rpm`, `.AppImage` |
 
-formcompiler (`nodemode-ai/formcompiler`) builds all four when a `compile_vX.Y.Z` branch is pushed here, and the repo's own `ci.yml` builds the interface, checks the engine on each host, runs the text lint and `agents sync --check`.
+formcompiler (`nodemode-dev/formcompiler`) builds all four when a `compile_vX.Y.Z` branch is pushed here, and the repo's own `ci.yml` builds the interface, checks the engine on each host, runs the text lint and `agents sync --check`.
 
 ## Releasing
 

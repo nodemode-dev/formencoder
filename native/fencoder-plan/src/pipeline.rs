@@ -10,7 +10,7 @@ use crate::formats::{self, acodec, vcodec};
 use crate::settings::{self, loudness_standards};
 use crate::text::{self, Rgba, Timecode};
 use crate::util::{Res, rate_str};
-use crate::{colour, encoders, ffmpeg, metadata};
+use crate::{colour, encoders, ffmpeg, metadata, paths};
 
 #[derive(Clone, Default)]
 pub struct Source {
@@ -852,6 +852,24 @@ pub fn build(src: &Source, s: &Value, output: &str, work: &Path, opt: &BuildOpti
     let info = &src.info;
     let fmt = formats::get(s["format"].as_str().unwrap_or("h264"))?;
     let fmt_id = s["format"].as_str().unwrap_or("h264");
+    if src.stitch.is_empty() {
+        paths::local_input(&src.path, "the source")?;
+    }
+    for (p, _) in &src.stitch {
+        paths::local_input(p, "a stitched source")?;
+    }
+    if let Some(a) = &src.audio_path {
+        paths::local_input(a, "the audio source")?;
+    }
+    let kept;
+    let output = if opt.preview_at.is_some() {
+        output
+    } else {
+        kept = paths::local_output(output, "the output path")?;
+        kept.as_str()
+    };
+    let work_abs = paths::absolute_or_same(&work.to_string_lossy());
+    let work = Path::new(&work_abs);
     let mut plan = Plan { output: output.into(), ..Default::default() };
     let _ = fs::create_dir_all(work);
     let fmt_video = !fmt["video"].as_array().map(|a| a.is_empty()).unwrap_or(true);

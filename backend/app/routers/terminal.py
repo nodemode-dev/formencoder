@@ -3,27 +3,54 @@ import codecs
 import contextlib
 import json
 import os
-import shutil
+import re
+import shlex
 import signal
 import struct
+import subprocess
 import threading
 import time
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from ..agent import consent, workspace
-from ..core import config
+from ..core import config, window_key
+from ..services import agent_lookup
+from ..services import agent_programs as finder
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
-AGENTS = {"claude": "claude", "codex": "codex", "cursor": "cursor-agent"}
+AGENTS = {kind: spec["bin"] for kind, spec in finder.PROGRAMS.items()}
+PROGRAMS = {kind: {"title": spec["title"], "install": finder.install(kind)} for kind, spec in finder.PROGRAMS.items()}
+TABS = ("claude", "codex", "cursor", "antigravity")
+RESUME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{7,79}")
+PROMPT_MAX = 20000
 
 
-def _environment(base_url: str) -> dict:
+def _program(kind: str) -> dict:
+    return finder.status(kind)
+
+
+def _typed(kind: str) -> str:
+    path = finder.program(kind)
+    if not path:
+        return AGENTS[kind]
+    return shlex.quote(path) if POSIX else (f'"{path}"' if " " in path else path)
+
+
+def _tab_entry(base_url: str, token: str) -> dict:
+    command, _ = workspace.mcp_command()
+    return {"command": command, "args": workspace.client_args("antigravity"),
+            "env": {"FORMENCODER_URL": base_url, finder.TOKEN_VAR: token, "FORMENCODER_AGENT_NAME": "terminal"}}
+
+
+def _environment(base_url: str, token: str | None, program: str | None = None) -> dict:
     ws = workspace.ensure()
     env = dict(os.environ)
     env["FORMENCODER_URL"] = base_url
-    env["FORMENCODER_AGENT_TOKEN"] = consent.TOKEN
+    env.pop("FORMENCODER_AGENT_TOKEN", None)
+    if token:
+        env["FORMENCODER_AGENT_TOKEN"] = token
     env["FORMENCODER_AGENT_NAME"] = "terminal"
     env["FORMENCODER_WORKSPACE"] = str(ws)
     env["PATH"] = str(ws / "bin") + os.pathsep + env.get("PATH", "")
@@ -33,7 +60,7 @@ def _environment(base_url: str) -> dict:
     env.setdefault("TERM", "xterm-256color")
     env["COLORTERM"] = "truecolor"
     env.pop("FORMENCODER_DESKTOP", None)
-    return env
+    return agent_lookup.child_env(program, base=env, front=[str(ws / "bin")]) if program else env
 
 
 def _shell_path() -> str:
@@ -47,13 +74,14 @@ def _shell() -> list[str]:
 
 
 class Session:
-    def __init__(self, cols: int, rows: int, env: dict, cwd: str):
+    def __init__(self, cols: int, rows: int, env: dict, cwd: str, argv: list[str] | None = None):
         self.cols, self.rows = max(20, min(500, cols)), max(5, min(300, rows))
         self.pid = None
         self.fd = None
         self.process = None
         self.winpty = None
         self.decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        command = argv or _shell()
         if POSIX:
             import pty
 
@@ -63,18 +91,19 @@ class Session:
                     os.chdir(cwd)
                 except OSError:
                     os.chdir(os.path.expanduser("~"))
-                os.execvpe(_shell()[0], _shell(), env)
+                try:
+                    os.execvpe(command[0], command, env)
+                except OSError:
+                    os._exit(127)
             self.pid, self.fd = pid, fd
             self.resize(self.cols, self.rows)
             return
         try:
             from winpty import PtyProcess
 
-            self.winpty = PtyProcess.spawn(_shell(), cwd=cwd, env=env, dimensions=(self.rows, self.cols))
+            self.winpty = PtyProcess.spawn(command, cwd=cwd, env=env, dimensions=(self.rows, self.cols))
         except Exception:
-            import subprocess
-
-            self.process = subprocess.Popen(_shell(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, cwd=cwd)
+            self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, cwd=cwd)
 
     def resize(self, cols: int, rows: int) -> None:
         self.cols, self.rows = max(20, min(500, cols)), max(5, min(300, rows))
@@ -144,17 +173,27 @@ def status() -> dict:
         "pty": POSIX,
         "shell": _shell()[0],
         "cwd": str(ws),
-        "agents": {name: shutil.which(binary) is not None for name, binary in AGENTS.items()},
+        "agents": {name: finder.program(name) is not None for name in AGENTS},
         "launch": AGENTS,
     }
+
+
+@router.get("/agents")
+def agent_programs(request: Request) -> dict:
+    window_key.require(request)
+    return {"agents": {kind: _program(kind) for kind in PROGRAMS}}
 
 
 KEEP = 256_000
 
 
 class Term:
-    def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool) -> None:
+    def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool, trusted: bool = False,
+                 kind: str = "shell", window: bool = False, argv: list[str] | None = None, program: str | None = None) -> None:
         self.id, self.title, self.cwd, self.base, self.owned = tid, title, cwd, base, owned
+        self.trusted = trusted
+        self.kind, self.window, self.argv, self.program = kind, window, argv, program
+        self.token: str | None = None
         self.opener = "ui"
         self.created = time.time()
         self.buffer = ""
@@ -167,7 +206,16 @@ class Term:
 
     def _start(self, cols: int, rows: int) -> None:
         self.exited = False
-        self.session = Session(cols, rows, _environment(self.base), self.cwd)
+        consent.revoke(self.token)
+        self.token = consent.issue() if self.trusted else None
+        if self.kind == "antigravity" and self.token:
+            try:
+                finder.write_tab_entry(self.cwd, _tab_entry(self.base, self.token))
+            except OSError:
+                consent.revoke(self.token)
+                self.token = None
+                raise
+        self.session = Session(cols, rows, _environment(self.base, self.token, self.program), self.cwd, self.argv)
         session = self.session
 
         def pump() -> None:
@@ -197,6 +245,10 @@ class Term:
         if session is not self.session:
             return
         self.exited = True
+        if self.window:
+            self._forget()
+            consent.revoke(self.token)
+            self.token = None
         for q in list(self.listeners):
             with contextlib.suppress(asyncio.QueueFull):
                 q.put_nowait(None)
@@ -216,6 +268,9 @@ class Term:
         old, self.session = self.session, None
         if old:
             old.close()
+        for q in list(self.listeners):
+            with contextlib.suppress(asyncio.QueueFull):
+                q.put_nowait({"type": "restart"})
         self._feed("\r\n[formencoder] terminal restarted\r\n")
         self._start(cols, rows)
 
@@ -223,9 +278,20 @@ class Term:
         if self.session:
             self.session.close()
         self.exited = True
+        self._forget()
+        consent.revoke(self.token)
+        self.token = None
+        for q in list(self.listeners):
+            with contextlib.suppress(asyncio.QueueFull):
+                q.put_nowait({"type": "closed"})
+
+    def _forget(self) -> None:
+        if self.kind == "antigravity":
+            finder.remove_tab_entry(self.cwd, self.token)
 
     def row(self) -> dict:
-        return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener}
+        return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener,
+                "kind": self.kind if self.opener == "ui" else "agent", "alive": not self.exited}
 
 
 class Hub:
@@ -237,15 +303,26 @@ class Hub:
         from ..engine.host import host as engine_host
 
         engine_host.bus.publish({"type": "terminals", "sessions": self.listing()}, ("ui",))
+        engine_host.bus.publish({"type": "terminalTabs", "tabs": self.tabs()}, ("ui",))
 
     def listing(self) -> list[dict]:
-        return [t.row() for t in self.terms.values() if not t.owned]
+        return [t.row() for t in self.terms.values() if not t.owned and not t.window]
 
-    def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None) -> Term:
+    def tabs(self) -> list[dict]:
+        return [t.row() for t in self.terms.values() if t.window]
+
+    def listed(self, tid: str) -> Term:
+        term = self.get(tid)
+        if term.window:
+            raise KeyError(f"no terminal {tid!r}; open terminals: {', '.join(t['id'] for t in self.listing()) or 'none'}")
+        return term
+
+    def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None, trusted: bool = False,
+             kind: str = "shell", window: bool = False, argv: list[str] | None = None, program: str | None = None) -> Term:
         self._n += 1
         tid = f"t{self._n}"
         place = cwd or str(workspace.ensure())
-        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned)
+        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted, kind, window, argv, program)
         self.terms[tid] = term
         if run:
             term.write(run + "\r")
@@ -282,12 +359,51 @@ def sessions() -> dict:
     return {"sessions": hub.listing()}
 
 
+@router.get("/tabs")
+def tabs(request: Request) -> dict:
+    window_key.require(request)
+    return {"tabs": hub.tabs()}
+
+
+@router.post("/tabs")
+async def open_tab(request: Request) -> dict:
+    body = await request.json() if (await request.body()) else {}
+    if not isinstance(body, dict):
+        body = {}
+    kind = body.get("kind") or "shell"
+    prompt, resume = body.get("prompt") or None, body.get("resume") or None
+    if kind != "shell" and kind not in TABS:
+        raise HTTPException(422, {"code": "unknown_kind", "message": f"No tab kind called {kind}. Kinds: shell, {', '.join(TABS)}."})
+    if prompt is not None and (kind == "shell" or not isinstance(prompt, str) or len(prompt) > PROMPT_MAX):
+        raise HTTPException(422, {"code": "bad_prompt", "message": f"A prompt is text of at most {PROMPT_MAX} characters for an agent tab."})
+    if resume is not None and (kind != "claude" or not isinstance(resume, str) or not RESUME.fullmatch(resume)):
+        raise HTTPException(422, {"code": "bad_resume", "message": "resume is a Claude Code session id, for a claude tab only."})
+    try:
+        cols, rows = int(body.get("cols") or 100), int(body.get("rows") or 30)
+    except (TypeError, ValueError):
+        cols, rows = 100, 30
+    argv = path = None
+    if kind in TABS:
+        found = finder.usable(kind)
+        if found.state != "runs":
+            raise HTTPException(404, {"code": "not_installed", "message": finder.said(found), "install": PROGRAMS[kind]["install"]})
+        path = found.path
+        argv = agent_lookup.start_argv([path, *(["--resume", resume] if resume else []), *((["--", prompt] if prompt.startswith("-") else [prompt]) if prompt else [])])
+    title = body.get("title") if isinstance(body.get("title"), str) else None
+    cwd = body.get("cwd") if isinstance(body.get("cwd"), str) and kind != "antigravity" else None
+    try:
+        term = hub.open(title or (PROGRAMS[kind]["title"] if argv else None), cwd, cols, rows, _base(request.headers.get("host")), trusted=argv is not None, kind=kind, window=True, argv=argv, program=path)
+    except OSError as exc:
+        raise HTTPException(500, {"code": "failed", "message": f"The program could not start: {exc}"}) from None
+    return term.row()
+
+
 @router.post("/sessions")
 async def open_session(request: Request) -> dict:
     body = await request.json() if (await request.body()) else {}
     launch = body.get("launch")
-    run = AGENTS.get(launch) if launch in AGENTS else None
-    term = hub.open(body.get("title"), body.get("cwd"), int(body.get("cols") or 100), int(body.get("rows") or 30), _base(request.headers.get("host")), run=run)
+    run = _typed(launch) if launch in AGENTS else None
+    term = hub.open(body.get("title"), body.get("cwd"), int(body.get("cols") or 100), int(body.get("rows") or 30), _base(request.headers.get("host")), run=run, trusted=True)
     return term.row()
 
 
@@ -303,7 +419,8 @@ async def session_input(tid: str, request: Request) -> dict:
 
 
 @router.get("/sessions/{tid}/output")
-def session_output(tid: str, since: int | None = None) -> dict:
+def session_output(tid: str, request: Request, since: int | None = None) -> dict:
+    window_key.require(request)
     try:
         text, offset = hub.get(tid).read(since)
     except KeyError as exc:
@@ -342,6 +459,9 @@ def session_close(tid: str) -> dict:
 
 @router.websocket("/ws")
 async def terminal(socket: WebSocket) -> None:
+    if not window_key.spend(socket.query_params.get("ticket")):
+        await socket.close(code=4403)
+        return
     await socket.accept()
     try:
         cols = int(socket.query_params.get("cols", "100"))
@@ -349,25 +469,44 @@ async def terminal(socket: WebSocket) -> None:
     except ValueError:
         cols, rows = 100, 30
     attach = socket.query_params.get("session")
+    typed = socket.query_params.get("typed") == "1"
     if attach and attach in hub.terms:
         term = hub.terms[attach]
         if term.session:
             term.session.resize(cols, rows)
+    elif attach and typed:
+        await socket.send_bytes(json.dumps({"type": "gone", "id": attach}).encode("utf-8"))
+        await socket.close(code=4404)
+        return
     else:
         base = _base(socket.headers.get("host"), socket.query_params.get("engine"))
-        term = hub.open(None, socket.query_params.get("cwd"), cols, rows, base, owned=True)
+        term = hub.open(None, socket.query_params.get("cwd"), cols, rows, base, owned=True, trusted=True)
     queue: asyncio.Queue = asyncio.Queue(maxsize=4000)
     replay, _ = term.read(None)
+    if typed:
+        await socket.send_bytes(json.dumps({"type": "hello", "id": term.id, "kind": term.kind, "alive": not term.exited}).encode("utf-8"))
     if replay and attach:
         await socket.send_text(replay)
+    if typed and term.exited:
+        await socket.send_bytes(json.dumps({"type": "exit"}).encode("utf-8"))
     term.listeners.add(queue)
 
     async def send() -> None:
         while True:
             data = await queue.get()
+            if isinstance(data, dict):
+                if typed:
+                    await socket.send_bytes(json.dumps(data).encode("utf-8"))
+                    if data.get("type") == "closed":
+                        await socket.close()
+                        break
+                continue
             if data is None:
                 with contextlib.suppress(Exception):
-                    await socket.send_text(json.dumps({"exit": True}))
+                    if typed:
+                        await socket.send_bytes(json.dumps({"type": "exit"}).encode("utf-8"))
+                    else:
+                        await socket.send_text(json.dumps({"exit": True}))
                 if term.owned:
                     break
                 continue
@@ -376,10 +515,23 @@ async def terminal(socket: WebSocket) -> None:
     sender = asyncio.create_task(send())
     launch = socket.query_params.get("launch")
     if launch in AGENTS:
-        term.write(AGENTS[launch] + "\r")
+        term.write(_typed(launch) + "\r")
     try:
         while True:
             message = await socket.receive_text()
+            if typed:
+                try:
+                    control = json.loads(message)
+                except ValueError:
+                    control = None
+                if not isinstance(control, dict):
+                    continue
+                if control.get("type") == "input" and isinstance(control.get("data"), str):
+                    term.write(control["data"])
+                elif control.get("type") == "resize" and term.session:
+                    with contextlib.suppress(TypeError, ValueError):
+                        term.session.resize(int(control.get("cols")), int(control.get("rows")))
+                continue
             if message.startswith("\x00{"):
                 try:
                     control = json.loads(message[1:])
@@ -388,7 +540,7 @@ async def terminal(socket: WebSocket) -> None:
                 if isinstance(control.get("resize"), list) and len(control["resize"]) == 2 and term.session:
                     term.session.resize(int(control["resize"][0]), int(control["resize"][1]))
                 if control.get("launch") in AGENTS:
-                    term.write(AGENTS[control["launch"]] + "\r")
+                    term.write(_typed(control["launch"]) + "\r")
                 continue
             term.write(message)
     except WebSocketDisconnect:

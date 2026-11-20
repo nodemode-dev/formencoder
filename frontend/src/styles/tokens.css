@@ -116,6 +116,11 @@
   --glass-filter: blur(40px) saturate(1.8);
   --glass-shadow: 0 22px 56px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
 }
+:root[data-oled] {
+  --bg-hover: rgba(255, 255, 255, 0.1);
+  --border-soft: rgba(255, 255, 255, 0.12);
+  --line-0: var(--border-color);
+}
 
 body.theme-light {
   color-scheme: light;

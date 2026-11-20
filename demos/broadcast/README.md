@@ -11,7 +11,7 @@ Everything it needs (script, styles, fonts, icon, the programme) is inside this 
 
 ## What it shows
 
-The interface is the real one: the Studio Dark tokens, the fifteen theme profiles, the dock and its panels, the inline icons and the Export Settings idiom, all imported from `frontend/src/`. It opens on a 17.4 s programme (aerial waves over a public-domain LibriVox reading, with six caption cues) already measured: the picture carries a timecode, the name and a "FOR REVIEW ONLY" text burned in live, with the captions on top. Sources, authors and licences are in `CREDITS.md`.
+The interface is the real one: the Studio Dark tokens, the sixteen theme profiles, the dock and its panels, the inline icons and the Export Settings idiom, all imported from `frontend/src/`. It opens on a 17.4 s programme (aerial waves over a public-domain LibriVox reading, with six caption cues) already measured: the picture carries a timecode, the name and a "FOR REVIEW ONLY" text burned in live, with the captions on top. Sources, authors and licences are in `CREDITS.md`.
 
 - **Delivery Profiles.** Broadcast (H.264 EBU R128, H.264 ATSC A/85, broadcast WAV, an XDCAM MXF master marked as desktop only), streaming, social and audio profiles. A profile sets the loudness standard, caption mode, overlays and the output preset together.
 - **Loudness.** ITU-R BS.1770-4 integrated loudness, loudness range, true peak and the short-term graph for the source and for the delivery, with the target and tolerance band; a matrix of the programme against EBU R128, ATSC A/85, OP-59, ARIB TR-B32, streaming (-14 LUFS) and podcast (-16 LUFS) with the gain each needs; Normalise (linear gain, with a look-ahead limiter when asked).

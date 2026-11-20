@@ -34,7 +34,7 @@ These are queries: they change what the window shows, not the queue, so they nev
 - **Family**: the running form family apps and their sources.
 - **Log**: the Encoding and Error logs.
 - **Info**: the selected source or output's details.
-- **Terminal**: the embedded terminal where Claude Code, Codex and Cursor run as trusted agents.
+- **Terminal**: the embedded terminal where Claude Code, Codex, Cursor and Antigravity run as trusted agents.
 - **Agents**: which outside agents are allowed, the MCP address, and installing the clients.
 
 ## Extensions

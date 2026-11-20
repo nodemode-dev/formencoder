@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""./formencoder agents: Claude Code, Codex and Cursor driving formencoder.
+"""./formencoder agents: Claude Code, Codex, Cursor and Antigravity driving formencoder.
 
   sync [--check]    regenerate the formencoder-harness skill's generated references from the engine (commands, MCP tools,
-                    presets, formats and settings) and mirror .claude/skills/formencoder-harness to .agents/skills;
-                    --check exits 1 when anything drifted
-  install [--dry-run] [claude|codex|cursor ...]
-                    set the clients up for this user account: the MCP server and the skill (all three by default)
+                    presets, formats and settings), mirror .claude/skills/formencoder-harness to .agents/skills and write
+                    agents/manifest.json (what the app offers agents); --check exits 1 when anything drifted
+  install [--dry-run] [claude|codex|cursor|antigravity ...]
+                    set the clients up for this user account: the MCP server and the skill (all four by default;
+                    Antigravity gets the MCP server only, in ~/.gemini/config/mcp_config.json)
   status            which clients are on this computer and whether the skill is in step
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +26,13 @@ ROOT = Path(__file__).resolve().parent.parent
 BACKEND = ROOT / "backend"
 SKILL = ROOT / ".claude" / "skills" / "formencoder-harness"
 MIRROR = ROOT / ".agents" / "skills" / "formencoder-harness"
+SKILLS = ROOT / ".claude" / "skills"
+MANIFEST = ROOT / "agents" / "manifest.json"
+DOCK = {"present": True, "positions": ["left", "right", "bottom", "floating"], "tabs": ["shell", "claude", "codex", "cursor", "antigravity"]}
+DOCK_FOLDER = ROOT / "frontend" / "src" / "dock"
+DOCK_IMPORT = re.compile(r"""(?:from|import)\s*\(?\s*['"]([^'"]+)['"]""")
+LOOKUP = ROOT / "backend" / "app" / "services" / "agent_lookup.py"
+LOOKUP_HASHES = {"1.0.0": "252ea9bb9419d4990f174f91914f09800497bc69e98f849f5643bbf4217cc3f3", "1.0.1": "62667f9b68b7d101e1896ce617240424e33b7e498c560bc79d45f0ab26c77d51"}
 ORDER = ["queue", "encode", "preset", "format", "watch", "ingest", "proxy", "analyze", "media", "captions", "lut", "family", "publish", "log", "prefs", "edit", "history", "ui", "app", "settings"]
 HEAD = "Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand."
 
@@ -114,7 +124,7 @@ def tools_md() -> str:
            "(`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts "
            "the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile "
            "chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the "
-           "curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every "
+           "curated tools only; Cursor and Antigravity) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every "
            "tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, "
            "`commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, "
            "`command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents "
@@ -219,6 +229,30 @@ def generate() -> dict[str, str]:
     return {k: v.replace(" — ", " · ").replace("—", "·") for k, v in docs.items()}
 
 
+def manifest_text(eng: Engine) -> str:
+    from app.agent.tools import NAMES, READ_ONLY, TOOLS, _command_tool
+    from app.services.formext_host import API
+
+    listed = list(TOOLS)
+    gated = [t["name"] for t in TOOLS if t["name"] not in READ_ONLY]
+    seen = set(NAMES)
+    for r in eng.commands():
+        name = r.get("mcpName")
+        if name and name not in seen:
+            seen.add(name)
+            listed.append(_command_tool(r))
+            if not r.get("query"):
+                gated.append(name)
+    skills = [{"name": s.name, "sub_skills": sorted(p.parent.name for p in s.glob("sub-skills/*/SUB-SKILL.md"))}
+              for s in sorted(SKILLS.iterdir()) if (s / "SKILL.md").is_file()]
+    doc = {"format": "form-agent-manifest", "version": 1, "app": "formencoder",
+           "mcp": {"tools": [t["name"] for t in listed],
+                   "read_only": [t["name"] for t in listed if t["annotations"].get("readOnlyHint")],
+                   "approval_gated": gated, "transports": ["stdio", "http"]},
+           "skills": skills, "dock": DOCK, "extensions": {"host_api": API}}
+    return json.dumps(doc, indent=2) + "\n"
+
+
 def _mcp_name(cid: str) -> str:
     return "".join("_" if ch == "." else ("_" + ch.lower() if ch.isupper() else ch) for ch in cid)
 
@@ -263,6 +297,39 @@ def surfaces() -> list[str]:
     return problems
 
 
+def dock_problems(folder: Path | None = None) -> list[str]:
+    folder = folder or DOCK_FOLDER
+    listed = folder / "MANIFEST.json"
+    if not listed.is_file():
+        return ["MANIFEST.json is missing"]
+    wanted = json.loads(listed.read_text(encoding="utf-8")).get("files") or {}
+    found = {p.name: p for p in sorted(folder.iterdir()) if p.name != "MANIFEST.json"}
+    problems = [f"{name} is missing" for name in wanted if name not in found]
+    for name, path in found.items():
+        if name not in wanted:
+            problems.append(f"{name} is extra")
+        elif not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != wanted[name]:
+            problems.append(f"{name} differs from MANIFEST.json")
+        if path.is_file() and path.suffix == ".ts":
+            for target in DOCK_IMPORT.findall(path.read_text(encoding="utf-8")):
+                if target.startswith("..") or target.startswith("/"):
+                    problems.append(f"{name} imports {target} from outside the dock folder")
+    return problems
+
+
+def lookup_problems() -> list[str]:
+    rel = LOOKUP.relative_to(ROOT).as_posix()
+    try:
+        raw = LOOKUP.read_bytes()
+    except OSError:
+        return [f"{rel}: missing (the shared finder for the agent programs)"]
+    said = re.search(rb'^VERSION = "([^"\r\n]+)"\r?$', raw, re.M)
+    version = said.group(1).decode("ascii", "replace") if said else "unknown"
+    if LOOKUP_HASHES.get(version) != hashlib.sha256(raw).hexdigest():
+        return [f"{rel}: does not match the hash recorded for version {version} (the shared finder changes only as a whole new version)"]
+    return []
+
+
 def _files(folder: Path) -> dict:
     return {str(p.relative_to(folder)): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
 
@@ -273,6 +340,19 @@ def sync(check: bool) -> int:
     for p in problems:
         print(f"agents: surface: {p}")
     drift = ["the registry, the MCP tools and the command line disagree"] if problems else []
+    for p in dock_problems():
+        print(f"agents: dock: {p}")
+        drift.append(f"frontend/src/dock/{p.split(' ', 1)[0]}")
+    finder = lookup_problems()
+    for p in finder:
+        print(f"agents: finder: {p}")
+        drift.append(p.split(":", 1)[0])
+    wanted = manifest_text(Engine())
+    if not MANIFEST.exists() or MANIFEST.read_text(encoding="utf-8") != wanted:
+        drift.append(str(MANIFEST.relative_to(ROOT)))
+        if not check:
+            MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+            MANIFEST.write_text(wanted, encoding="utf-8")
     for name, text in generate().items():
         ref = SKILL / "references" / name
         if not ref.exists() or ref.read_text(encoding="utf-8") != text:
@@ -288,8 +368,11 @@ def sync(check: bool) -> int:
     if check:
         print("agents: in step" if not drift else "agents: drifted: " + ", ".join(drift) + " (run ./formencoder agents sync)")
         return 1 if drift else 0
-    print("agents: " + ("updated " + ", ".join(drift) if drift else "already in step"))
-    return 0
+    print("agents: " + ("updated " + ", ".join(d for d in drift if not d.startswith("frontend/src/dock/")) if drift else "already in step"))
+    if dock_problems():
+        print("agents: frontend/src/dock does not match its MANIFEST.json; copy the folder again from the family's source, sync cannot repair it")
+        return 1
+    return 1 if finder else 0
 
 
 def install(args: list[str]) -> int:

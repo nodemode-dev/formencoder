@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+import tarfile
 import tempfile
 import urllib.request
 from pathlib import Path
@@ -37,15 +38,25 @@ def main() -> int:
     if not files:
         print(f"::notice::no FFmpeg build is recorded for {triple}; this app downloads it on first run")
         return 0
-    url = ffmpeg_fetch.source(record, triple)
-    with tempfile.TemporaryDirectory() as scratch:
-        archive = Path(scratch) / "ffmpeg.tar.gz"
-        try:
-            urllib.request.urlretrieve(url, archive)
-        except OSError as error:
-            print(f"::notice::{url} could not be fetched ({error}); this app downloads FFmpeg on first run")
-            return 0
-        count = ffmpeg_fetch.install(archive, files, STAGE)
+    count, refused = 0, []
+    for url in ffmpeg_fetch.sources(record, triple):
+        with tempfile.TemporaryDirectory() as scratch:
+            archive = Path(scratch) / "ffmpeg.tar.gz"
+            try:
+                urllib.request.urlretrieve(url, archive)
+                count = ffmpeg_fetch.install(archive, files, STAGE)
+            except (OSError, ValueError, tarfile.TarError) as error:
+                print(f"::notice::{url} could not be used ({error})")
+                if not isinstance(error, OSError):
+                    refused.append(f"{url}: {error}")
+                clear(STAGE)
+                continue
+        break
+    if not count and refused:
+        raise SystemExit("no download matched the pinned record: " + "; ".join(refused))
+    if not count:
+        print("::notice::no address could be fetched; this app downloads FFmpeg on first run")
+        return 0
     suffix = ".exe" if triple.endswith("windows-msvc") else ""
     for program in ("ffmpeg", "ffprobe"):
         named = STAGE / f"{program}-{triple}{suffix}"

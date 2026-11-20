@@ -1,6 +1,6 @@
 # src-tauri/ffmpeg
 
-`setup/bundle_ffmpeg.py --target [triple]` fills this folder with the LGPL FFmpeg 7.1 build recorded in `src-tauri/binaries/ffmpeg-licence.json` (the same builds formcut ships, from the formcut-binaries release), after checking every file against that record. `setup/desktop_build` and the desktop workflow run it before `tauri build`, and Tauri bundles the folder as the app's `ffmpeg` resource:
+`setup/bundle_ffmpeg.py --target [triple]` fills this folder with the LGPL FFmpeg 7.1 build recorded in `src-tauri/binaries/ffmpeg-licence.json` (the same builds formcut ships, from the formai-binaries release, with the older formcut-binaries address as a fallback; builds made before the rename use only the older name, which keeps working), after checking every file against that record. `FORMENCODER_FFMPEG_RELEASE` set to a release folder URL makes that folder the only address, with the same check. `setup/desktop_build` and the desktop workflow run it before `tauri build`, and Tauri bundles the folder as the app's `ffmpeg` resource:
 
 - macOS: `formencoder.app/Contents/Resources/ffmpeg`
 - Windows: `ffmpeg` beside `formencoder.exe`

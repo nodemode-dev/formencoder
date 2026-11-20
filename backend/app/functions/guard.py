@@ -71,6 +71,8 @@ def before(s: Session, oid: str, out: Path, planned: str) -> None:
         for m in _PATH_INSIDE.finditer(value):
             if not _within(value[m.start(1):], allowed):
                 raise FunctionError(f"{where} names {value[m.start(1):]}, outside the inputs, the install and out_dir")
+    for sent in s.sent:
+        patch(sent)
 
 
 def patch(settings: object) -> None:

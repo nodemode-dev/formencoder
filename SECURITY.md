@@ -30,6 +30,12 @@ something outside it could get in:
 - **Agents and the terminal**: getting an agent's consequential action (deleting,
   overwriting, publishing, typing into a terminal) to run without the person's
   approval, or getting past the first-change consent.
+- **The window key**: every change through the engine, answering a consent or
+  approval prompt, and the window's terminal need a key that only the FormEncoder
+  window holds; outside agents come in through MCP or the command line and are
+  asked. In the desktop app the shell hands the key to its own window. Run from
+  source (`./formencoder boot`), the engine gives the key once to the first page
+  that asks, which is weaker by nature: open the page before anything else does.
 - **Publish credentials** (FTP, S3, YouTube, Vimeo, Facebook and webhook secrets):
   anything that leaks them.
 - **Webhooks**: forging or replaying a signed export notification from formcut, or a

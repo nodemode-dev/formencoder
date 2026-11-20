@@ -80,7 +80,8 @@ async def mcp(request: Request) -> Response:
             out = _err(rid, -32602, f"No tool named {name}")
         else:
             mutating = not tools.read_only(name) and not (name == "execute" and consent.query_command(args.get("command")))
-            denied = await consent.gate(client, token, mutating, detail=name)
+            what = f"run the command {args.get('command')}"[:120] if name == "execute" and isinstance(args.get("command"), str) else ""
+            denied = await consent.gate_for(request, client, token, mutating, detail=name, what=what)
             out = _ok(rid, tools.fail(denied) if denied else await tools.call(name, args, client), modern)
     else:
         out = _err(rid, -32601, f"Method not found: {method}")

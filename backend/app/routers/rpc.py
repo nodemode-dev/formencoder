@@ -48,7 +48,7 @@ async def call(request: Request) -> Response:
     if source.strip().lower() == "ui":
         source = "cli"
     rid = message.get("id") if isinstance(message, dict) else None
-    denied = await consent.gate(source, request.headers.get("x-formencoder-agent-token"), mutating=consent.mutating_rpc(message))
+    denied = await consent.gate_for(request, source, request.headers.get("x-formencoder-agent-token"), mutating=consent.mutating_rpc(message), what=f"run {_label(message)}"[:120])
     if denied:
         return Response(json.dumps({"jsonrpc": "2.0", "id": rid, "error": {"code": -32003, "message": denied}}), media_type="application/json")
     why = await _reasons(message)

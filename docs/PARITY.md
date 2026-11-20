@@ -125,7 +125,7 @@ Media Encoder's own documentation backs every row; 33 rows also carry an indepen
 
 ## Beyond Media Encoder (not scored)
 
-- 85. AI agent control (MCP server, agent terminal): formencoder Full (The formencoder MCP server over Streamable HTTP and stdio (21 curated tools plus one tool per engine command, 123 in the full profile, with resources and recipe prompts), every command also runnable as ./formencoder ID --name value, terminals agents open, type into and read in front of the person, consequential actions held for the person's approval unless they turn on full faith, consent per client, the formencoder-harness skill, and an embedded terminal that starts Claude Code, Codex and Cursor already connected. Verified: MCP encode, preview and verify.)
+- 85. AI agent control (MCP server, agent terminal): formencoder Full (The formencoder MCP server over Streamable HTTP and stdio (29 curated tools plus one tool per engine command, 125 in the full profile, with resources and recipe prompts), every command also runnable as ./formencoder ID --name value, terminals agents open, type into and read in front of the person, consequential actions held for the person's approval unless they turn on full faith, consent per client, the formencoder-harness skill, and an embedded terminal that starts Claude Code, Codex and Cursor already connected. Verified: MCP encode, preview and verify.)
 
 ## Method
 

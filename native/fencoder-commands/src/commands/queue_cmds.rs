@@ -255,6 +255,12 @@ pub(super) fn set_output(e: &mut Engine, p: &Value) -> Res {
     if s(p, "path").is_some() && pairs.len() > 1 {
         return Err("a path names one file; pass folder to change several outputs".into());
     }
+    if let Some(path) = s(p, "path") {
+        paths::local_output(path, "the output path")?;
+    }
+    if let Some(f) = s(p, "folder") {
+        paths::local_output(f, "the output folder")?;
+    }
     let mut ids_out = Vec::new();
     for (i, j) in pairs {
         let o = &mut e.items_mut()[i]["outputs"][j];
