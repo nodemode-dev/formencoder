@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.11.0 · 2026-11-20
+
+Starting and stopping cleanly, on Windows too: the engine's side. One engine of the app per data folder, an engine that leaves when its app is gone, a log file, and a start failure that is said before the app closes. The app's side of the same work (below, under "Not in this release") is still to come.
+
+- One engine of the app serves a data folder. A second copy of FormEncoder on the same folder is told "formencoder is already running on [folder]" and does not start a second engine on the same queue and settings.
+- An engine that was left running after its app had gone is ended and replaced by the next start of the app. An engine whose app is still there is never ended.
+- The engine leaves within about two seconds when the app that started it is gone, however the app ended, and takes its lock and its address record with it.
+- The engine keeps a log: `logs/formencoder-engine.log` in the data folder (`~/Formencoder`, or the folder `FORMENCODER_DATA_DIR` names). A refused start and an error that stops the engine are written there. An engine with no error stream, such as a build without a console, keeps its errors in `logs/formencoder-engine-errors.log`.
+- A double click on the engine's own program opens FormEncoder instead of serving on its own; where no app is found beside it, it says so and stops. `formencoder-engine --headless`, the engine a command line or an agent's bridge starts with no app, serves as before, beside the app's engine if there is one.
+- When the app cannot start its engine, the sentence is shown before the loading window closes; the window used to close first. The sentence says that a copy of FormEncoder may already be open and where the engine's log is.
+- Changed: an engine that is asked to stop with a terminate signal gives up its lock and its address record and leaves with exit code 0.
+- A terminal's reader no longer writes an error line when the engine is already on its way out.
+- Not in this release: on Windows, tying the engine to the app through the system so that an app ended in Task Manager takes its engine with it at once; the engine's last lines and exit code in the failure message; a limit on the wait for the engine's address. Until then the engine's own watch is what ends it.
+- Not run for this release: Windows, macOS, the desktop app (the change to it was not compiled) and a packaged engine. The checks ran on Linux from source, with stand-ins for the app.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.11.0 by hand, without a rebuild.
+
 ## v0.10.0 · 2026-11-19
 
 The family's terminal panel, and four agent programs. The Terminal panel is now the one the other Form apps have, Google's Antigravity (`agy`) is offered beside Claude Code, Codex and Cursor, and FormEncoder finds these programs however it was started.
