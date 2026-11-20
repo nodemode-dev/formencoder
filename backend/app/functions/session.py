@@ -29,8 +29,11 @@ class FunctionError(Exception):
 class Session:
     def __init__(self, engine: Any) -> None:
         self.engine = engine
+        self.sent: list = []
 
     def run(self, command: str, **params: Any) -> Any:
+        if params.get("settings"):
+            self.sent.append(params["settings"])
         try:
             return json.loads(self.engine.execute(command, json.dumps(params), "function"))
         except ValueError as exc:

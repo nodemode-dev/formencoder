@@ -350,3 +350,13 @@ Refers to `backend/formencoder_engine.py` (the first lines) · kind: fix · logg
 - Checked on Linux: started with `>&- 2>&-` on port 4743 the engine gave no answer on its health route before this change and answered `{"status":"ok",...}` after it; started normally it still printed `Uvicorn running on http://127.0.0.1:4741`.
 - Not run: Windows, a frozen engine.
 
+## A function call refuses a setting it was sent even when the engine has already corrected it (unreleased, after 0.10.0)
+
+Refers to `backend/app/functions/session.py` (`Session.run`, `Session.sent`), `backend/app/functions/guard.py` (`before`) · kind: fix · logged: unreleased · 2026-11-19
+
+- Why: three cases of `test_the_engine_side_guard_refuses_metacharacters_and_inner_paths` failed in the pull request's test job. They queue an output with a pixel aspect value that is not a ratio and expect `guard.before` to refuse it. Since 0.8.2 (584fe9b, 11 November) `settings::normalize` replaces such a value with `1:1`, so the queued output never held it, and `guard.before`, which read only the engine's merged settings, had nothing to refuse: the call would have gone on with a value the caller did not send. The test was written the day before that change (c91e8e8, 10 November) and has failed since it.
+- `Session.run` keeps every `settings` patch it carries to the engine in `Session.sent`. After its checks of the merged settings, `guard.before` runs `guard.patch` on each of them, so a pixel aspect value with anything but a ratio, and any other string the patch rule refuses, is refused whichever engine command carried it, whether the engine kept it or corrected it.
+- The new check comes last, so a path the engine did keep is still refused with its own "outside" sentence. `encode` already ran `guard.patch` before queueing, so its answers are the same.
+- Seen with a headless session before any test was run again: queued with `1:1,movie=...`, `1:1;x` and `1:1 /...` the engine held `1:1` each time and `guard.before` refused with `params.settings.video.pixelAspect ... holds a filtergraph, option or path character`; `4:3` and `source` were held as sent and allowed. Then `tests/test_functions.py`: 42 passed (39 passed, 3 failed before).
+- Not changed: the engine (no Rust change, not rebuilt) and the commands the window and agents use, where such a value is still corrected to `1:1` and not refused.
+
