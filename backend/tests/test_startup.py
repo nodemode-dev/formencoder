@@ -122,6 +122,23 @@ def test_a_lock_that_names_a_process_which_is_not_the_engine_is_replaced_and_the
         stop(other, mine)
 
 
+def test_a_holder_that_ended_but_was_not_collected_counts_as_gone_where_there_is_no_proc(tmp_path, monkeypatch):
+    from app.core import startup
+
+    engine, shell, mine = stand_in(), stand_in(), stand_in()
+    try:
+        (tmp_path / startup.LOCK_NAME).write_text(json.dumps(record(startup, engine, shell)))
+        stop(shell)
+        monkeypatch.setattr(startup, "PROC", str(tmp_path / "no-proc"))
+        assert startup.finished(engine.pid) is False
+        path, replaced = startup.claim(tmp_path, mine.pid)
+        assert replaced == engine.pid
+        assert startup.finished(engine.pid) is True
+        assert json.loads(path.read_text())["pid"] == os.getpid()
+    finally:
+        stop(engine, shell, mine)
+
+
 def test_the_two_ways_of_reading_a_start_time_agree(monkeypatch):
     from app.core import startup
 

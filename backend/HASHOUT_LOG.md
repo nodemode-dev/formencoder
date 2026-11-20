@@ -396,3 +396,11 @@ Refers to `backend/app/routers/terminal.py` (`pump`) · kind: fix · logged: unr
 - In `pump`, a hand-over of output that raises `RuntimeError` ends the read loop, and the hand-over of the end notice ignores the same error. The wait for the child stays where it was, so the child is still reaped.
 - Seen: the whole backend suite with this change, 279 passed, and its output held no `Event loop is closed` line. Whether the line shows on this machine without the change was not looked at.
 
+
+## An engine that has ended but was not yet collected counts as gone where there is no /proc (unreleased, after 0.11.0)
+
+Refers to `backend/app/core/startup.py` (`finished`, `gone_by`), `backend/tests/test_startup.py` · kind: fix · logged: unreleased · 2026-11-20
+
+- Why: FormCut's macOS job failed three start-up tests with "could not stop an engine that was left running". `end` had ended the holder, but `gone_by` kept seeing it: `_alive_posix` asks `kill(pid, 0)`, which still answers for a process that has ended and that its parent has not collected, and it tells such a process apart only by reading `/proc`, which macOS does not have. This file is the same one, so the same wait would run out here.
+- `finished(pid)` asks `ps -o stat= -p <pid>` where there is no `/proc` (never on Windows, never on Linux) and answers true for a state that starts with `Z`. `gone_by` stops waiting when the process is not alive or is finished. `alive` is unchanged, so the two second watch on the app starts no program.
+- Seen on Linux with `PROC` pointed at a folder that does not exist: with `finished` answering false, `claim` on a holder whose shell is gone is refused with that sentence; with the change it replaces the holder. One new test, `test_startup.py` 16 passed. Not run on macOS.
