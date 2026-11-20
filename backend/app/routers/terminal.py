@@ -4,7 +4,7 @@ import contextlib
 import json
 import os
 import re
-import shutil
+import shlex
 import signal
 import struct
 import subprocess
@@ -15,44 +15,30 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisco
 
 from ..agent import consent, workspace
 from ..core import config, window_key
+from ..services import agent_lookup
+from ..services import agent_programs as finder
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
-AGENTS = {"claude": "claude", "codex": "codex", "cursor": "cursor-agent"}
-PROGRAMS = {
-    "claude": {"title": "Claude Code", "install": "irm https://claude.ai/install.ps1 | iex" if os.name == "nt" else "curl -fsSL https://claude.ai/install.sh | bash"},
-    "codex": {"title": "Codex", "install": "npm install -g @openai/codex"},
-    "cursor": {"title": "Cursor", "install": "curl https://cursor.com/install -fsS | bash"},
-}
+AGENTS = {kind: spec["bin"] for kind, spec in finder.PROGRAMS.items()}
+PROGRAMS = {kind: {"title": spec["title"], "install": finder.install(kind)} for kind, spec in finder.PROGRAMS.items()}
+TABS = ("claude", "codex", "cursor")
 RESUME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{7,79}")
 PROMPT_MAX = 20000
-VERSION_KEEP = 60.0
-_VERSIONS: dict[str, tuple[float, str | None]] = {}
-
-
-def _version(path: str) -> str | None:
-    now = time.monotonic()
-    kept = _VERSIONS.get(path)
-    if kept and now - kept[0] < VERSION_KEEP:
-        return kept[1]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("FORMENCODER_")}
-    try:
-        out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=5, stdin=subprocess.DEVNULL, env=env)
-        lines = out.stdout.strip().splitlines() if out.returncode == 0 else []
-    except (OSError, subprocess.SubprocessError):
-        lines = []
-    found = lines[0].strip()[:80] if lines else None
-    _VERSIONS[path] = (now, found)
-    return found
 
 
 def _program(kind: str) -> dict:
-    path = shutil.which(AGENTS[kind])
-    return {"installed": path is not None, "path": path, "version": _version(path) if path else None, "signedIn": None,
-            "install": PROGRAMS[kind]["install"], "title": PROGRAMS[kind]["title"], "program": AGENTS[kind]}
+    return finder.status(kind)
 
 
-def _environment(base_url: str, token: str | None) -> dict:
+def _typed(kind: str) -> str:
+    path = finder.program(kind)
+    if not path:
+        return AGENTS[kind]
+    return shlex.quote(path) if POSIX else (f'"{path}"' if " " in path else path)
+
+
+def _environment(base_url: str, token: str | None, program: str | None = None) -> dict:
     ws = workspace.ensure()
     env = dict(os.environ)
     env["FORMENCODER_URL"] = base_url
@@ -68,7 +54,7 @@ def _environment(base_url: str, token: str | None) -> dict:
     env.setdefault("TERM", "xterm-256color")
     env["COLORTERM"] = "truecolor"
     env.pop("FORMENCODER_DESKTOP", None)
-    return env
+    return agent_lookup.child_env(program, base=env, front=[str(ws / "bin")]) if program else env
 
 
 def _shell_path() -> str:
@@ -181,7 +167,7 @@ def status() -> dict:
         "pty": POSIX,
         "shell": _shell()[0],
         "cwd": str(ws),
-        "agents": {name: shutil.which(binary) is not None for name, binary in AGENTS.items()},
+        "agents": {name: finder.program(name) is not None for name in AGENTS},
         "launch": AGENTS,
     }
 
@@ -197,10 +183,10 @@ KEEP = 256_000
 
 class Term:
     def __init__(self, tid: str, title: str, cwd: str, cols: int, rows: int, base: str, owned: bool, trusted: bool = False,
-                 kind: str = "shell", window: bool = False, argv: list[str] | None = None) -> None:
+                 kind: str = "shell", window: bool = False, argv: list[str] | None = None, program: str | None = None) -> None:
         self.id, self.title, self.cwd, self.base, self.owned = tid, title, cwd, base, owned
         self.trusted = trusted
-        self.kind, self.window, self.argv = kind, window, argv
+        self.kind, self.window, self.argv, self.program = kind, window, argv, program
         self.token: str | None = None
         self.opener = "ui"
         self.created = time.time()
@@ -216,7 +202,7 @@ class Term:
         self.exited = False
         consent.revoke(self.token)
         self.token = consent.issue() if self.trusted else None
-        self.session = Session(cols, rows, _environment(self.base, self.token), self.cwd, self.argv)
+        self.session = Session(cols, rows, _environment(self.base, self.token, self.program), self.cwd, self.argv)
         session = self.session
 
         def pump() -> None:
@@ -313,11 +299,11 @@ class Hub:
         return term
 
     def open(self, title: str | None, cwd: str | None, cols: int, rows: int, base: str, owned: bool = False, run: str | None = None, trusted: bool = False,
-             kind: str = "shell", window: bool = False, argv: list[str] | None = None) -> Term:
+             kind: str = "shell", window: bool = False, argv: list[str] | None = None, program: str | None = None) -> Term:
         self._n += 1
         tid = f"t{self._n}"
         place = cwd or str(workspace.ensure())
-        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted, kind, window, argv)
+        term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted, kind, window, argv, program)
         self.terms[tid] = term
         if run:
             term.write(run + "\r")
@@ -367,8 +353,8 @@ async def open_tab(request: Request) -> dict:
         body = {}
     kind = body.get("kind") or "shell"
     prompt, resume = body.get("prompt") or None, body.get("resume") or None
-    if kind != "shell" and kind not in PROGRAMS:
-        raise HTTPException(422, {"code": "unknown_kind", "message": f"No tab kind called {kind}. Kinds: shell, {', '.join(PROGRAMS)}."})
+    if kind != "shell" and kind not in TABS:
+        raise HTTPException(422, {"code": "unknown_kind", "message": f"No tab kind called {kind}. Kinds: shell, {', '.join(TABS)}."})
     if prompt is not None and (kind == "shell" or not isinstance(prompt, str) or len(prompt) > PROMPT_MAX):
         raise HTTPException(422, {"code": "bad_prompt", "message": f"A prompt is text of at most {PROMPT_MAX} characters for an agent tab."})
     if resume is not None and (kind != "claude" or not isinstance(resume, str) or not RESUME.fullmatch(resume)):
@@ -377,16 +363,17 @@ async def open_tab(request: Request) -> dict:
         cols, rows = int(body.get("cols") or 100), int(body.get("rows") or 30)
     except (TypeError, ValueError):
         cols, rows = 100, 30
-    argv = None
-    if kind in PROGRAMS:
-        path = shutil.which(AGENTS[kind])
-        if path is None:
-            raise HTTPException(404, {"code": "not_installed", "message": f"{PROGRAMS[kind]['title']} is not installed on this computer.", "install": PROGRAMS[kind]["install"]})
-        argv = [path, *(["--resume", resume] if resume else []), *((["--", prompt] if prompt.startswith("-") else [prompt]) if prompt else [])]
+    argv = path = None
+    if kind in TABS:
+        found = finder.usable(kind)
+        if found.state != "runs":
+            raise HTTPException(404, {"code": "not_installed", "message": finder.said(found), "install": PROGRAMS[kind]["install"]})
+        path = found.path
+        argv = agent_lookup.start_argv([path, *(["--resume", resume] if resume else []), *((["--", prompt] if prompt.startswith("-") else [prompt]) if prompt else [])])
     title = body.get("title") if isinstance(body.get("title"), str) else None
     cwd = body.get("cwd") if isinstance(body.get("cwd"), str) else None
     try:
-        term = hub.open(title or (PROGRAMS[kind]["title"] if argv else None), cwd, cols, rows, _base(request.headers.get("host")), trusted=argv is not None, kind=kind, window=True, argv=argv)
+        term = hub.open(title or (PROGRAMS[kind]["title"] if argv else None), cwd, cols, rows, _base(request.headers.get("host")), trusted=argv is not None, kind=kind, window=True, argv=argv, program=path)
     except OSError as exc:
         raise HTTPException(500, {"code": "failed", "message": f"The program could not start: {exc}"}) from None
     return term.row()
@@ -396,7 +383,7 @@ async def open_tab(request: Request) -> dict:
 async def open_session(request: Request) -> dict:
     body = await request.json() if (await request.body()) else {}
     launch = body.get("launch")
-    run = AGENTS.get(launch) if launch in AGENTS else None
+    run = _typed(launch) if launch in AGENTS else None
     term = hub.open(body.get("title"), body.get("cwd"), int(body.get("cols") or 100), int(body.get("rows") or 30), _base(request.headers.get("host")), run=run, trusted=True)
     return term.row()
 
@@ -509,7 +496,7 @@ async def terminal(socket: WebSocket) -> None:
     sender = asyncio.create_task(send())
     launch = socket.query_params.get("launch")
     if launch in AGENTS:
-        term.write(AGENTS[launch] + "\r")
+        term.write(_typed(launch) + "\r")
     try:
         while True:
             message = await socket.receive_text()
@@ -534,7 +521,7 @@ async def terminal(socket: WebSocket) -> None:
                 if isinstance(control.get("resize"), list) and len(control["resize"]) == 2 and term.session:
                     term.session.resize(int(control["resize"][0]), int(control["resize"][1]))
                 if control.get("launch") in AGENTS:
-                    term.write(AGENTS[control["launch"]] + "\r")
+                    term.write(_typed(control["launch"]) + "\r")
                 continue
             term.write(message)
     except WebSocketDisconnect:

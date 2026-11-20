@@ -4,11 +4,11 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import time
 from pathlib import Path
 
 from ..core import config
+from ..services import agent_lookup, agent_programs
 from . import workspace
 
 SKILL = "formencoder-harness"
@@ -50,19 +50,21 @@ def install_claude(home: Path, dry: bool, said: list) -> None:
     cmd = launch()
     args = workspace.client_args("claude")
     line = " ".join([cmd, *args])
-    claude = shutil.which("claude")
+    found = agent_programs.usable("claude")
+    claude = found.path if found.state == "runs" else None
     if claude:
-        have = subprocess.run([claude, "mcp", "get", NAME], capture_output=True, text=True)
+        env = agent_programs.child_env(claude, base=dict(os.environ))
+        have = agent_lookup.run([claude, "mcp", "get", NAME], env, 60)
         if have.returncode == 0 and cmd in have.stdout and "--profile" in have.stdout:
             said.append(f"  MCP server {NAME} already set (user scope)")
         else:
             said.append(f"  claude mcp add --scope user {NAME} -- {line}")
             if not dry:
                 if have.returncode == 0:
-                    subprocess.run([claude, "mcp", "remove", NAME, "--scope", "user"], capture_output=True)
-                subprocess.run([claude, "mcp", "add", "--scope", "user", NAME, "--", cmd, *args], check=True, capture_output=True)
+                    agent_lookup.run([claude, "mcp", "remove", NAME, "--scope", "user"], env, 60)
+                agent_lookup.run([claude, "mcp", "add", "--scope", "user", NAME, "--", cmd, *args], env, 60).check_returncode()
     else:
-        said.append(f"  the claude command is not installed here; once it is, run: claude mcp add --scope user {NAME} -- {line}")
+        said.append(f"  {agent_programs.said(found)} Once it starts, run: claude mcp add --scope user {NAME} -- {line}")
     _copy_skill(home / ".claude" / "skills" / SKILL, dry, said)
 
 
@@ -119,4 +121,4 @@ def install(which: list[str] | None = None, dry: bool = False) -> list[str]:
 
 
 def clients() -> dict:
-    return {name: shutil.which(binary) is not None for name, binary in (("claude", "claude"), ("codex", "codex"), ("cursor", "cursor-agent"))}
+    return {name: agent_programs.program(name) is not None for name in agent_programs.PROGRAMS}

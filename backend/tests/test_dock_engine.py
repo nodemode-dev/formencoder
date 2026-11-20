@@ -88,17 +88,51 @@ def test_a_question_that_has_its_own_id_keeps_it():
 def test_the_agent_status_names_each_program_its_version_and_its_install_line(client, bare, stand_ins):
     assert bare.get("/api/terminal/agents").status_code == 403
     agents = client.get("/api/terminal/agents").json()["agents"]
-    assert list(agents) == ["claude", "codex", "cursor"]
-    assert agents["codex"] == agents["codex"] | {"installed": True, "path": str(stand_ins / "codex"), "version": "codex 9.9.9", "signedIn": None, "title": "Codex", "program": "codex"}
-    assert agents["cursor"]["version"] == "cursor-agent 9.9.9" and agents["claude"]["version"] == "claude 9.9.9"
+    assert list(agents) == ["claude", "codex", "cursor", "antigravity"]
+    assert agents["codex"] == agents["codex"] | {"installed": True, "path": str(stand_ins / "codex"), "version": "9.9.9", "finding": "runs", "how": "path", "signedIn": None, "title": "Codex", "program": "codex"}
+    assert agents["cursor"]["version"] == "9.9.9" and agents["claude"]["version"] == "9.9.9"
+    assert agents["codex"]["said"] == f"Codex is at {stand_ins / 'codex'} (the engine's PATH)."
     assert all(a["install"] for a in agents.values())
 
 
 def test_the_agent_status_says_what_is_missing(client, no_programs):
     agents = client.get("/api/terminal/agents").json()["agents"]
-    for kind in ("claude", "codex", "cursor"):
+    for kind in ("claude", "codex", "cursor", "antigravity"):
         assert agents[kind]["installed"] is False and agents[kind]["path"] is None and agents[kind]["version"] is None and agents[kind]["install"]
-    assert client.get("/api/terminal/status").json()["agents"] == {"claude": False, "codex": False, "cursor": False}
+        assert agents[kind]["finding"] == "missing" and agents[kind]["looked"] and "was not found. Looked in:" in agents[kind]["said"]
+    assert client.get("/api/terminal/status").json()["agents"] == {"claude": False, "codex": False, "cursor": False, "antigravity": False}
+
+
+@POSIX_ONLY
+def test_a_program_that_does_not_start_is_found_and_reported_as_broken(client, tmp_path, monkeypatch):
+    folder = tmp_path / "bin"
+    folder.mkdir()
+    script = folder / "codex"
+    script.write_text("#!/bin/sh\necho 'node: not found' >&2\nexit 127\n")
+    script.chmod(0o755)
+    monkeypatch.setenv("PATH", str(folder))
+    codex = client.get("/api/terminal/agents").json()["agents"]["codex"]
+    assert codex == codex | {"installed": False, "path": str(script), "finding": "broken", "error": "node: not found", "version": None}
+    refused = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "codex"})
+    assert refused.status_code == 404 and "but does not start: node: not found" in refused.json()["detail"]["message"]
+
+
+@POSIX_ONLY
+def test_a_program_outside_the_engine_path_is_found_in_a_known_folder_and_through_the_shell(client, tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    known, named = home / ".local" / "bin", tmp_path / "elsewhere"
+    for folder, name in ((known, "claude"), (named, "codex")):
+        folder.mkdir(parents=True)
+        script = folder / name
+        script.write_text('#!/bin/sh\nif [ "$1" = "--version" ]; then echo "7.7.7"; exit 0; fi\nread line\n')
+        script.chmod(0o755)
+    (home / ".zshrc-path").write_text(str(named))
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    agents = client.get("/api/terminal/agents").json()["agents"]
+    assert agents["claude"] == agents["claude"] | {"installed": True, "path": str(known / "claude"), "how": "folder", "version": "7.7.7"}
+    assert agents["codex"] == agents["codex"] | {"installed": True, "path": str(named / "codex"), "how": "shell", "version": "7.7.7"}
+    assert agents["cursor"]["finding"] == "missing"
 
 
 @POSIX_ONLY
@@ -126,12 +160,15 @@ def test_an_agent_tab_runs_the_program_with_its_own_token_which_dies_with_the_ta
 @POSIX_ONLY
 def test_a_prompt_and_a_resume_id_reach_the_program_as_arguments(client, stand_ins):
     from app.routers.terminal import hub
+    from app.services import agent_lookup
 
     row = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "claude", "prompt": "make a small file", "resume": "0123abcd-4567"}).json()
-    assert hub.terms[row["id"]].argv == [str(stand_ins / "claude"), "--resume", "0123abcd-4567", "make a small file"]
+    assert hub.terms[row["id"]].argv == agent_lookup.start_argv([str(stand_ins / "claude"), "--resume", "0123abcd-4567", "make a small file"])
+    assert hub.terms[row["id"]].argv[:3] == [os.environ["SHELL"], "-l", "-c"]
     assert "args=--resume 0123abcd-4567 make a small file" in printed(client, row["id"], "args=")
     dashed = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "codex", "prompt": "-v"}).json()
-    assert hub.terms[dashed["id"]].argv == [str(stand_ins / "codex"), "--", "-v"]
+    assert hub.terms[dashed["id"]].argv == agent_lookup.start_argv([str(stand_ins / "codex"), "--", "-v"])
+    assert "args=-- -v" in printed(client, dashed["id"], "args=")
     for tid in (row["id"], dashed["id"]):
         client.delete(f"/api/terminal/sessions/{tid}", headers=LOCAL)
 
