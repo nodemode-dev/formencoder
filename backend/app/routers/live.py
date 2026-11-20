@@ -35,6 +35,10 @@ async def live(socket: WebSocket) -> None:
 
     sender = asyncio.create_task(pump())
     put({"type": "hello", "version": __version__, "revision": host.revision, "running": host.running, "core": host.available, "error": host.error, "client": client.id})
+    if window:
+        for waiting in host.bus.waiting():
+            if waiting.get("type") == "consent":
+                put(waiting)
     tasks: set[asyncio.Task] = set()
     try:
         while True:

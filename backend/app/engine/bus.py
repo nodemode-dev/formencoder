@@ -20,6 +20,10 @@ class Bus:
         self.clients: set[Client] = set()
         self._ids = itertools.count(1)
         self._replies: dict[int, asyncio.Future] = {}
+        self._asking: dict[int, dict] = {}
+
+    def waiting(self) -> list[dict]:
+        return list(self._asking.values())
 
     def bind(self, loop: asyncio.AbstractEventLoop) -> None:
         self.loop = loop
@@ -67,6 +71,8 @@ class Bus:
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self._replies[rid] = fut
         payload = {"id": str(rid), **message, "requestId": rid, "expiresIn": timeout, "expiresAt": time.time() + timeout}
+        if not first:
+            self._asking[rid] = payload
         for w in windows:
             try:
                 w.queue.put_nowait(payload)
@@ -82,6 +88,7 @@ class Bus:
             return None
         finally:
             self._replies.pop(rid, None)
+            self._asking.pop(rid, None)
             self._deliver({"type": "withdrawn", "requestId": rid, "id": str(rid), "of": message.get("type"), "reason": reason}, ("ui",))
 
     def answer(self, rid: int, value: dict) -> bool:

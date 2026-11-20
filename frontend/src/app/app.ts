@@ -11,7 +11,7 @@ import { LogPanel } from '../panels/log';
 import { MediaPanel } from '../panels/media';
 import { PresetsPanel } from '../panels/presets';
 import { QueuePanel } from '../panels/queue';
-import { TerminalPanel } from '../panels/terminal';
+import { TerminalPanel } from '../dock-adapter';
 import { WatchPanel } from '../panels/watch';
 import { Dialog, promptName } from '../ui/dialogs';
 import { demoMenuEntries, openDemo } from '../ui/demos';
@@ -44,7 +44,6 @@ class App {
   private status!: HTMLElement;
   private wsSelect!: HTMLSelectElement;
   private revealed = false;
-  private consent: Dialog | null = null;
   private approval: { id: number; dialog: Dialog } | null = null;
   private readonly answered = new Set<number>();
 
@@ -158,7 +157,7 @@ class App {
   }
 
   private registerPanels(): void {
-    this.terminal = new TerminalPanel(ctx);
+    this.terminal = new TerminalPanel(ctx, { show: () => this.dock.show('terminal'), close: () => this.dock.close('terminal'), settings: () => this.dock.show('agents') });
     this.queue = new QueuePanel(ctx);
     this.dock.register('queue', 'Queue', () => this.queue);
     this.dock.register('encoding', 'Encoding', () => new EncodingPanel(ctx));
@@ -247,7 +246,6 @@ class App {
 
   private bindEngine(): void {
     ctx.client.events.on('toast', (ev) => toast(String(ev.text ?? ev.message ?? ''), ev.kind === 'error' ? 'error' : ev.kind === 'ok' ? 'ok' : 'info'));
-    ctx.client.events.on('consent', (ev) => this.askConsent(ev));
     ctx.client.events.on('approvals', (ev) => this.approvals((ev.pending as Approval[] | undefined) ?? []));
     ctx.client.events.on('open', () => void ctx.client.call<{ pending: Approval[] }>('agents.approvals').then((s) => this.approvals(s.pending)).catch(() => undefined));
     ctx.client.events.on('notify', (ev) => this.notify(ev));
@@ -370,7 +368,7 @@ class App {
       decided.dialog.close();
       decided.dialog.scrim.remove();
     }
-    if (this.approval || this.consent?.isOpen) return;
+    if (this.approval || this.terminal.dock.consent?.isOpen()) return;
     const next = pending.find((r) => !this.answered.has(r.id));
     if (!next) return;
     const d = new Dialog('Allow this agent action?', 500);
@@ -392,29 +390,6 @@ class App {
     d.button('Decline', 'ghost', () => answer(false));
     d.button('Allow', 'primary', () => answer(true));
     this.approval = { id: next.id, dialog: d };
-    d.open();
-  }
-
-  private askConsent(ev: ServerEvent): void {
-    const rid = ev.requestId;
-    const who = String(ev.client ?? 'An agent').replace(/^mcp:/, '');
-    this.consent?.close();
-    const d = new Dialog('Allow an agent to change the queue?', 460);
-    d.scrim.dataset.automationId = 'consent';
-    d.body.appendChild(el(`<p class="fx-note"><strong>${escapeHtml(who)}</strong> wants to use formencoder's tools (${escapeHtml(String(ev.detail ?? 'edit'))}). Queue changes are undoable. Agents you start from the Terminal panel never ask.</p>`));
-    let answered = false;
-    const answer = (allow: boolean, remember: string): void => {
-      if (answered) return;
-      answered = true;
-      ctx.client.reply(rid, { allow, remember });
-      d.close();
-      d.scrim.remove();
-    };
-    d.onClose = () => answer(false, 'none');
-    d.button('Don’t Allow', 'ghost', () => answer(false, 'none'));
-    d.button('Allow Always', '', () => answer(true, 'always'));
-    d.button('Allow', 'primary', () => answer(true, 'session'));
-    this.consent = d;
     d.open();
   }
 
