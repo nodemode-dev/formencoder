@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.12.0 · 2026-11-20
+
+The app's side of starting and stopping cleanly, and two fixes to agent tabs and to start-up on macOS.
+
+- On Windows the engine is tied to the app through the system: an app ended in Task Manager, or any other way, takes its engine with it at once.
+- When the app cannot start its engine, the message now says what went wrong, shows the engine's last lines and its exit code, and gives the full path of the engine's log. A copy that is already open is still named as the likely cause when that is the reason.
+- The app waits at most 90 seconds for its engine to be ready, then says so instead of waiting without end.
+- On Windows the engine is built with no console window beside the app. `FORMENCODER_ENGINE_WINDOWED=0` at build time keeps the console.
+- Fixed: two Antigravity tabs open at once each keep their own connection to the app, and closing one no longer cuts off the other. Each tab works in a folder of its own.
+- Fixed, on macOS: an engine left over from an earlier start that had ended but was not yet cleaned up by the system kept the next start waiting and then refused it. It now counts as gone.
+- The Agents panel's guide now says that Codex, Cursor and Antigravity each get a button of their own when they are on this computer.
+- Not run for this release: Windows, macOS, the desktop app (its Windows code was type-checked here, not built or run) and a packaged engine. The checks ran on Linux from source, with stand-ins for the agent programs.
+- The version string inside the three browser demo bundles was not changed in this release; they still say 0.11.0.
+
 ## v0.11.0 · 2026-11-20
 
 Starting and stopping cleanly, on Windows too: the engine's side. One engine of the app per data folder, an engine that leaves when its app is gone, a log file, and a start failure that is said before the app closes. The app's side of the same work (below, under "Not in this release") is still to come.

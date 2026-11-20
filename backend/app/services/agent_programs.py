@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 
+from ..core import config
 from . import agent_lookup
 
 PROGRAMS = {
@@ -20,6 +21,8 @@ OVERRIDES = {
 }
 OTHERWISE = ""
 TAB_ENTRY = "formencoder_tab"
+TAB_FOLDERS = "agent-tabs"
+TAB_GUIDE = "AGENTS.md"
 TOKEN_VAR = "FORMENCODER_AGENT_TOKEN"
 
 
@@ -54,12 +57,19 @@ def program(kind: str) -> str | None:
     return found.path if found.state == "runs" else None
 
 
+def tab_folder(kind: str, tab: str) -> Path:
+    return config.data_dir() / TAB_FOLDERS / kind / f"{os.getpid()}-{tab}"
+
+
 def _mcp_file(folder: str | os.PathLike) -> Path:
     return Path(folder) / ".agents" / "mcp_config.json"
 
 
 def _servers(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8") or "{}") if path.exists() else {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8") or "{}") if path.exists() else {}
+    except ValueError:
+        data = None
     if not isinstance(data, dict) or not isinstance(data.get("mcpServers", {}), dict):
         raise OSError(f"{path} is not an MCP servers file formencoder can read, so it was left alone")
     return data
@@ -73,11 +83,31 @@ def _replace(path: Path, data: dict) -> None:
     os.replace(part, path)
 
 
-def write_tab_entry(folder: str | os.PathLike, entry: dict) -> None:
+def write_tab_entry(folder: str | os.PathLike, entry: dict, guide: str | os.PathLike | None = None) -> None:
     path = _mcp_file(folder)
     data = _servers(path)
     data.setdefault("mcpServers", {})[TAB_ENTRY] = entry
     _replace(path, data)
+    if guide and Path(guide).is_file():
+        (Path(folder) / TAB_GUIDE).write_text(Path(guide).read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def clear_tab_folder(folder: str | os.PathLike, guide: str | os.PathLike | None = None) -> None:
+    base = Path(folder)
+    if base.parent.parent.name != TAB_FOLDERS:
+        return
+    path = _mcp_file(base)
+    try:
+        if path.exists() and _servers(path) == {"mcpServers": {}}:
+            path.unlink()
+        if path.parent.is_dir():
+            path.parent.rmdir()
+        copy = base / TAB_GUIDE
+        if copy.is_file() and guide and Path(guide).is_file() and copy.read_text(encoding="utf-8") == Path(guide).read_text(encoding="utf-8"):
+            copy.unlink()
+        base.rmdir()
+    except (OSError, ValueError):
+        return
 
 
 def remove_tab_entry(folder: str | os.PathLike, token: str | None) -> None:
