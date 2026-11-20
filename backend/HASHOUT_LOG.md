@@ -341,3 +341,12 @@ Refers to `routers/terminal.py` `TABS`, `_tab_entry`, `Term._start`, `Term._ende
 - Tests, written after that: `test_dock_engine.py` (the Antigravity case of the tab test, the entry in the file, the install cases), `test_dock_module.py` (the manifest lists five tabs). `agents/manifest.json` was rewritten by `./formencoder agents sync`.
 - Not run: a real `agy` (whether it reads `.agents/mcp_config.json` in the workspace, wants the workspace trusted first, or passes `env` to the bridge), Windows, macOS.
 
+## The engine starts when it has no output streams (unreleased, after 0.9.0)
+
+Refers to `backend/formencoder_engine.py` (the first lines) · kind: fix · logged: unreleased · 2026-11-19
+
+- Why: an engine built for Windows without a console is started with `sys.stdout` and `sys.stderr` set to `None`, and the first `print` ends it. A tester saw this in another app of the family; this entry script printed its address the same way.
+- Before any other import, a stream that is `None` is replaced with one opened on the null device (`stdin` for reading, `stdout` and `stderr` for writing). Streams that exist are not touched.
+- Checked on Linux: started with `>&- 2>&-` on port 4743 the engine gave no answer on its health route before this change and answered `{"status":"ok",...}` after it; started normally it still printed `Uvicorn running on http://127.0.0.1:4741`.
+- Not run: Windows, a frozen engine.
+
