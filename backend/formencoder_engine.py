@@ -9,9 +9,9 @@ if sys.stderr is None:
     sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 import json
+import logging
+import signal
 import socket
-import threading
-import time
 from pathlib import Path
 
 
@@ -37,72 +37,89 @@ def selfcheck() -> int:
     return 0 if report["ok"] else 1
 
 
-def _alive(pid: int) -> bool:
-    if os.name == "nt":
-        import ctypes
+def _leave(data) -> None:
+    from app.core import discovery, runtime
 
-        handle = ctypes.windll.kernel32.OpenProcess(0x00100000, False, pid)
-        if not handle:
-            return False
-        try:
-            return ctypes.windll.kernel32.WaitForSingleObject(handle, 0) != 0
-        finally:
-            ctypes.windll.kernel32.CloseHandle(handle)
     try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+        runtime.release(data)
+        discovery.withdraw()
+    finally:
+        os._exit(0)
 
 
-def _watch_parent() -> None:
-    raw = os.environ.get("FORMENCODER_PARENT_PID", "").strip()
-    if not raw.isdigit():
+def watch_shell(data, shell: int) -> None:
+    if shell <= 1:
         return
-    pid = int(raw)
+    from app.core import startup
 
-    def loop() -> None:
-        while _alive(pid):
-            time.sleep(1.0)
-        try:
-            from app.core import discovery
+    def leave() -> None:
+        logging.getLogger("formencoder").info("the app that started this engine is gone (process %s), stopping", shell)
+        _leave(data)
 
-            discovery.withdraw()
-        finally:
-            os._exit(0)
-
-    threading.Thread(target=loop, name="formencoder-parent-watch", daemon=True).start()
+    startup.watch(shell, leave)
 
 
-def serve(headless: bool) -> None:
-    import uvicorn
-
-    _watch_parent()
+def serve(headless: bool) -> int:
     dist = _bundle() / "frontend_dist"
     if (dist / "index.html").is_file():
         os.environ.setdefault("FORMENCODER_DIST", str(dist))
     if not headless:
         os.environ["FORMENCODER_DESKTOP"] = "1"
     port = int(os.environ.get("FORMENCODER_PORT") or ("8270" if headless else "0"))
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(("127.0.0.1", port))
-    sock.listen()
-    port = sock.getsockname()[1]
-    os.environ["FORMENCODER_PORT"] = str(port)
-    from app import __version__
-    from app.core import discovery
-    from app.main import app
-    from app.core import window_key
+    from app.core import config, runtime, startup
 
-    if window_key.stdout_mode():
-        print(window_key.LINE + window_key.KEY, flush=True)
-    print(f"Uvicorn running on http://127.0.0.1:{port}", flush=True)
-    discovery.publish(f"http://127.0.0.1:{port}", __version__)
-    server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
-    server.run(sockets=[sock])
+    try:
+        data = config.data_dir()
+        logs = runtime.start_logging(data).parent
+    except OSError as err:
+        print(f"formencoder cannot use its data folder: {err}", file=sys.stderr)
+        return 5
+    startup.keep_errors(logs)
+    log = logging.getLogger("formencoder")
+    shell = startup.shell_pid()
+    if not headless:
+        if startup.alone():
+            beside = startup.app_beside(Path(sys.executable))
+            if beside is not None and startup.open_app(beside):
+                log.info("started without its app, so it opened %s and stopped", beside)
+                return 0
+            log.error("started without its app, and no app program was found near %s", sys.executable)
+            print("formencoder-engine is a part of FormEncoder and serves nothing on its own. Open FormEncoder instead.", file=sys.stderr)
+            return 4
+        try:
+            runtime.claim(data, shell)
+        except startup.Busy as err:
+            log.error("%s", err)
+            print(err, file=sys.stderr)
+            return 2
+    watch_shell(data, shell)
+    try:
+        import uvicorn
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("127.0.0.1", port))
+        sock.listen()
+        port = sock.getsockname()[1]
+        os.environ["FORMENCODER_PORT"] = str(port)
+        config.PORT = port
+        from app import __version__
+        from app.core import discovery
+        from app.main import app
+        from app.core import window_key
+
+        if window_key.stdout_mode():
+            print(window_key.LINE + window_key.KEY, flush=True)
+        print(f"Uvicorn running on http://127.0.0.1:{port}", flush=True)
+        discovery.publish(f"http://127.0.0.1:{port}", __version__)
+        signal.signal(signal.SIGTERM, lambda _signum, _frame: _leave(data))
+        server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
+        runtime.start_logging(data)
+        log.info("serving on http://127.0.0.1:%s", port)
+        server.run(sockets=[sock])
+    finally:
+        runtime.release(data)
+    return 0
 
 
 def main() -> int:
@@ -118,8 +135,11 @@ def main() -> int:
         return 0
     if "--selfcheck" in args:
         return selfcheck()
-    serve(headless="--headless" in args)
-    return 0
+    try:
+        return serve(headless="--headless" in args)
+    except Exception:
+        logging.getLogger("formencoder").exception("the engine stopped on an error")
+        raise
 
 
 if __name__ == "__main__":
