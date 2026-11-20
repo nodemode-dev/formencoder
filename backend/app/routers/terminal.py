@@ -210,7 +210,7 @@ class Term:
         self.token = consent.issue() if self.trusted else None
         if self.kind == "antigravity" and self.token:
             try:
-                finder.write_tab_entry(self.cwd, _tab_entry(self.base, self.token))
+                finder.write_tab_entry(self.cwd, _tab_entry(self.base, self.token), workspace.root() / finder.TAB_GUIDE)
             except OSError:
                 consent.revoke(self.token)
                 self.token = None
@@ -292,6 +292,7 @@ class Term:
     def _forget(self) -> None:
         if self.kind == "antigravity":
             finder.remove_tab_entry(self.cwd, self.token)
+            finder.clear_tab_folder(self.cwd, workspace.root() / finder.TAB_GUIDE)
 
     def row(self) -> dict:
         return {"id": self.id, "title": self.title, "cwd": self.cwd, "created": self.created, "exited": self.exited, "owned": self.owned, "offset": self.offset, "opener": self.opener,
@@ -325,7 +326,9 @@ class Hub:
              kind: str = "shell", window: bool = False, argv: list[str] | None = None, program: str | None = None) -> Term:
         self._n += 1
         tid = f"t{self._n}"
-        place = cwd or str(workspace.ensure())
+        own = kind == "antigravity"
+        home = workspace.ensure() if own or not cwd else None
+        place = str(finder.tab_folder(kind, tid)) if own else cwd or str(home)
         term = Term(tid, title or f"Terminal {self._n}", place, cols, rows, base, owned, trusted, kind, window, argv, program)
         self.terms[tid] = term
         if run:

@@ -158,26 +158,81 @@ def test_an_agent_tab_runs_the_program_with_its_own_token_which_dies_with_the_ta
 
 
 @POSIX_ONLY
-def test_an_antigravity_tab_has_its_entry_in_the_workspace_file_until_it_closes(client, stand_ins):
+def test_an_antigravity_tab_has_its_entry_in_a_folder_of_its_own_until_it_closes(client, stand_ins):
+    from pathlib import Path
+
     from app.agent import consent, workspace
+    from app.core import config
     from app.routers.terminal import hub
 
-    path = workspace.ensure() / ".agents" / "mcp_config.json"
+    shared = workspace.ensure() / ".agents" / "mcp_config.json"
     seed = json.dumps({"mcpServers": {"other": {"command": "/bin/true", "args": []}}, "theme": "kept"}, indent=2) + "\n"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(seed, encoding="utf-8")
+    shared.parent.mkdir(parents=True, exist_ok=True)
+    shared.write_text(seed, encoding="utf-8")
     row = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "antigravity", "cwd": "/tmp"}).json()
     term = hub.terms[row["id"]]
-    assert row["kind"] == "antigravity" and term.cwd == str(workspace.root())
+    folder = Path(term.cwd)
+    assert row["kind"] == "antigravity" and folder == config.data_dir() / "agent-tabs" / "antigravity" / f"{os.getpid()}-{row['id']}"
+    path = folder / ".agents" / "mcp_config.json"
     held = json.loads(path.read_text(encoding="utf-8"))
-    assert list(held["mcpServers"]) == ["other", "formencoder_tab"] and held["theme"] == "kept" and held["mcpServers"]["other"] == {"command": "/bin/true", "args": []}
+    assert list(held["mcpServers"]) == ["formencoder_tab"]
     entry = held["mcpServers"]["formencoder_tab"]
     assert entry["command"] == workspace.mcp_command()[0] and entry["args"] == ["mcp", "--profile", "core"]
     assert entry["env"]["FORMENCODER_AGENT_TOKEN"] == term.token and consent.inapp(term.token)
     assert path.stat().st_mode & 0o777 == 0o600
+    assert (folder / "AGENTS.md").read_text(encoding="utf-8") == (workspace.root() / "AGENTS.md").read_text(encoding="utf-8")
+    assert "token-present=yes" in printed(client, row["id"], "token-present")
     token = term.token
     client.delete(f"/api/terminal/sessions/{row['id']}", headers=LOCAL)
-    assert path.read_text(encoding="utf-8") == seed and not consent.inapp(token)
+    assert not folder.exists() and not consent.inapp(token)
+    assert shared.read_text(encoding="utf-8") == seed
+    shared.unlink()
+
+
+@POSIX_ONLY
+def test_two_antigravity_tabs_keep_an_entry_each_and_closing_one_leaves_the_others(client, stand_ins):
+    from pathlib import Path
+
+    from app.agent import consent
+    from app.routers.terminal import hub
+
+    first = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "antigravity"}).json()
+    second = client.post("/api/terminal/tabs", headers=LOCAL, json={"kind": "antigravity"}).json()
+    one, two = hub.terms[first["id"]], hub.terms[second["id"]]
+    files = [Path(term.cwd) / ".agents" / "mcp_config.json" for term in (one, two)]
+    assert one.cwd != two.cwd and one.token != two.token
+
+    def token_in(path):
+        return json.loads(path.read_text(encoding="utf-8"))["mcpServers"]["formencoder_tab"]["env"]["FORMENCODER_AGENT_TOKEN"]
+
+    assert [token_in(path) for path in files] == [one.token, two.token]
+    kept = one.token
+    client.delete(f"/api/terminal/sessions/{second['id']}", headers=LOCAL)
+    assert not Path(two.cwd).exists()
+    assert token_in(files[0]) == kept and consent.inapp(kept) and not changing_call(client, kept).get("isError")
+    client.delete(f"/api/terminal/sessions/{first['id']}", headers=LOCAL)
+    assert not Path(one.cwd).exists() and not consent.inapp(kept)
+
+
+def test_a_tab_folder_that_holds_something_else_is_kept_and_a_file_that_is_not_json_gives_a_sentence(tmp_path):
+    from app.services import agent_programs as finder
+
+    folder = tmp_path / "agent-tabs" / "antigravity" / "1-t1"
+    finder.write_tab_entry(folder, {"env": {finder.TOKEN_VAR: "abc"}})
+    (folder / "notes.txt").write_text("mine")
+    finder.remove_tab_entry(folder, "abc")
+    finder.clear_tab_folder(folder)
+    assert sorted(p.name for p in folder.iterdir()) == ["notes.txt"]
+    elsewhere = tmp_path / "somewhere" / "else" / "t1"
+    finder.write_tab_entry(elsewhere, {"env": {finder.TOKEN_VAR: "abc"}})
+    finder.remove_tab_entry(elsewhere, "abc")
+    finder.clear_tab_folder(elsewhere)
+    assert (elsewhere / ".agents" / "mcp_config.json").is_file()
+    (folder / ".agents").mkdir()
+    (folder / ".agents" / "mcp_config.json").write_text("{not json")
+    with pytest.raises(OSError, match="is not an MCP servers file formencoder can read, so it was left alone"):
+        finder.write_tab_entry(folder, {"env": {}})
+    assert (folder / ".agents" / "mcp_config.json").read_text() == "{not json"
 
 
 def test_agents_install_adds_formencoder_to_antigravity_and_leaves_a_foreign_entry_alone(tmp_path):
