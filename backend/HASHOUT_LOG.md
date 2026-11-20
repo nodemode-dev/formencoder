@@ -378,3 +378,13 @@ Refers to `backend/app/core/startup.py` (new), `backend/app/core/runtime.py` (ne
 - Not run: Windows, macOS, a really frozen engine. Every Windows-only line in `startup.py` (`_kernel`, `_open_windows`, `_alive_windows`, `_created_windows`, `_end_windows`, the handle branch of `watch`, `SetDllDirectoryW` and the detached flags in `open_app`) has never run.
 - Held: the shell side (the job object, the failure text with the engine's last lines and exit code, a limit on the wait for the address). Two processes, the app's engine and a headless one, can write the one log file; on Windows its rotation at 1 MB would then fail for as long as both run.
 
+## The start failure is said before the loading window closes (unreleased, after 0.10.0)
+
+Refers to `src-tauri/src/main.rs` (the `None` arm of the engine's start in `setup`) · kind: fix · logged: unreleased · 2026-11-19
+
+- Why: when the engine gave no address and key, the loading window was closed first and the sentence shown after it. The loading window is then the app's last window, and a tester of another app in the family saw the app go without a word. With the lock, a second copy of the app is now a start that fails on purpose, so the sentence matters more.
+- The sentence is shown first and the loading window is closed only after it returns. The sentence now says that a copy of FormEncoder may already be open, since only one copy can use the data folder, and where the engine's log is (`logs/formencoder-engine.log` in the data folder).
+- The engine's variable: nothing to change. The shell already sets `FORMENCODER_PARENT_PID` to its own process id, and that is the variable the engine's lock and watch read.
+- Not compiled: the desktop shell cannot be built here (no WebKit libraries). The change is one string and two statements in another order, read against FormTools's `main.rs` and FormTxt's same change. Not run on any system.
+- Held: `win_job.rs` (the job object, which needs the engine's start moved off tauri-plugin-shell or the child's process opened by id), `engine_start.rs` (the failure text with the engine's last lines, its exit code and the log's full path), a limit on the wait for the address, and the window that fails to build (`Err(_) => close_splash`), which still closes the loading window without a sentence.
+
