@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.10.0 · 2026-11-19
+
+The family's terminal panel, and four agent programs. The Terminal panel is now the one the other Form apps have, Google's Antigravity (`agy`) is offered beside Claude Code, Codex and Cursor, and FormEncoder finds these programs however it was started.
+
+- The Terminal panel is the family's shared panel. It keeps its place in FormEncoder (any group, floating, per workspace, opened from the Window menu). Inside it are tabs: plain shells, Claude Code, Codex, Cursor and Antigravity each in a tab of its own, and read-only tabs for terminals an outside agent opened. A line at the bottom opens Claude Code with what you type.
+- Changed on purpose: a plain shell tab carries no agent access. A program you type into a shell asks like any outside agent; the agent tabs you start from the panel's buttons do not ask.
+- The permission question is the panel's dialog in the middle of the window: Deny, Allow once, or Always allow that agent. Escape refuses. A question that is still waiting is shown again after a reload, and it closes by itself within about a second when the agent that asked goes away.
+- Antigravity is the fourth agent program. It has its own button and tab in the Terminal panel, a Start Antigravity entry in the Agent button's menu and a Set up Antigravity button in the Agents panel. `./formencoder agents install antigravity` adds FormEncoder to `~/.gemini/config/mcp_config.json`, keeps everything else in that file, and leaves alone an entry of the same name that FormEncoder did not write. Antigravity gets the MCP server only; no skill is copied for it.
+- FormEncoder finds the agent programs however it was started. An app opened from the Dock, the Start menu or a desktop launcher used to see only a short list of folders and could report a program as not installed. It now also looks in the usual install folders and reads your shell's own list once. The status says where each program was found, and tells apart a program that is missing from one that was found but does not start, with the program's own error line. `FORMENCODER_CLAUDE_BIN`, `FORMENCODER_CODEX_BIN`, `FORMENCODER_CURSOR_BIN` and `FORMENCODER_ANTIGRAVITY_BIN` name a program's file directly.
+- An agent tab is started through your login shell, with the program's own folder first on its PATH, so a program that needs the `node` installed beside it starts.
+- The reported version of an agent program is now the version itself (for example `2.1.0`), not the whole line the program prints.
+- The engine starts when it has no output streams. An engine built without a console no longer stops at its first line of output. This was seen in a Windows build of another Form app; the fix here was run on Linux only.
+- The MCP entry the agent tabs use inside FormEncoder's agent workspace is named `formencoder_tab`, apart from the `formencoder` entry that `agents install` writes for use outside the app.
+- `agents/manifest.json` lists the Terminal panel's tabs, and `./formencoder agents sync --check` fails when the shared panel's files or the shared program finder were changed in place.
+- FormEncoder's own tests can no longer start a real agent program: the whole run sees stand-ins only.
+- The README, the wiki, the command help and the agent skills name four agent programs.
+- Not run for this release: Windows, macOS, the desktop app, and the real Claude Code, Codex, Cursor and Antigravity (stand-ins were used). The Antigravity button and tab were not looked at in a browser.
+- The version string inside the three browser demo bundles (`demo/assets/demo.js`, `demos/broadcast/assets/broadcast.js`, `demos/inspect/assets/inspect.js`) is bumped to 0.10.0 by hand, without a rebuild.
+
 ## v0.9.0 · 2026-11-19
 
 The family update. Only the FormEncoder window can change things or answer for the person, an agent's permission is asked for in clearer words, encodes write to local files only, and there is a true-black theme. FormEncoder keeps its own Terminal panel in this release.
