@@ -4,7 +4,7 @@ You are running inside formencoder {{VERSION}}, the form family's media encoder,
 
 ## How to drive formencoder
 
-- Use the `formencoder` MCP server (configured in `.mcp.json` here; it runs `{{MCP}}`). Agents started from this terminal are trusted; nothing asks for permission.
+- Use the `formencoder_tab` MCP server (configured in `.mcp.json` here; it runs `{{MCP}}`). A Claude Code, Codex or Cursor tab started from formencoder's Terminal panel is trusted and nothing asks for permission; a program typed into a plain shell tab asks the person like any outside agent.
 - If MCP is unavailable, the same surface is on the command line: `formencoder encode FILE --preset system/youtube-1080p`, `formencoder queue`, `formencoder exec ID '{"json": "params"}'`, `formencoder batch '[...]'`, `formencoder commands FILTER`, `formencoder describe ID`, `formencoder presets QUERY`, `formencoder probe FILE`, `formencoder frame out.png --output '#1' --time 2`, `formencoder wait`.
 - Read `.claude/skills/formencoder-harness/SKILL.md` before a non-trivial job. It routes to sub-skills for the queue and presets, export settings, effects and loudness, captions and metadata, watch folders and ingest, the form family bridge, and verifying.
 

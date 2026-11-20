@@ -11,8 +11,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -25,7 +27,9 @@ SKILL = ROOT / ".claude" / "skills" / "formencoder-harness"
 MIRROR = ROOT / ".agents" / "skills" / "formencoder-harness"
 SKILLS = ROOT / ".claude" / "skills"
 MANIFEST = ROOT / "agents" / "manifest.json"
-DOCK = {"present": True, "positions": ["left", "right", "bottom", "floating"], "tabs": ["terminal", "agents"]}
+DOCK = {"present": True, "positions": ["left", "right", "bottom", "floating"], "tabs": ["shell", "claude", "codex", "cursor"]}
+DOCK_FOLDER = ROOT / "frontend" / "src" / "dock"
+DOCK_IMPORT = re.compile(r"""(?:from|import)\s*\(?\s*['"]([^'"]+)['"]""")
 ORDER = ["queue", "encode", "preset", "format", "watch", "ingest", "proxy", "analyze", "media", "captions", "lut", "family", "publish", "log", "prefs", "edit", "history", "ui", "app", "settings"]
 HEAD = "Generated from the formencoder engine by `./formencoder agents sync`; do not edit by hand."
 
@@ -290,6 +294,26 @@ def surfaces() -> list[str]:
     return problems
 
 
+def dock_problems(folder: Path | None = None) -> list[str]:
+    folder = folder or DOCK_FOLDER
+    listed = folder / "MANIFEST.json"
+    if not listed.is_file():
+        return ["MANIFEST.json is missing"]
+    wanted = json.loads(listed.read_text(encoding="utf-8")).get("files") or {}
+    found = {p.name: p for p in sorted(folder.iterdir()) if p.name != "MANIFEST.json"}
+    problems = [f"{name} is missing" for name in wanted if name not in found]
+    for name, path in found.items():
+        if name not in wanted:
+            problems.append(f"{name} is extra")
+        elif not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != wanted[name]:
+            problems.append(f"{name} differs from MANIFEST.json")
+        if path.is_file() and path.suffix == ".ts":
+            for target in DOCK_IMPORT.findall(path.read_text(encoding="utf-8")):
+                if target.startswith("..") or target.startswith("/"):
+                    problems.append(f"{name} imports {target} from outside the dock folder")
+    return problems
+
+
 def _files(folder: Path) -> dict:
     return {str(p.relative_to(folder)): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
 
@@ -300,6 +324,9 @@ def sync(check: bool) -> int:
     for p in problems:
         print(f"agents: surface: {p}")
     drift = ["the registry, the MCP tools and the command line disagree"] if problems else []
+    for p in dock_problems():
+        print(f"agents: dock: {p}")
+        drift.append(f"frontend/src/dock/{p.split(' ', 1)[0]}")
     wanted = manifest_text(Engine())
     if not MANIFEST.exists() or MANIFEST.read_text(encoding="utf-8") != wanted:
         drift.append(str(MANIFEST.relative_to(ROOT)))
@@ -321,7 +348,10 @@ def sync(check: bool) -> int:
     if check:
         print("agents: in step" if not drift else "agents: drifted: " + ", ".join(drift) + " (run ./formencoder agents sync)")
         return 1 if drift else 0
-    print("agents: " + ("updated " + ", ".join(drift) if drift else "already in step"))
+    print("agents: " + ("updated " + ", ".join(d for d in drift if not d.startswith("frontend/src/dock/")) if drift else "already in step"))
+    if dock_problems():
+        print("agents: frontend/src/dock does not match its MANIFEST.json; copy the folder again from the family's source, sync cannot repair it")
+        return 1
     return 0
 
 

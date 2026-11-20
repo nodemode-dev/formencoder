@@ -385,7 +385,7 @@ export class Dock {
       for (const grp of this.groups[a]) {
         for (const id of grp.panels) {
           const p = this.made.get(id);
-          if (p) {
+          if (p && p.el.parentElement === grp.body) {
             p.el.hidden = true;
             p.hidden?.();
           }

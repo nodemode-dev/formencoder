@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import secrets
 import time
@@ -104,6 +106,22 @@ def state() -> dict:
     seals = seal.summary([seal_state(), approvals.seal_state()])
     return {"policy": config.agents_policy(), "session": sorted(_session), "always": sorted(_always()), "seal": seals, "sealBroken": seals == "broken",
             "answers": list(ANSWERS), "alwaysScope": ALWAYS_SCOPE, "askSeconds": ASK_SECONDS, "blockedStopsTabs": True}
+
+
+GONE = "The caller went away before the person answered."
+
+
+async def gate_for(request, source: str, token: str | None, mutating: bool, detail: str = "", what: str = "") -> str | None:
+    asking = asyncio.ensure_future(gate(source, token, mutating, detail=detail, what=what))
+    while True:
+        done, _ = await asyncio.wait({asking}, timeout=1.0)
+        if done:
+            return asking.result()
+        if await request.is_disconnected():
+            asking.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await asking
+            return GONE
 
 
 async def gate(source: str, token: str | None, mutating: bool, detail: str = "", what: str = "") -> str | None:

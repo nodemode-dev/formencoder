@@ -19,6 +19,7 @@ def client_args(client: str) -> list[str]:
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 SKILLS = ("formencoder-harness",)
 MANAGED = ("CLAUDE.md", "AGENTS.md", ".mcp.json", ".claude/settings.json", ".codex/config.toml", ".cursor/mcp.json")
+TAB_ENTRY = "formencoder_tab"
 
 
 def root() -> Path:
@@ -128,11 +129,11 @@ def ensure() -> Path:
     _shell_rc(base)
     _write(base / "CLAUDE.md", _render("CLAUDE.md", values))
     _write(base / "AGENTS.md", _render("AGENTS.md", values))
-    _write(base / ".mcp.json", json.dumps({"mcpServers": {"formencoder": {"type": "stdio", "command": command, "args": client_args("claude")}}}, indent=2) + "\n")
+    _write(base / ".mcp.json", json.dumps({"mcpServers": {TAB_ENTRY: {"type": "stdio", "command": command, "args": client_args("claude")}}}, indent=2) + "\n")
     toml_cmd = command.replace("\\", "\\\\")
-    _write(base / ".codex" / "config.toml", f'[mcp_servers.formencoder]\ncommand = "{toml_cmd}"\nargs = {json.dumps(client_args("codex"))}\nstartup_timeout_sec = 90\ntool_timeout_sec = 3600\n')
-    _write(base / ".cursor" / "mcp.json", json.dumps({"mcpServers": {"formencoder": {"command": command, "args": client_args("cursor")}}}, indent=2) + "\n")
-    claude_settings = {"enableAllProjectMcpServers": True, "enabledMcpjsonServers": ["formencoder"], "permissions": {"allow": ["mcp__formencoder", "Bash(formencoder:*)"]}}
+    _write(base / ".codex" / "config.toml", f'[mcp_servers.{TAB_ENTRY}]\ncommand = "{toml_cmd}"\nargs = {json.dumps(client_args("codex"))}\nstartup_timeout_sec = 90\ntool_timeout_sec = 3600\n')
+    _write(base / ".cursor" / "mcp.json", json.dumps({"mcpServers": {TAB_ENTRY: {"command": command, "args": client_args("cursor")}}}, indent=2) + "\n")
+    claude_settings = {"enableAllProjectMcpServers": True, "enabledMcpjsonServers": [TAB_ENTRY], "permissions": {"allow": [f"mcp__{TAB_ENTRY}", "Bash(formencoder:*)"]}}
     _write(base / ".claude" / "settings.json", json.dumps(claude_settings, indent=2) + "\n")
     if not stamp.is_file() or stamp.read_text(encoding="utf-8").strip() != __version__:
         _copy_skills(base)

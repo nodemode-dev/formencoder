@@ -4,7 +4,7 @@ formencoder's engine exposes every command to agents through MCP, the same comma
 
 ## Three ways in
 
-- **In formencoder**: the Terminal panel (or the Agent workspace) opens a shell in formencoder's agent workspace. Its Claude Code, Codex and Cursor buttons start an agent that already has the `formencoder` MCP server and the `formencoder-harness` skill; it works without permission prompts.
+- **In formencoder**: the Terminal panel (or the Agent workspace) opens tabs in formencoder's agent workspace. Its Claude Code, Codex and Cursor buttons each start that agent in a tab of its own; it already has formencoder's MCP server (named `formencoder_tab` there) and the `formencoder-harness` skill, and works without permission prompts while its tab is open. A plain shell tab carries no agent access: a program typed there asks like any outside agent.
 - **From the repository**: `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` run `./formencoder mcp`, which starts the engine when it is not running. The first change asks once in the formencoder window: Allow, Allow Always or Don't Allow.
 - **From anywhere**: `./formencoder agents install` (or the Agents panel) adds the MCP server and the skill to your Claude Code, Codex and Cursor setup.
 

@@ -303,8 +303,10 @@
       "floating"
     ],
     "tabs": [
-      "terminal",
-      "agents"
+      "shell",
+      "claude",
+      "codex",
+      "cursor"
     ]
   },
   "extensions": {
