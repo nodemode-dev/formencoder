@@ -318,3 +318,12 @@ Refers to `services/agent_lookup.py` (the family's file, version 1.0.1, never ed
 - Tests changed, and why: `test_dock_engine.py` expected three programs, the whole version line and a bare argv; it now expects four, `9.9.9` and the argv `start_argv` gives. Added after seeing them pass against stand-ins: a broken program, a program found in a known folder and one found through the shell's PATH; three hash cases in `test_dock_module.py`.
 - Not run: Windows, macOS, a frozen engine, a real Claude Code, Codex, Cursor or Antigravity.
 
+## No test can start a real agent program (unreleased, after 0.9.0)
+
+Refers to `backend/tests/conftest.py` `AGENT_STAND_INS`, `AGENT_CALLS`, `AGENT_SHELL`, `only_stand_in_agent_programs`, `pytest_sessionfinish`, `pytest_terminal_summary` · kind: test · logged: unreleased · 2026-11-19
+
+- Why: the finder reads the person's shell PATH and the known install folders, so a test run on a machine with a real `claude` could have found and started it.
+- Before any test imports the app, the run gets stand-ins named `claude`, `codex`, `cursor-agent`, `agent` and `agy` first on PATH (they answer `--version`, log every start and otherwise exit 1), a stand-in login shell as `SHELL` that never reads the machine's profile, the made-up home it already had, and no `NPM_CONFIG_PREFIX`, `npm_config_prefix`, `PNPM_HOME`, `VOLTA_HOME`, `BUN_INSTALL` or `NVM_SYMLINK`. The autouse fixture replaces `agent_lookup.system_folders` with an empty list and drops the finder's kept answers before and after each test.
+- The run ends with one line saying how many times a stand-in was started and with what arguments.
+- Not on Windows: the stand-ins are shell scripts, and the tests that start programs are skipped there.
+
