@@ -310,3 +310,14 @@ Refers to `frontend/src/dock/` (every file, from FormVis commit 23b018892caa30ea
 - Why: the panel's guide spoke of Claude Code only. In 2.2.1 the two guide sentences (`tourInstalledBody`, `tourReadyBody` in `strings.ts`) add that Codex, Cursor and Antigravity each get a button of their own when they are on this computer. `CONTRACT.md` and `MANIFEST.json` change with them; the other files are byte for byte as in 2.2.0.
 - Copied unchanged with `git show [commit]:frontend/src/dock/[file]`, each of the 16 files. FormEncoder carries no translations of the panel's sentences and pins no module version of its own, so nothing else changed.
 - Checked: `dock_problems()` of `setup/agents.py` finds nothing, `./formencoder agents sync --check` in step, `test_dock_module.py` 10 passed. The guide was not looked at in a window.
+
+## Every FormVis token name resolves in FormEncoder (unreleased, after 0.12.0)
+
+Refers to `frontend/src/styles/tokens.css` · kind: change · logged: unreleased · 2026-11-20
+
+- Why: the family's design alignment. FormVis's token names are the family's names; a stylesheet or a shared module written against them now finds every one here.
+- Added with FormVis Studio Dark's values (FormVis `origin/main`, `frontend/src/styles/tokens.css`): the node and canvas names (`--node-shadow`, `--grid-size`, `--node-opacity`, `--connection-width`, `--canvas-bg-image`), the 13 `--handle-*` colours, `--ease-glass`, `--text-on-cta`, `--success-fill` and its hover, `--brand-orange`, 14 z names (`--z-under`, `--z-local-2/4/5`, `--z-rail`, `--z-taskbar`, `--z-settings`, `--z-portal`, `--z-home`, `--z-home-modal`, `--z-home-preview`, `--z-account-panel`, `--z-overlay-modal`, `--z-debug`) and 15 `--cv-*` layout and canvas names. 52 names in all.
+- Not added: `--z-overlay`, which `dock-tokens.css` already defines as `var(--z-modal)`; the z values stay FormEncoder's.
+- One value takes FormVis's: in `:root[data-oled]` (AMOLED Black), `--surface-1` is `var(--bg-primary)`, as in FormVis, where it was a mix of the background and the third background. Surfaces follow FormVis; this is the only shared name whose value differed apart from the accent.
+- Kept: the accent `#f2545b` and its dim form, the base font size, every z value. `--info` has no FormVis counterpart and stays; the `--fx-*` names in `base.css` are layout variables of the dock grid, not tokens. No rule, literal or layout changed.
+- Checked on the three demos built from this file, 1440x900, Studio Dark, Light and AMOLED Black: the token dump on `:root` goes from 105 set names to 157 with no value changed except `--surface-1` in AMOLED; Studio Dark and Light identical pixel for pixel on the Queue and Broadcast demos (the Inspect demo differs between two runs of the same build, so its pairs are not a measure); AMOLED shows the darker panels in Broadcast and Inspect.
