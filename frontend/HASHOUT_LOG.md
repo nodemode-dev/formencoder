@@ -302,3 +302,11 @@ Refers to `src-tauri/src/main.rs` (`EngineStep`, `start_limit`, `kill_backend`, 
 - A failed start shows one error dialog titled FormEncoder: the sentence for what went wrong (program missing, could not be started, stopped with its code, the busy code 2 with the old advice to use the open window, a wait that ran out with its length, the window that could not be built), the engine's last lines or "The engine wrote nothing before that.", and the log's full path. The path is worked out the way `app/core/config.py` and `app/core/runtime.py` do it: `FORMENCODER_DATA_DIR` (a leading `~` is the home folder), else `Formencoder` in the home folder (`USERPROFILE` on Windows, as Python's `Path.home()` reads it), then `logs/formencoder-engine.log`. The splash closes after the dialog, so a window is open until then.
 - `windows-sys` 0.61.2, the version 28 packages in the lock already use, is the only new crate; the one line in the shell's own entry of `Cargo.lock` was put in by hand and matched byte for byte by `cargo update --workspace --offline` on the old lock in a scratch copy.
 - Checked: the two new files in the scratch crate, `cargo check --target x86_64-pc-windows-msvc` clean, `cargo test` 5 passed (the sentences, the tail, the log path, the home folder). Not run: the shell itself was not compiled (no webview packages here), nothing on Windows or macOS.
+
+## The shared dock is module 2.2.1 (unreleased, after 0.11.0)
+
+Refers to `frontend/src/dock/` (every file, from FormVis commit 23b018892caa30eae5654a2f98611bd81f0f77ad) · kind: change · logged: unreleased · 2026-11-20
+
+- Why: the panel's guide spoke of Claude Code only. In 2.2.1 the two guide sentences (`tourInstalledBody`, `tourReadyBody` in `strings.ts`) add that Codex, Cursor and Antigravity each get a button of their own when they are on this computer. `CONTRACT.md` and `MANIFEST.json` change with them; the other files are byte for byte as in 2.2.0.
+- Copied unchanged with `git show [commit]:frontend/src/dock/[file]`, each of the 16 files. FormEncoder carries no translations of the panel's sentences and pins no module version of its own, so nothing else changed.
+- Checked: `dock_problems()` of `setup/agents.py` finds nothing, `./formencoder agents sync --check` in step, `test_dock_module.py` 10 passed. The guide was not looked at in a window.
