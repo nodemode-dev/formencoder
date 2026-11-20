@@ -388,3 +388,11 @@ Refers to `src-tauri/src/main.rs` (the `None` arm of the engine's start in `setu
 - Not compiled: the desktop shell cannot be built here (no WebKit libraries). The change is one string and two statements in another order, read against FormTools's `main.rs` and FormTxt's same change. Not run on any system.
 - Held: `win_job.rs` (the job object, which needs the engine's start moved off tauri-plugin-shell or the child's process opened by id), `engine_start.rs` (the failure text with the engine's last lines, its exit code and the log's full path), a limit on the wait for the address, and the window that fails to build (`Err(_) => close_splash`), which still closes the loading window without a sentence.
 
+## A terminal's reader thread tolerates an event loop that is already closed (unreleased, after 0.10.0)
+
+Refers to `backend/app/routers/terminal.py` (`pump`) · kind: fix · logged: unreleased · 2026-11-19
+
+- Why: the log of the pull request's test job held `RuntimeError: Event loop is closed` from a terminal's reader thread. The thread hands each piece of output, and at the end its end notice, to the event loop that opened the terminal; when that loop is already closed (a finished test, an engine on its way out) nobody is left to receive either. It was a line in the log, not a failure.
+- In `pump`, a hand-over of output that raises `RuntimeError` ends the read loop, and the hand-over of the end notice ignores the same error. The wait for the child stays where it was, so the child is still reaped.
+- Seen: the whole backend suite with this change, 279 passed, and its output held no `Event loop is closed` line. Whether the line shows on this machine without the change was not looked at.
+
