@@ -18,7 +18,7 @@ description: Changing how agents drive formencoder. Use for the MCP tools and gu
 | `backend/app/agent/approvals.py` | which actions need the person's approval (`reasons`), the guard that waits or answers `pendingApproval`, `decide`, full faith (`approvals.json`), the agent activity record; decisions and full faith only over the live socket (`agents.decide`, `agents.fullFaith` in `engine/rpc.py`) |
 | `backend/app/routers/terminal.py` | the terminal hub: sessions with ids, history, readers and restart; REST under `/api/terminal/sessions`; the websocket attaching with `?session=`; the shell started with the workspace's bash rc file or zsh ZDOTDIR so the `formencoder` shim stays on PATH |
 | `backend/app/agent/workspace.py`, `templates/` | the agent workspace (`CLAUDE.md`, `AGENTS.md`, MCP configs, skills) the Terminal panel opens |
-| `backend/app/agent/connect.py` | `./formencoder agents install`: user-level MCP entries and skill copies for Claude Code, Codex and Cursor |
+| `backend/app/agent/connect.py` | `./formencoder agents install`: user-level MCP entries for Claude Code, Codex, Cursor and Antigravity, and skill copies for the first three |
 | `backend/app/agent/cli.py`, `setup/fe.py` | the command line (`encode`, `queue`, `exec`, `batch`, `commands`, `describe`, `presets`, `probe`, `frame`, `wait`) |
 | `setup/agents.py` | `sync` generates `references/commands.md`, `tools.md`, `presets.md` and `formats.md` from the engine and mirrors the skill to `.agents/skills` |
 | `.claude/skills/formencoder-harness` | the hand-written skill: `SKILL.md`, sub-skills, `references/concepts.md` |

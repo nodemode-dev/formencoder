@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""./formencoder agents: Claude Code, Codex and Cursor driving formencoder.
+"""./formencoder agents: Claude Code, Codex, Cursor and Antigravity driving formencoder.
 
   sync [--check]    regenerate the formencoder-harness skill's generated references from the engine (commands, MCP tools,
                     presets, formats and settings), mirror .claude/skills/formencoder-harness to .agents/skills and write
                     agents/manifest.json (what the app offers agents); --check exits 1 when anything drifted
-  install [--dry-run] [claude|codex|cursor ...]
-                    set the clients up for this user account: the MCP server and the skill (all three by default)
+  install [--dry-run] [claude|codex|cursor|antigravity ...]
+                    set the clients up for this user account: the MCP server and the skill (all four by default;
+                    Antigravity gets the MCP server only, in ~/.gemini/config/mcp_config.json)
   status            which clients are on this computer and whether the skill is in step
 """
 
@@ -123,7 +124,7 @@ def tools_md() -> str:
            "(`queue.addSource` is `queue_add_source`; commands.md gives every name). `./formencoder mcp` serves them over stdio (it starts "
            "the engine when it is not running); the engine also serves them over Streamable HTTP at `http://127.0.0.1:8270/mcp`. A profile "
            "chooses what a client lists: `--profile full` (curated plus every command tool; Claude Code and Codex), `--profile core` (the "
-           "curated tools only; Cursor) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every "
+           "curated tools only; Cursor and Antigravity) or `--profile core,queue,preset` (curated plus those namespaces); over HTTP pass `?profile=`. Every "
            "tool can be called by name whatever the profile. Resources: `formencoder://status`, `queue`, `presets`, `formats`, `encoders`, "
            "`commands`, `log/encoding`, `log/error`, `guide/[topic]`, and the templates `output/[id]`, `preset/[id]`, `format/[id]`, "
            "`command/[id]`. Prompts: `workflow`, `youtube_version`, `broadcast_master`, `proxies`, `review_copy`. The shell equivalents "

@@ -15,9 +15,9 @@ description: How an agent reaches formencoder. Use when the formencoder MCP serv
 
 | Started from | Trust | Configuration |
 | --- | --- | --- |
-| formencoder's Terminal panel, a Claude Code, Codex or Cursor tab (its buttons or the ask line; the MCP server is named `formencoder_tab` there) | trusted while the tab is open: the program carries the tab's token, nothing asks; a program typed into a plain shell tab asks like any other | the agent workspace: `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, `.codex/config.toml`, `.cursor/mcp.json` and this skill |
+| formencoder's Terminal panel, a Claude Code, Codex, Cursor or Antigravity tab (its buttons or the ask line; the MCP server is named `formencoder_tab` there) | trusted while the tab is open: the program carries the tab's token, nothing asks; a program typed into a plain shell tab asks like any other | the agent workspace: `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, `.codex/config.toml`, `.cursor/mcp.json` and this skill |
 | The formencoder repository | asks once per client in the window | `.mcp.json`, `.codex/config.toml`, `.cursor/mcp.json` at the repository root |
-| Any other folder | asks once per client in the window | `./formencoder agents install` (or the Agents panel) adds the MCP server and this skill to the user's Claude Code, Codex and Cursor setup |
+| Any other folder | asks once per client in the window | `./formencoder agents install` (or the Agents panel) adds the MCP server and this skill to the user's Claude Code, Codex and Cursor setup, and the MCP server to Antigravity's |
 
 ## Permission
 

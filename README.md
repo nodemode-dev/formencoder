@@ -91,7 +91,7 @@ The window, the command line and the MCP server call the same 96 commands.
 ./formencoder encode clip.mov --preset system/youtube-1080p   # queue, encode and print results
 ./formencoder queue                                           # every output and its status
 ./formencoder probe clip.mov                                  # media information
-./formencoder mcp                                             # MCP server on stdio for Claude Code, Codex and Cursor
+./formencoder mcp                                             # MCP server on stdio for Claude Code, Codex, Cursor and Antigravity
 ```
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
