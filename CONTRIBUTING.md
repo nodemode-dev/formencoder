@@ -50,6 +50,8 @@ backend/venv/bin/pip install -r backend/requirements-test.txt
 backend/venv/bin/python -m pytest frontend/tests/window -q -p no:cacheprovider
 python3 setup/lint_text.py .
 python3 -m py_compile setup/*.py
+backend/venv/bin/pip install -r backend/requirements_desktop.txt
+backend/venv/bin/python setup/check_freeze_bat.py
 ```
 
 The engine tests need FFmpeg on your path, and the window smoke needs Playwright and its

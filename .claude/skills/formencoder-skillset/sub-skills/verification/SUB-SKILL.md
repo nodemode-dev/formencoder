@@ -14,6 +14,7 @@ description: Verifying a change to formencoder before it ships. Use after any en
 | Separate tools | `./formencoder install-tools --keep-going` then `execute tools.list` | each tool reports its path; a package or software encode reads back through `verify` |
 | Interface types and bundle | `cd frontend && npm run build` | no errors |
 | Text hygiene | `python3 setup/lint_text.py .` | 0 findings |
+| Windows freeze command | `backend/venv/bin/python setup/check_freeze_bat.py` (PyInstaller from `backend/requirements_desktop.txt`) | 0 findings |
 | Agent references | `./formencoder agents sync --check` | in step |
 | Skills | the god-tier `validate_skill.py` on `.claude/skills/formencoder-harness` and `formencoder-skillset` | 0 FAIL |
 | Toolchain | `./formencoder doctor` | ready |
