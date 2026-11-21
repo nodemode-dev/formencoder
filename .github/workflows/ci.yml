@@ -246,6 +246,13 @@ jobs:
         run: python3 setup/lint_text.py .
       - name: Python syntax of the setup scripts
         run: python3 -m py_compile setup/*.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: The Windows freeze command parses as PyInstaller reads it
+        run: |
+          python -m pip install -r backend/requirements_desktop.txt
+          python setup/check_freeze_bat.py
 
   desktop-shell:
     runs-on: ubuntu-22.04

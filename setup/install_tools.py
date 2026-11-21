@@ -86,9 +86,9 @@ def platform_data() -> Path:
     return Path(os.environ.get("XDG_DATA_HOME", home / ".local" / "share")) / "formencoder"
 
 
-def run(cmd: list[str], cwd: Path | None = None) -> None:
+def run(cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None = None) -> None:
     print("[install-tools] " + " ".join(cmd), flush=True)
-    subprocess.run(cmd, cwd=cwd, check=True)
+    subprocess.run(cmd, cwd=cwd, check=True, env=env)
 
 
 def fetch_tarball(name: str, spec: dict, work: Path) -> Path:
@@ -137,9 +137,31 @@ def build_triple() -> list[str]:
     return [f"--build={cpu}-apple-darwin", f"--host={cpu}-apple-darwin"]
 
 
+def nmake_machine() -> list[str]:
+    target = (os.environ.get("VSCMD_ARG_TGT_ARCH") or platform.machine()).lower()
+    if target in ("x64", "amd64"):
+        return ["MSVCVER=Win64", "MACHINE=/machine:X64"]
+    if target in ("arm64", "aarch64"):
+        return ["MSVCVER=Win64", "MACHINE=/machine:ARM64"]
+    return []
+
+
+def full_perl() -> str | None:
+    for candidate in (os.environ.get("OPENSSL_SRC_PERL"), r"C:\Strawberry\perl\bin\perl.exe", shutil.which("perl")):
+        if not candidate or not Path(candidate).is_file():
+            continue
+        try:
+            probe = subprocess.run([candidate, "-MLocale::Maketext::Simple", "-e", "1"], capture_output=True, timeout=60)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if probe.returncode == 0:
+            return candidate
+    return None
+
+
 def build_autotools(spec: dict, src: Path) -> Path:
     if os.name == "nt":
-        run(["nmake", "-f", "Makefile.MSVC", "comp=msvc", "asm=no"], cwd=src)
+        run(["nmake", "-f", "Makefile.MSVC", "comp=msvc", "asm=no", *nmake_machine()], cwd=src)
         return src / "output"
     refresh_config_scripts(src)
     run(["./configure", "--disable-shared", "--enable-static", "--disable-gtktest", "--disable-decoder", *build_triple()], cwd=src)
@@ -248,7 +270,15 @@ def install(name: str, spec: dict, dest: Path, notices: Path, work: Path, stage:
         return
     if "crate" in spec:
         root = work / f"{spec['crate']}-{spec['tag']}"
-        run(["cargo", "install", "--locked", f"{spec['crate']}@{spec['tag']}", "--root", str(root)])
+        env = None
+        if os.name == "nt":
+            perl = full_perl()
+            if perl:
+                env = {**os.environ, "OPENSSL_SRC_PERL": perl}
+                print(f"[install-tools] OpenSSL for {spec['crate']} is built with {perl}", flush=True)
+            else:
+                print(f"[install-tools] no Perl with Locale::Maketext::Simple was found (Strawberry Perl has it); the OpenSSL that {spec['crate']} builds may fail", flush=True)
+        run(["cargo", "install", "--locked", f"{spec['crate']}@{spec['tag']}", "--root", str(root)], env=env)
         exe = spec["crate"] + (".exe" if os.name == "nt" else "")
         shutil.copy2(root / "bin" / exe, dest / exe)
         (notices / f"{name}-{spec['licence']}.txt").write_text(f"{spec['crate']} {spec['tag']} from crates.io, built with cargo install --locked.\nLicensed under the MIT License or the Apache License 2.0, at your option: https://github.com/contentauth/c2pa-rs\n", encoding="utf-8")

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.13.1 · 2026-11-20
+
+The Windows release builds again.
+
+- Fixed: the Windows build of 0.13.0 stopped while packaging the engine, because one space was missing from the packaging command. The command is whole again, and every check now reads that command the way the packager does, so a slip of this kind fails the checks before a release.
+- Fixed, on 64-bit Windows: the LAME MP3 encoder and the C2PA tool were left out of the Windows app because they did not build there. Both are now built for the right processor, and the C2PA tool uses a full Perl when the computer has one.
+- The engine's 105 tests that need its native core were run again with it built: the whole engine suite passes, 282 tests.
+- Not run for this release: Windows itself (the first proof is the windows_x64 release build), macOS and the desktop app.
+
 ## v0.13.0 · 2026-11-20
 
 The family's design names, and a released status.
